@@ -128,26 +128,26 @@ Tarefas:
 > ⚠️ **LGPD (Art. 11):** O consentimento biométrico é pré-requisito obrigatório do enroll. Nenhum embedding pode ser coletado sem consentimento registrado.
 
 Tarefas — Consentimento (pré-requisito do enroll):
-- [ ] Model `ConsentimentoBiometrico`: `employee FK`, `timestamp`, `aceito` (BooleanField), `ip_origem`, `versao_termo`
-- [ ] Migration inicial do model
-- [ ] Endpoint `POST /api/employees/{id}/consent/` — registra consentimento do funcionário
-- [ ] Guard no enroll: bloquear `cadastrar_embedding()` se não houver `ConsentimentoBiometrico.aceito = True`
+- [x] Model `ConsentimentoBiometrico`: `employee FK`, `timestamp`, `aceito` (BooleanField), `ip_origem`, `versao_termo`
+- [x] Migration inicial do model
+- [x] Endpoint `POST /api/employees/{id}/consent/` — registra consentimento do funcionário
+- [x] Guard no enroll: bloquear `cadastrar_embedding()` se não houver `ConsentimentoBiometrico.aceito = True`
 
 Tarefas — Engine Biométrica:
-- [ ] Model `FacialEmbedding`: `employee FK`, `embedding_data` (BinaryField — criptografado), `created_at`, `ativo`
-- [ ] `BiometriaService.cadastrar_embedding(employee, imagem_bytes)`:
+- [x] Model `FacialEmbedding`: `employee FK`, `embedding_data` (BinaryField — criptografado), `created_at`, `ativo`
+- [x] `BiometriaService.cadastrar_embedding(employee, imagem_bytes)`:
   - Verifica consentimento ativo antes de prosseguir
   - Gera embedding via `DeepFace.represent(img, model_name="ArcFace", detector_backend="retinaface")`
   - Valida qualidade mínima (1 rosto detectado)
   - Criptografa vetor resultante com `Fernet(settings.BIOMETRIA_KEY)`
   - Salva no model
-- [ ] `BiometriaService.verificar(employee, imagem_bytes) -> dict`:
+- [x] `BiometriaService.verificar(employee, imagem_bytes) -> dict`:
   - Descriptografa embedding armazenado
   - Executa `DeepFace.verify()` com `model_name="ArcFace"`, `detector_backend="retinaface"`, `anti_spoofing=True`
   - Retorna `{autenticado: bool, distancia: float, threshold: float}`
-- [ ] Endpoint `POST /api/employees/{id}/enroll/` — recebe imagem, faz enroll (exige consentimento)
-- [ ] Endpoint `POST /api/biometrics/verify/` — recebe imagem + employee_id, retorna resultado
-- [ ] Endpoint `GET /api/employees/embeddings/` — retorna embeddings criptografados para cache do app
+- [x] Endpoint `POST /api/employees/{id}/enroll/` — recebe imagem, faz enroll (exige consentimento)
+- [x] Endpoint `POST /api/biometrics/verify/` — recebe imagem + employee_id, retorna resultado
+- [x] Endpoint `GET /api/employees/embeddings/` — retorna embeddings criptografados para cache do app
 
 **Critério de aceite:** Enroll sem consentimento retorna 403. Verificação retorna `autenticado: true` para foto da pessoa cadastrada e `false` para outra com confiança > 95%.
 
