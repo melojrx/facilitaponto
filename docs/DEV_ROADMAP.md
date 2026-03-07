@@ -79,12 +79,12 @@ Tarefas:
 **Estimativa:** 6h
 
 Tarefas:
-- [ ] Model `Tenant` com campos: `id` (UUID), `cnpj`, `razao_social`, `nome_fantasia`, `registro_inpi`, `ativo`, `plano`, `created_at`
-- [ ] Mixin `TenantModelMixin` com `tenant = FK(Tenant)` + `tenant_id` em todas as queries via manager customizado
-- [ ] Manager `TenantManager` que filtra automaticamente por `tenant` do request
-- [ ] Middleware `TenantMiddleware` que resolve o tenant pelo JWT ou subdomínio e injeta no request
-- [ ] Admin Django básico para `Tenant`
-- [ ] Migration inicial
+- [x] Model `Tenant` com campos: `id` (UUID), `cnpj`, `razao_social`, `nome_fantasia`, `registro_inpi`, `ativo`, `plano`, `created_at`
+- [x] Mixin `TenantModelMixin` com `tenant = FK(Tenant)` + `tenant_id` em todas as queries via manager customizado
+- [x] Manager `TenantManager` que filtra automaticamente por `tenant` do request
+- [x] Middleware `TenantMiddleware` que resolve o tenant pelo JWT ou subdomínio e injeta no request
+- [x] Admin Django básico para `Tenant`
+- [x] Migration inicial
 
 **Critério de aceite:** Dados de tenants diferentes não aparecem nas queries um do outro.
 

@@ -1,12 +1,12 @@
 """
-TenantModelMixin — adiciona FK para Tenant em qualquer model.
+TenantModelMixin — adiciona FK para Tenant e managers padrão.
 
-Uso:
-    class Employee(TenantModelMixin, models.Model):
-        nome = models.CharField(max_length=255)
-        objects = TenantManager()
+`objects`: manager com isolamento automático por tenant.
+`all_objects`: manager sem filtro para usos administrativos/controlados.
 """
 from django.db import models
+
+from core.managers import TenantManager
 
 
 class TenantModelMixin(models.Model):
@@ -21,6 +21,9 @@ class TenantModelMixin(models.Model):
         related_name="%(app_label)s_%(class)s_set",
         db_index=True,
     )
+
+    objects = TenantManager()
+    all_objects = TenantManager(scoped=False)
 
     class Meta:
         abstract = True
