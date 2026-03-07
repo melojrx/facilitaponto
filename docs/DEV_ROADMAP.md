@@ -111,11 +111,11 @@ Tarefas:
 **Estimativa:** 6h
 
 Tarefas:
-- [ ] Model `Employee`: `tenant FK`, `nome`, `cpf` (único por tenant), `pis` (11 dígitos — obrigatório AFD), `email`, `ativo`, `created_at`
-- [ ] Model `NSRSequence`: `tenant FK`, `ultimo_nsr` (BigInt) — controla sequência por tenant
-- [ ] Função `get_next_nsr(tenant_id)` — atômica via `SELECT FOR UPDATE` no PostgreSQL
-- [ ] CRUD de funcionários via Django Admin (painel web)
-- [ ] API endpoint `GET /api/employees/active/` — retorna lista para o app sincronizar
+- [x] Model `Employee`: `tenant FK`, `nome`, `cpf` (único por tenant), `pis` (11 dígitos — obrigatório AFD), `email`, `ativo`, `created_at`
+- [x] Model `NSRSequence`: `tenant FK`, `ultimo_nsr` (BigInt) — controla sequência por tenant
+- [x] Função `get_next_nsr(tenant_id)` — atômica via `SELECT FOR UPDATE` no PostgreSQL
+- [x] CRUD de funcionários via Django Admin (painel web)
+- [x] API endpoint `GET /api/employees/active/` — retorna lista para o app sincronizar
 
 **Critério de aceite:** NSR gerado é sempre único e sequencial por tenant, mesmo em requests concorrentes.
 
