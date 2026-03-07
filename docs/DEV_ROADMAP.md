@@ -1,6 +1,6 @@
 # Roadmap de Desenvolvimento — Sistema de Ponto Eletrônico
-**Versão:** 1.1  
-**Data:** 2026-03-06  
+**Versão:** 1.2  
+**Data:** 2026-03-07  
 **Prazo MVP:** 8 semanas  
 **Stack:** Django 5 + DRF + React Native (Expo) + PostgreSQL + Redis + Celery  
 
@@ -14,7 +14,12 @@ Este projeto é um **SaaS multitenant de ponto eletrônico com reconhecimento fa
 2. **App Mobile React Native (Expo)** — roda em tablet Android na portaria, com suporte offline
 3. **Engine Biométrica** — reconhecimento facial server-side (online) e via MLKit (offline)
 
-O desenvolvimento é **assistido por IA** via Claude Code. Cada tarefa deve ser implementada seguindo os padrões definidos neste documento.
+O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seguindo os padrões definidos neste documento.
+
+### Snapshot de execução (2026-03-07)
+- Backend concluído até **DEV-007** (biometria, registro de ponto, sync offline backend, comprovante eletrônico).
+- Upload de foto de batida já em **storage S3/MinIO** com `foto_hash` para auditoria.
+- Próxima frente principal: **DEV-010 a DEV-013** (app mobile completo com modo offline).
 
 ---
 
@@ -196,9 +201,9 @@ Tarefas:
 - [x] Model `Comprovante`: `registro FK`, `conteudo_json`, `timestamp_carimbo`, `hash_carimbo`
 - [x] `ComprovanteService.gerar(registro) -> dict`:
   - Monta JSON com dados mínimos da Portaria 671
-  - Aplica carimbo de tempo (integração com servidor TSA ou freetsa.org para MVP)
+  - Aplica carimbo de tempo MVP com `timestamp_carimbo` + `hash_carimbo` (TSA RFC 3161 fica como evolução)
   - Salva e retorna
-- [x] Endpoint `GET /api/attendance/{id}/comprovante/` — retorna comprovante em JSON/PDF
+- [x] Endpoint `GET /api/attendance/{id}/comprovante/` — retorna comprovante em JSON
 
 **Critério de aceite:** Comprovante gerado imediatamente após registro com todos os campos obrigatórios.
 

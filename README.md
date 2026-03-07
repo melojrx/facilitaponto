@@ -23,7 +23,7 @@
 [![Pytest](https://img.shields.io/badge/Pytest-Tests-0A9EDC?logo=pytest&logoColor=white)](https://pytest.org/)
 [![Ruff](https://img.shields.io/badge/Ruff-Lint-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-orange)](#status-do-projeto)
-[![Privado](https://img.shields.io/badge/Repositório-Privado-red)](https://github.com/melojrx/ponto_digital)
+[![Privado](https://img.shields.io/badge/Repositório-Privado-red)](https://github.com/melojrx/facilitaponto)
 
 <br>
 
@@ -58,6 +58,15 @@ O projeto está organizado para evoluir em três frentes:
   - Enroll de embedding facial criptografado
   - Verificação biométrica online (`/api/biometrics/verify/`)
   - Endpoint de embeddings para cache mobile (`/api/employees/embeddings/`)
+- Núcleo de ponto DEV-006 concluído:
+  - Registro imutável com NSR atômico por tenant
+  - Registro online (`/api/attendance/register/`)
+  - Sincronização offline com idempotência (`/api/attendance/sync/`)
+  - Regras de ordenação de batidas (E/S/II/FI)
+  - Upload real da foto em storage S3/MinIO + hash SHA-256 para auditoria
+- Comprovante eletrônico DEV-007 concluído:
+  - Geração automática ao registrar ponto
+  - Endpoint de consulta (`/api/attendance/{id}/comprovante/`)
 
 ### 🔍 Qualidade atual
 
@@ -85,7 +94,7 @@ O projeto está organizado para evoluir em três frentes:
 ## Estrutura do repositório
 
 ```text
-ponto_digital/
+facilitaponto/
 ├── backend/          # Django, API REST, apps de domínio
 ├── docs/             # PRD, backlog, roadmap e layouts legais
 ├── mobile/           # App mobile (em evolução)
@@ -102,8 +111,8 @@ ponto_digital/
 | `accounts` | Usuários, dispositivos e autenticação |
 | `employees` | Funcionários e sequência NSR |
 | `biometrics` | Consentimento, enroll, verify e embeddings |
-| `attendance` | Registros de ponto *(próxima etapa)* |
-| `legal_files` | AFD/AEJ/comprovantes *(próxima etapa)* |
+| `attendance` | Registro de ponto, sync offline, NSR e comprovante |
+| `legal_files` | Comprovante eletrônico e base para AFD/AEJ |
 
 ---
 
@@ -119,8 +128,8 @@ ponto_digital/
 **1. Clonar o repositório**
 
 ```bash
-git clone https://github.com/melojrx/ponto_digital.git
-cd ponto_digital
+git clone https://github.com/melojrx/facilitaponto.git
+cd facilitaponto
 ```
 
 **2. Configurar variáveis de ambiente**
@@ -196,6 +205,14 @@ make smoke-dev001  # Validação técnica DEV-001
 | `POST` | `/api/biometrics/verify/` |
 | `GET` | `/api/employees/embeddings/` |
 
+### 🕒 Ponto e comprovante
+
+| Método | Endpoint |
+|---|---|
+| `POST` | `/api/attendance/register/` |
+| `POST` | `/api/attendance/sync/` |
+| `GET` | `/api/attendance/{id}/comprovante/` |
+
 ---
 
 ## Documentação do produto
@@ -214,6 +231,7 @@ make smoke-dev001  # Validação técnica DEV-001
 
 - 🔒 Dados biométricos tratados como **sensíveis** (LGPD)
 - 🔑 Embeddings faciais armazenados de forma **criptografada**
+- 🗂️ Fotos de registro armazenadas em **storage S3/MinIO** com hash SHA-256 de integridade
 - 🏢 **Separação de dados por tenant** sem vazamento cross-tenant
 - 📋 Evolução planejada para trilhas de auditoria e engine legal completa (AFD/AEJ)
 

@@ -1,6 +1,14 @@
 # Product Backlog — Sistema de Ponto Eletrônico
-**Versão:** 1.0  
-**Data:** 2026-02-28  
+**Versão:** 1.1  
+**Data:** 2026-03-07  
+
+---
+
+## Status de Execução (2026-03-07)
+
+- ✅ Entregue no backend: PB-001 a PB-005, PB-010 a PB-014, PB-030 a PB-034.
+- 🟡 Parcial: PB-035 com carimbo MVP (`timestamp_carimbo` + `hash_carimbo`); integração TSA RFC 3161 externa permanece como evolução.
+- 🚧 Próximo bloco crítico: PB-020 a PB-028 (app mobile), com prioridade em autenticação do dispositivo, sync de funcionários/embeddings e fluxo offline.
 
 ---
 
