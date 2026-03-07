@@ -3,8 +3,10 @@ Settings base — compartilhado entre desenvolvimento e produção.
 Variáveis sensíveis são sempre lidas via python-decouple (.env).
 """
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -79,16 +81,41 @@ WSGI_APPLICATION = "config.wsgi.application"
 # -----------------------------------------------------------------------------
 # Banco de Dados
 # -----------------------------------------------------------------------------
-DATABASES = {
-    "default": {
+def _database_from_url(database_url: str) -> dict:
+    parsed = urlparse(database_url)
+    if parsed.scheme not in {"postgres", "postgresql"}:
+        raise ImproperlyConfigured(
+            "DATABASE_URL inválida: use esquema postgres:// ou postgresql://"
+        )
+
+    db_name = parsed.path.lstrip("/")
+    if not db_name:
+        raise ImproperlyConfigured("DATABASE_URL inválida: nome do banco ausente no path")
+
+    return {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="ponto_digital"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST", default="db"),
-        "PORT": config("DB_PORT", default="5432"),
+        "NAME": db_name,
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname or "",
+        "PORT": str(parsed.port or "5432"),
     }
-}
+
+
+database_url = config("DATABASE_URL", default="")
+if database_url:
+    DATABASES = {"default": _database_from_url(database_url)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("DB_NAME", default="ponto_digital"),
+            "USER": config("DB_USER", default="postgres"),
+            "PASSWORD": config("DB_PASSWORD"),
+            "HOST": config("DB_HOST", default="db"),
+            "PORT": config("DB_PORT", default="5432"),
+        }
+    }
 
 # -----------------------------------------------------------------------------
 # Autenticação

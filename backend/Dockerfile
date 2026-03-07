@@ -15,7 +15,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -26,10 +26,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o código
 COPY . .
 
-# Compila arquivos estáticos no build (não em runtime)
-RUN python manage.py collectstatic --noinput
-
-# Entrypoint: roda migrations e inicia Gunicorn
+# Entrypoint: aguarda DB, roda migrations e inicia processo principal
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

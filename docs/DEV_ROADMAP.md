@@ -62,13 +62,13 @@ backend/
 **Estimativa:** 4h
 
 Tarefas:
-- [ ] Criar repositório com estrutura de diretórios definida acima
-- [ ] `docker-compose.yml` com serviços: `web`, `db` (PostgreSQL 16), `redis`, `celery`, `minio`
-- [ ] `requirements.txt` com: django, djangorestframework, djangorestframework-simplejwt, celery, redis, psycopg2-binary, python-decouple, deepface, tf-keras, Pillow, boto3, ruff, pytest-django
-- [ ] Settings base com `python-decouple`: DATABASE_URL, REDIS_URL, MINIO config, SECRET_KEY, BIOMETRIA_KEY (Fernet)
-- [ ] Settings separados: `base.py`, `development.py`, `production.py`
-- [ ] `.env.example` documentado
-- [ ] `Makefile` com comandos: `make run`, `make migrate`, `make test`, `make shell`
+- [x] Criar repositório com estrutura de diretórios definida acima
+- [x] `docker-compose.yml` com serviços: `web`, `db` (PostgreSQL 16), `redis`, `celery`, `minio`
+- [x] `requirements.txt` com: django, djangorestframework, djangorestframework-simplejwt, celery, redis, psycopg2-binary, python-decouple, deepface, tf-keras, Pillow, boto3, ruff, pytest-django
+- [x] Settings base com `python-decouple`: DATABASE_URL, REDIS_URL, MINIO config, SECRET_KEY, BIOMETRIA_KEY (Fernet)
+- [x] Settings separados: `base.py`, `development.py`, `production.py`
+- [x] `.env.example` documentado
+- [x] `Makefile` com comandos: `make run`, `make migrate`, `make test`, `make shell`
 
 **Critério de aceite:** `docker-compose up` sobe todos os serviços sem erro.
 

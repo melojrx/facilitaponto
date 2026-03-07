@@ -10,6 +10,8 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      RUN_COLLECTSTATIC: "0"
     depends_on:
       db:
         condition: service_healthy
@@ -20,14 +22,19 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A config worker --loglevel=info
+    entrypoint: []
+    command: celery -A config worker --loglevel=info --uid=nobody --gid=nogroup
     volumes:
       - ./backend:/app
     env_file:
       - ./backend/.env
     depends_on:
-      - redis
-      - web
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+      redis:
+        condition: service_started
 
   db:
     image: postgres:16-alpine

@@ -3,7 +3,7 @@ DJANGO = $(PYTHON) manage.py
 
 .DEFAULT_GOAL := help
 
-.PHONY: help run stop migrate makemigrations shell test lint createsuperuser
+.PHONY: help run stop migrate makemigrations shell test lint createsuperuser smoke-dev001
 
 help:
 	@echo ""
@@ -16,6 +16,7 @@ help:
 	@echo "  make shell          Abre o shell Django"
 	@echo "  make test           Roda a suíte de testes"
 	@echo "  make lint           Roda o ruff"
+	@echo "  make smoke-dev001   Executa checklist técnico completo da DEV-001"
 	@echo "  make createsuperuser Cria superusuário"
 	@echo ""
 
@@ -42,3 +43,6 @@ lint:
 
 createsuperuser:
 	docker compose exec web python manage.py createsuperuser
+
+smoke-dev001:
+	./scripts/smoke_dev001.sh
