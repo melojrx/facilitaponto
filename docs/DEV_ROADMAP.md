@@ -95,12 +95,12 @@ Tarefas:
 **Estimativa:** 5h
 
 Tarefas:
-- [ ] Model `User` customizado herdando `AbstractBaseUser`: `email` como username, `tenant FK`, `role` (admin, gestor, viewer)
-- [ ] Endpoint `POST /api/auth/token/` — login retorna access + refresh JWT com `tenant_id` no payload
-- [ ] Endpoint `POST /api/auth/token/refresh/`
-- [ ] Endpoint `POST /api/auth/device/register/` — registra device_id do tablet, retorna JWT de dispositivo
-- [ ] Permissão customizada `IsTenantMember` para DRF
-- [ ] Permissão `IsDeviceToken` para endpoints exclusivos do app mobile
+- [x] Model `User` customizado herdando `AbstractBaseUser`: `email` como username, `tenant FK`, `role` (admin, gestor, viewer)
+- [x] Endpoint `POST /api/auth/token/` — login retorna access + refresh JWT com `tenant_id` no payload
+- [x] Endpoint `POST /api/auth/token/refresh/`
+- [x] Endpoint `POST /api/auth/device/register/` — registra device_id do tablet, retorna JWT de dispositivo
+- [x] Permissão customizada `IsTenantMember` para DRF
+- [x] Permissão `IsDeviceToken` para endpoints exclusivos do app mobile
 
 **Critério de aceite:** Token de um tenant não acessa endpoints de outro tenant.
 
