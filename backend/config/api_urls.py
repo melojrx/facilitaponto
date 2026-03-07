@@ -25,5 +25,5 @@ urlpatterns = [
     # Apps — serão adicionados à medida que os apps forem implementados
     # path("tenants/", include("apps.tenants.urls")),
     path("employees/", include("apps.employees.urls")),
-    # path("attendance/", include("apps.attendance.urls")),
+    path("attendance/", include("apps.attendance.urls")),
 ]

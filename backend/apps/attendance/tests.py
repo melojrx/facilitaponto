@@ -1,2 +1,294 @@
+import io
+from concurrent.futures import ThreadPoolExecutor
 
-# Create your tests here.
+import pytest
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import close_old_connections
+from django.utils import timezone
+from PIL import Image
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.accounts.models import User
+from apps.attendance.models import AttendanceRecord
+from apps.attendance.services import AttendanceService
+from apps.employees.models import Employee
+from apps.tenants.models import Tenant
+
+
+class FakeBiometriaService:
+    def __init__(self, autenticado=True, distancia=0.2, threshold=0.68):
+        self.autenticado = autenticado
+        self.distancia = distancia
+        self.threshold = threshold
+
+    def verificar(self, employee, imagem_bytes):
+        return {
+            "autenticado": self.autenticado,
+            "distancia": self.distancia,
+            "threshold": self.threshold,
+        }
+
+
+def _device_access_token_for(user, tenant_id, device_id="tablet-main"):
+    refresh = RefreshToken.for_user(user)
+    refresh["tenant_id"] = str(tenant_id)
+    refresh["role"] = "device"
+    refresh["is_device"] = True
+    refresh["device_id"] = device_id
+    return str(refresh.access_token)
+
+
+def _build_test_image_file(name="face.jpg"):
+    buffer = io.BytesIO()
+    Image.new("RGB", (16, 16), color="white").save(buffer, format="JPEG")
+    buffer.seek(0)
+    return SimpleUploadedFile(name, buffer.read(), content_type="image/jpeg")
+
+
+@pytest.fixture
+def tenant_a(db):
+    return Tenant.objects.create(
+        cnpj="55555555000155",
+        razao_social="Tenant Attendance A",
+        plano=Tenant.Plano.BASICO,
+    )
+
+
+@pytest.fixture
+def tenant_b(db):
+    return Tenant.objects.create(
+        cnpj="99999999000199",
+        razao_social="Tenant Attendance B",
+        plano=Tenant.Plano.PROFISSIONAL,
+    )
+
+
+@pytest.fixture
+def user_a(db, tenant_a):
+    return User.objects.create_user(
+        email="attendance@tenant-a.com",
+        password="12345678",
+        tenant=tenant_a,
+        role=User.Role.ADMIN,
+    )
+
+
+@pytest.fixture
+def employee_a(db, tenant_a):
+    return Employee.all_objects.create(
+        tenant=tenant_a,
+        nome="Funcionario Attendance A",
+        cpf="55555555001",
+        pis="55555555001",
+        email="func.a@attendance.com",
+        ativo=True,
+    )
+
+
+@pytest.fixture
+def employee_b(db, tenant_b):
+    return Employee.all_objects.create(
+        tenant=tenant_b,
+        nome="Funcionario Attendance B",
+        cpf="99999999001",
+        pis="99999999001",
+        email="func.b@attendance.com",
+        ativo=True,
+    )
+
+
+@pytest.mark.django_db
+class TestAttendanceRecordModel:
+    def test_registro_e_imutavel_apos_criacao(self, tenant_a, employee_a):
+        record = AttendanceRecord.all_objects.create(
+            tenant=tenant_a,
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            timestamp=timezone.now(),
+            nsr=1,
+            foto_path="attendance/foto.jpg",
+            foto_hash="a" * 64,
+            confianca_biometrica=0.8,
+            origem=AttendanceRecord.Origem.ONLINE,
+        )
+
+        record.tipo = AttendanceRecord.Tipo.SAIDA
+        with pytest.raises(ValidationError):
+            record.save()
+
+
+@pytest.mark.django_db
+class TestAttendanceService:
+    def test_primeira_batida_deve_ser_entrada(self, employee_a):
+        service = AttendanceService(biometria_service=FakeBiometriaService())
+
+        with pytest.raises(ValidationError):
+            service.registrar(
+                employee=employee_a,
+                tipo=AttendanceRecord.Tipo.SAIDA,
+                imagem_bytes=b"img",
+            )
+
+    def test_ordem_das_batidas_e_validada(self, employee_a):
+        service = AttendanceService(biometria_service=FakeBiometriaService())
+
+        service.registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            imagem_bytes=b"img-e",
+        )
+        with pytest.raises(ValidationError):
+            service.registrar(
+                employee=employee_a,
+                tipo=AttendanceRecord.Tipo.ENTRADA,
+                imagem_bytes=b"img-e2",
+            )
+
+        service.registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.INICIO_INTERVALO,
+            imagem_bytes=b"img-ii",
+        )
+        service.registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.FIM_INTERVALO,
+            imagem_bytes=b"img-fi",
+        )
+        service.registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.SAIDA,
+            imagem_bytes=b"img-s",
+        )
+        service.registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            imagem_bytes=b"img-e3",
+        )
+
+        tipos = list(
+            AttendanceRecord.all_objects.filter(employee=employee_a).order_by("nsr").values_list("tipo", flat=True)
+        )
+        assert tipos == ["E", "II", "FI", "S", "E"]
+
+    def test_registrar_persiste_hash_nsr_e_dados(self, employee_a):
+        service = AttendanceService(
+            biometria_service=FakeBiometriaService(autenticado=True, distancia=0.3)
+        )
+
+        record = service.registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            imagem_bytes=b"imagem-teste",
+            origem=AttendanceRecord.Origem.ONLINE,
+        )
+
+        assert record.nsr == 1
+        assert record.foto_hash
+        assert len(record.foto_hash) == 64
+        assert record.foto_path.endswith(".jpg")
+        assert record.confianca_biometrica == pytest.approx(0.7)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_registrar_concorrente_gera_nsr_unico_e_sequencial(tenant_a):
+    total = 20
+    employees = []
+    for idx in range(total):
+        seq = f"{idx + 1:03d}"
+        employees.append(
+            Employee.all_objects.create(
+                tenant=tenant_a,
+                nome=f"Funcionario {seq}",
+                cpf=f"70000000{seq}",
+                pis=f"80000000{seq}",
+                ativo=True,
+            )
+        )
+
+    service = AttendanceService(biometria_service=FakeBiometriaService())
+
+    def call_service(employee):
+        close_old_connections()
+        record = service.registrar(
+            employee=employee,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            imagem_bytes=f"img-{employee.id}".encode(),
+            timestamp=timezone.now(),
+        )
+        return record.nsr
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        nsrs = list(executor.map(call_service, employees))
+
+    assert sorted(nsrs) == list(range(1, total + 1))
+    assert AttendanceRecord.all_objects.filter(tenant=tenant_a).count() == total
+
+
+@pytest.mark.django_db
+class TestAttendanceRegisterEndpoint:
+    endpoint = "/api/attendance/register/"
+
+    def test_registra_ponto_via_device_token(self, tenant_a, user_a, employee_a, monkeypatch):
+        def fake_verify(self, employee, imagem_bytes):
+            return {"autenticado": True, "distancia": 0.25, "threshold": 0.68}
+
+        monkeypatch.setattr(
+            "apps.attendance.services.BiometriaService.verificar",
+            fake_verify,
+        )
+
+        token = _device_access_token_for(user_a, tenant_a.id, device_id="tablet-a")
+        client = APIClient()
+        response = client.post(
+            self.endpoint,
+            data={
+                "employee_id": employee_a.id,
+                "tipo": AttendanceRecord.Tipo.ENTRADA,
+                "imagem": _build_test_image_file(),
+            },
+            format="multipart",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 201
+        assert response.data["employee_id"] == employee_a.id
+        assert response.data["tipo"] == AttendanceRecord.Tipo.ENTRADA
+        assert response.data["nsr"] == 1
+
+    def test_bloqueia_token_nao_device(self, tenant_a, user_a, employee_a):
+        client = APIClient()
+        client.force_authenticate(user=user_a)
+
+        response = client.post(
+            self.endpoint,
+            data={
+                "employee_id": employee_a.id,
+                "tipo": AttendanceRecord.Tipo.ENTRADA,
+                "imagem": _build_test_image_file(),
+            },
+            format="multipart",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 403
+
+    def test_bloqueia_funcionario_de_outro_tenant(self, tenant_a, user_a, employee_b):
+        token = _device_access_token_for(user_a, tenant_a.id, device_id="tablet-a")
+        client = APIClient()
+
+        response = client.post(
+            self.endpoint,
+            data={
+                "employee_id": employee_b.id,
+                "tipo": AttendanceRecord.Tipo.ENTRADA,
+                "imagem": _build_test_image_file(),
+            },
+            format="multipart",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 404

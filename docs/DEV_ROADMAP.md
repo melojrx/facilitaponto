@@ -158,7 +158,7 @@ Tarefas — Engine Biométrica:
 **Estimativa:** 8h
 
 Tarefas:
-- [ ] Model `AttendanceRecord`:
+- [x] Model `AttendanceRecord`:
   ```
   tenant FK, employee FK, tipo (E/S/II/FI),
   timestamp (DateTimeField com timezone),
@@ -172,17 +172,17 @@ Tarefas:
   justificativa (nullable — para ajustes),
   registro_original FK (self, nullable — para ajustes)
   ```
-- [ ] `save()` override que impede edição após criação (raise exception)
-- [ ] `AttendanceService.registrar(employee, tipo, imagem, timestamp, origem)`:
+- [x] `save()` override que impede edição após criação (raise exception)
+- [x] `AttendanceService.registrar(employee, tipo, imagem, timestamp, origem)`:
   - Verifica biometria
   - Gera NSR atômico
   - Salva foto no MinIO
   - Calcula hash SHA-256 da foto
   - Cria registro imutável
   - Retorna comprovante
-- [ ] Endpoint `POST /api/attendance/register/` — chamado pelo app (online)
+- [x] Endpoint `POST /api/attendance/register/` — chamado pelo app (online)
 - [ ] Endpoint `POST /api/attendance/sync/` — recebe lote de registros offline para sincronização
-- [ ] Validação de ordem de batidas (não pode ter 2 entradas seguidas, etc.)
+- [x] Validação de ordem de batidas (não pode ter 2 entradas seguidas, etc.)
 
 **Critério de aceite:** Registro criado nunca pode ser editado via API ou admin. NSR é gerado no servidor.
 
