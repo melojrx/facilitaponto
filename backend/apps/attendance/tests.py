@@ -14,6 +14,7 @@ from apps.accounts.models import User
 from apps.attendance.models import AttendanceRecord
 from apps.attendance.services import AttendanceService
 from apps.employees.models import Employee
+from apps.legal_files.models import Comprovante
 from apps.tenants.models import Tenant
 
 
@@ -190,6 +191,17 @@ class TestAttendanceService:
         assert record.foto_path.endswith(".jpg")
         assert record.confianca_biometrica == pytest.approx(0.7)
 
+        comprovante = Comprovante.all_objects.get(registro=record)
+        assert comprovante.tenant == record.tenant
+        assert comprovante.hash_carimbo
+        assert len(comprovante.hash_carimbo) == 64
+        assert comprovante.conteudo_json["nome"] == employee_a.nome
+        assert comprovante.conteudo_json["pis"] == employee_a.pis
+        assert comprovante.conteudo_json["nsr"] == record.nsr
+        assert comprovante.conteudo_json["tipo"] == record.tipo
+        assert "data" in comprovante.conteudo_json
+        assert "hora" in comprovante.conteudo_json
+
 
 @pytest.mark.django_db(transaction=True)
 def test_registrar_concorrente_gera_nsr_unico_e_sequencial(tenant_a):
@@ -258,6 +270,10 @@ class TestAttendanceRegisterEndpoint:
         assert response.data["tipo"] == AttendanceRecord.Tipo.ENTRADA
         assert response.data["nsr"] == 1
 
+        record = AttendanceRecord.all_objects.get(id=response.data["id"])
+        comprovante = Comprovante.all_objects.get(registro=record)
+        assert comprovante.conteudo_json["nsr"] == record.nsr
+
     def test_bloqueia_token_nao_device(self, tenant_a, user_a, employee_a):
         client = APIClient()
         client.force_authenticate(user=user_a)
@@ -289,6 +305,74 @@ class TestAttendanceRegisterEndpoint:
             format="multipart",
             HTTP_AUTHORIZATION=f"Bearer {token}",
             HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestAttendanceComprovanteEndpoint:
+    def test_retorna_comprovante_do_registro(self, tenant_a, user_a, employee_a, monkeypatch):
+        def fake_verify(self, employee, imagem_bytes):
+            return {"autenticado": True, "distancia": 0.2, "threshold": 0.68}
+
+        monkeypatch.setattr(
+            "apps.attendance.services.BiometriaService.verificar",
+            fake_verify,
+        )
+
+        record = AttendanceService().registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            imagem_bytes=b"img-comprovante",
+        )
+
+        token = _device_access_token_for(user_a, tenant_a.id, device_id="tablet-a")
+        client = APIClient()
+        response = client.get(
+            f"/api/attendance/{record.id}/comprovante/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 200
+        assert response.data["registro_id"] == record.id
+        assert response.data["tenant_id"] == str(tenant_a.id)
+        assert response.data["conteudo_json"]["nome"] == employee_a.nome
+        assert response.data["conteudo_json"]["pis"] == employee_a.pis
+        assert response.data["conteudo_json"]["nsr"] == record.nsr
+        assert response.data["conteudo_json"]["tipo"] == record.tipo
+        assert response.data["timestamp_carimbo"] is not None
+        assert len(response.data["hash_carimbo"]) == 64
+
+    def test_bloqueia_acesso_de_outro_tenant(self, tenant_a, tenant_b, user_a, employee_a, monkeypatch):
+        user_b = User.objects.create_user(
+            email="attendance@tenant-b.com",
+            password="12345678",
+            tenant=tenant_b,
+            role=User.Role.ADMIN,
+        )
+
+        def fake_verify(self, employee, imagem_bytes):
+            return {"autenticado": True, "distancia": 0.2, "threshold": 0.68}
+
+        monkeypatch.setattr(
+            "apps.attendance.services.BiometriaService.verificar",
+            fake_verify,
+        )
+
+        record = AttendanceService().registrar(
+            employee=employee_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            imagem_bytes=b"img-comprovante-tenant",
+        )
+
+        token_b = _device_access_token_for(user_b, tenant_b.id, device_id="tablet-b")
+        client = APIClient()
+        response = client.get(
+            f"/api/attendance/{record.id}/comprovante/",
+            HTTP_AUTHORIZATION=f"Bearer {token_b}",
+            HTTP_HOST=f"{tenant_b.cnpj}.ponto.local",
         )
 
         assert response.status_code == 404

@@ -8,7 +8,10 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsDeviceToken
 from apps.employees.models import Employee
+from apps.legal_files.serializers import ComprovanteSerializer
+from apps.legal_files.services import ComprovanteService
 
+from .models import AttendanceRecord
 from .serializers import AttendanceRecordSerializer, AttendanceRegisterSerializer
 from .services import AttendanceService
 
@@ -42,3 +45,17 @@ class AttendanceRegisterView(APIView):
             raise ValidationError(exc.messages) from exc
 
         return Response(AttendanceRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+
+
+class AttendanceComprovanteView(APIView):
+    """Retorna comprovante de um registro de ponto."""
+
+    permission_classes = [IsAuthenticated, IsDeviceToken]
+
+    def get(self, request, record_id):
+        record = get_object_or_404(AttendanceRecord.objects, id=record_id)
+        comprovante = getattr(record, "comprovante", None)
+        if comprovante is None:
+            comprovante = ComprovanteService().gerar(record)
+
+        return Response(ComprovanteSerializer(comprovante).data, status=status.HTTP_200_OK)

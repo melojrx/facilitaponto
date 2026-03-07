@@ -1,17 +1,20 @@
 import hashlib
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils import timezone
 
 from apps.biometrics.services import BiometriaService
 from apps.employees.services import get_next_nsr
+from apps.legal_files.services import ComprovanteService
 
 from .models import AttendanceRecord
 
 
 class AttendanceService:
-    def __init__(self, biometria_service=None):
+    def __init__(self, biometria_service=None, comprovante_service=None):
         self.biometria_service = biometria_service or BiometriaService()
+        self.comprovante_service = comprovante_service or ComprovanteService()
 
     def registrar(
         self,
@@ -36,22 +39,25 @@ class AttendanceService:
         timestamp = timestamp or timezone.now()
         foto_hash = hashlib.sha256(imagem_bytes).hexdigest()
         foto_path = self._build_foto_path(employee.tenant_id, timestamp, foto_hash)
-        nsr = get_next_nsr(employee.tenant_id)
+        with transaction.atomic():
+            nsr = get_next_nsr(employee.tenant_id)
 
-        return AttendanceRecord.all_objects.create(
-            tenant=employee.tenant,
-            employee=employee,
-            tipo=tipo,
-            timestamp=timestamp,
-            nsr=nsr,
-            latitude=latitude,
-            longitude=longitude,
-            foto_path=foto_path,
-            foto_hash=foto_hash,
-            confianca_biometrica=self._distance_to_confidence(biometria.get("distancia")),
-            origem=origem,
-            sincronizado_em=timezone.now() if origem == AttendanceRecord.Origem.OFFLINE else None,
-        )
+            record = AttendanceRecord.all_objects.create(
+                tenant=employee.tenant,
+                employee=employee,
+                tipo=tipo,
+                timestamp=timestamp,
+                nsr=nsr,
+                latitude=latitude,
+                longitude=longitude,
+                foto_path=foto_path,
+                foto_hash=foto_hash,
+                confianca_biometrica=self._distance_to_confidence(biometria.get("distancia")),
+                origem=origem,
+                sincronizado_em=timezone.now() if origem == AttendanceRecord.Origem.OFFLINE else None,
+            )
+            self.comprovante_service.gerar(record)
+            return record
 
     @staticmethod
     def _validate_tipo(tipo):

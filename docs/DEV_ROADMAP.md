@@ -193,12 +193,12 @@ Tarefas:
 **Estimativa:** 4h
 
 Tarefas:
-- [ ] Model `Comprovante`: `registro FK`, `conteudo_json`, `timestamp_carimbo`, `hash_carimbo`
-- [ ] `ComprovanteService.gerar(registro) -> dict`:
+- [x] Model `Comprovante`: `registro FK`, `conteudo_json`, `timestamp_carimbo`, `hash_carimbo`
+- [x] `ComprovanteService.gerar(registro) -> dict`:
   - Monta JSON com dados mínimos da Portaria 671
   - Aplica carimbo de tempo (integração com servidor TSA ou freetsa.org para MVP)
   - Salva e retorna
-- [ ] Endpoint `GET /api/attendance/{id}/comprovante/` — retorna comprovante em JSON/PDF
+- [x] Endpoint `GET /api/attendance/{id}/comprovante/` — retorna comprovante em JSON/PDF
 
 **Critério de aceite:** Comprovante gerado imediatamente após registro com todos os campos obrigatórios.
 
