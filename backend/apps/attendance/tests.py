@@ -1,7 +1,9 @@
+import base64
 import io
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from botocore.exceptions import ClientError
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import close_old_connections
@@ -13,6 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts.models import User
 from apps.attendance.models import AttendanceRecord
 from apps.attendance.services import AttendanceService
+from apps.attendance.storage import AttendancePhotoStorageService
 from apps.employees.models import Employee
 from apps.legal_files.models import Comprovante
 from apps.tenants.models import Tenant
@@ -46,6 +49,64 @@ def _build_test_image_file(name="face.jpg"):
     Image.new("RGB", (16, 16), color="white").save(buffer, format="JPEG")
     buffer.seek(0)
     return SimpleUploadedFile(name, buffer.read(), content_type="image/jpeg")
+
+
+@pytest.fixture(autouse=True)
+def _mock_storage_upload(monkeypatch, request):
+    if "TestAttendancePhotoStorageService" in request.node.nodeid:
+        return
+
+    def fake_upload(self, tenant_id, timestamp, foto_hash, imagem_bytes, content_type="image/jpeg"):
+        day = timestamp.strftime("%Y/%m/%d")
+        return f"s3://ponto-digital/attendance/{tenant_id}/{day}/{foto_hash}.jpg"
+
+    monkeypatch.setattr(
+        "apps.attendance.storage.AttendancePhotoStorageService.upload_attendance_photo",
+        fake_upload,
+    )
+
+
+@pytest.mark.django_db
+class TestAttendancePhotoStorageService:
+    class FakeS3Client:
+        def __init__(self):
+            self.head_bucket_calls = []
+            self.create_bucket_calls = []
+            self.put_object_calls = []
+            self.raise_no_bucket_once = True
+
+        def head_bucket(self, Bucket):
+            self.head_bucket_calls.append(Bucket)
+            if self.raise_no_bucket_once:
+                self.raise_no_bucket_once = False
+                error_response = {"Error": {"Code": "404"}}
+                raise ClientError(error_response, "HeadBucket")
+
+        def create_bucket(self, Bucket):
+            self.create_bucket_calls.append(Bucket)
+
+        def put_object(self, **kwargs):
+            self.put_object_calls.append(kwargs)
+
+    def test_upload_attendance_photo_cria_bucket_quando_ausente(self, settings):
+        settings.AWS_STORAGE_BUCKET_NAME = "bucket-teste"
+        fake_client = self.FakeS3Client()
+        service = AttendancePhotoStorageService(client=fake_client)
+        timestamp = timezone.now()
+
+        result = service.upload_attendance_photo(
+            tenant_id="tenant-1",
+            timestamp=timestamp,
+            foto_hash="abc123",
+            imagem_bytes=b"img",
+        )
+
+        expected_key = f"attendance/tenant-1/{timestamp.strftime('%Y/%m/%d')}/abc123.jpg"
+        assert result == f"s3://bucket-teste/{expected_key}"
+        assert fake_client.create_bucket_calls == ["bucket-teste"]
+        assert fake_client.put_object_calls[0]["Bucket"] == "bucket-teste"
+        assert fake_client.put_object_calls[0]["Key"] == expected_key
+        assert fake_client.put_object_calls[0]["Body"] == b"img"
 
 
 @pytest.fixture
@@ -178,13 +239,14 @@ class TestAttendanceService:
             biometria_service=FakeBiometriaService(autenticado=True, distancia=0.3)
         )
 
-        record = service.registrar(
+        record, created = service.registrar(
             employee=employee_a,
             tipo=AttendanceRecord.Tipo.ENTRADA,
             imagem_bytes=b"imagem-teste",
             origem=AttendanceRecord.Origem.ONLINE,
         )
 
+        assert created is True
         assert record.nsr == 1
         assert record.foto_hash
         assert len(record.foto_hash) == 64
@@ -223,7 +285,7 @@ def test_registrar_concorrente_gera_nsr_unico_e_sequencial(tenant_a):
 
     def call_service(employee):
         close_old_connections()
-        record = service.registrar(
+        record, _ = service.registrar(
             employee=employee,
             tipo=AttendanceRecord.Tipo.ENTRADA,
             imagem_bytes=f"img-{employee.id}".encode(),
@@ -321,7 +383,7 @@ class TestAttendanceComprovanteEndpoint:
             fake_verify,
         )
 
-        record = AttendanceService().registrar(
+        record, _ = AttendanceService().registrar(
             employee=employee_a,
             tipo=AttendanceRecord.Tipo.ENTRADA,
             imagem_bytes=b"img-comprovante",
@@ -361,7 +423,7 @@ class TestAttendanceComprovanteEndpoint:
             fake_verify,
         )
 
-        record = AttendanceService().registrar(
+        record, _ = AttendanceService().registrar(
             employee=employee_a,
             tipo=AttendanceRecord.Tipo.ENTRADA,
             imagem_bytes=b"img-comprovante-tenant",
@@ -376,3 +438,118 @@ class TestAttendanceComprovanteEndpoint:
         )
 
         assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestAttendanceSyncEndpoint:
+    endpoint = "/api/attendance/sync/"
+
+    def test_sync_offline_com_idempotencia_e_nsr_no_servidor(
+        self,
+        tenant_a,
+        user_a,
+        employee_a,
+        monkeypatch,
+    ):
+        def fake_verify(self, employee, imagem_bytes):
+            return {"autenticado": True, "distancia": 0.2, "threshold": 0.68}
+
+        monkeypatch.setattr(
+            "apps.attendance.services.BiometriaService.verificar",
+            fake_verify,
+        )
+
+        token = _device_access_token_for(user_a, tenant_a.id, device_id="tablet-a")
+        client = APIClient()
+        payload = {
+            "registros": [
+                {
+                    "employee_id": employee_a.id,
+                    "tipo": AttendanceRecord.Tipo.ENTRADA,
+                    "timestamp": "2026-03-07T08:00:00-03:00",
+                    "client_event_id": "evt-1",
+                    "imagem_base64": base64.b64encode(b"img-evt-1").decode("ascii"),
+                },
+                {
+                    "employee_id": employee_a.id,
+                    "tipo": AttendanceRecord.Tipo.SAIDA,
+                    "timestamp": "2026-03-07T12:00:00-03:00",
+                    "client_event_id": "evt-2",
+                    "imagem_base64": base64.b64encode(b"img-evt-2").decode("ascii"),
+                },
+            ]
+        }
+
+        response = client.post(
+            self.endpoint,
+            data=payload,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 200
+        assert len(response.data["results"]) == 2
+        assert response.data["results"][0]["created"] is True
+        assert response.data["results"][1]["created"] is True
+        assert response.data["results"][0]["record"]["nsr"] == 1
+        assert response.data["results"][1]["record"]["nsr"] == 2
+        assert response.data["results"][0]["record"]["origem"] == AttendanceRecord.Origem.OFFLINE
+        assert response.data["results"][0]["record"]["sincronizado_em"] is not None
+
+        assert AttendanceRecord.all_objects.filter(tenant=tenant_a).count() == 2
+        assert Comprovante.all_objects.filter(tenant=tenant_a).count() == 2
+
+        retry_response = client.post(
+            self.endpoint,
+            data=payload,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert retry_response.status_code == 200
+        assert retry_response.data["results"][0]["created"] is False
+        assert retry_response.data["results"][1]["created"] is False
+        assert AttendanceRecord.all_objects.filter(tenant=tenant_a).count() == 2
+
+    def test_sync_rejeita_lote_fora_de_ordem(self, tenant_a, user_a, employee_a, monkeypatch):
+        def fake_verify(self, employee, imagem_bytes):
+            return {"autenticado": True, "distancia": 0.2, "threshold": 0.68}
+
+        monkeypatch.setattr(
+            "apps.attendance.services.BiometriaService.verificar",
+            fake_verify,
+        )
+
+        token = _device_access_token_for(user_a, tenant_a.id, device_id="tablet-a")
+        client = APIClient()
+        payload = {
+            "registros": [
+                {
+                    "employee_id": employee_a.id,
+                    "tipo": AttendanceRecord.Tipo.ENTRADA,
+                    "timestamp": "2026-03-07T09:00:00-03:00",
+                    "client_event_id": "evt-out-1",
+                    "imagem_base64": base64.b64encode(b"img-out-1").decode("ascii"),
+                },
+                {
+                    "employee_id": employee_a.id,
+                    "tipo": AttendanceRecord.Tipo.SAIDA,
+                    "timestamp": "2026-03-07T08:00:00-03:00",
+                    "client_event_id": "evt-out-2",
+                    "imagem_base64": base64.b64encode(b"img-out-2").decode("ascii"),
+                },
+            ]
+        }
+
+        response = client.post(
+            self.endpoint,
+            data=payload,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 400
+        assert "ordem crescente de timestamp" in str(response.data)

@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 
 from core.mixins import TenantModelMixin
 
@@ -29,6 +30,7 @@ class AttendanceRecord(TenantModelMixin, models.Model):
     foto_path = models.CharField(max_length=500)
     foto_hash = models.CharField(max_length=64)
     confianca_biometrica = models.FloatField()
+    client_event_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
     origem = models.CharField(
         max_length=10,
         choices=Origem.choices,
@@ -51,7 +53,12 @@ class AttendanceRecord(TenantModelMixin, models.Model):
             models.UniqueConstraint(
                 fields=["tenant", "nsr"],
                 name="attendance_record_unique_nsr_per_tenant",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "client_event_id"],
+                condition=Q(client_event_id__isnull=False),
+                name="attendance_record_unique_client_event_id_per_tenant",
+            ),
         ]
         indexes = [
             models.Index(fields=["tenant", "employee", "timestamp"]),

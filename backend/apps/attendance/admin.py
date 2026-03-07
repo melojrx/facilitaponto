@@ -5,7 +5,7 @@ from .models import AttendanceRecord
 
 @admin.register(AttendanceRecord)
 class AttendanceRecordAdmin(admin.ModelAdmin):
-    list_display = ("employee", "tenant", "tipo", "timestamp", "nsr", "origem")
+    list_display = ("employee", "tenant", "tipo", "timestamp", "nsr", "origem", "client_event_id")
     list_filter = ("tenant", "tipo", "origem")
     search_fields = ("employee__nome", "employee__cpf", "employee__pis", "foto_hash")
     readonly_fields = (
@@ -19,6 +19,7 @@ class AttendanceRecordAdmin(admin.ModelAdmin):
         "foto_path",
         "foto_hash",
         "confianca_biometrica",
+        "client_event_id",
         "origem",
         "sincronizado_em",
         "justificativa",

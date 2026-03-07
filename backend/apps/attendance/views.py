@@ -12,7 +12,12 @@ from apps.legal_files.serializers import ComprovanteSerializer
 from apps.legal_files.services import ComprovanteService
 
 from .models import AttendanceRecord
-from .serializers import AttendanceRecordSerializer, AttendanceRegisterSerializer
+from .serializers import (
+    AttendanceRecordSerializer,
+    AttendanceRegisterSerializer,
+    AttendanceSyncResultSerializer,
+    AttendanceSyncSerializer,
+)
 from .services import AttendanceService
 
 
@@ -32,7 +37,7 @@ class AttendanceRegisterView(APIView):
         imagem_bytes = serializer.validated_data["imagem"].read()
 
         try:
-            record = AttendanceService().registrar(
+            record, _ = AttendanceService().registrar(
                 employee=employee,
                 tipo=serializer.validated_data["tipo"],
                 imagem_bytes=imagem_bytes,
@@ -45,6 +50,27 @@ class AttendanceRegisterView(APIView):
             raise ValidationError(exc.messages) from exc
 
         return Response(AttendanceRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+
+
+class AttendanceSyncView(APIView):
+    """Sincroniza lote de registros offline com idempotência por client_event_id."""
+
+    permission_classes = [IsAuthenticated, IsDeviceToken]
+
+    def post(self, request):
+        serializer = AttendanceSyncSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            results = AttendanceService().sincronizar_lote(
+                tenant=request.tenant,
+                registros=serializer.validated_data["registros"],
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+
+        payload = AttendanceSyncResultSerializer(results, many=True).data
+        return Response({"results": payload}, status=status.HTTP_200_OK)
 
 
 class AttendanceComprovanteView(APIView):

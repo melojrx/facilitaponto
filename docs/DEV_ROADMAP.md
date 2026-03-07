@@ -181,7 +181,7 @@ Tarefas:
   - Cria registro imutável
   - Retorna comprovante
 - [x] Endpoint `POST /api/attendance/register/` — chamado pelo app (online)
-- [ ] Endpoint `POST /api/attendance/sync/` — recebe lote de registros offline para sincronização
+- [x] Endpoint `POST /api/attendance/sync/` — recebe lote de registros offline para sincronização
 - [x] Validação de ordem de batidas (não pode ter 2 entradas seguidas, etc.)
 
 **Critério de aceite:** Registro criado nunca pode ser editado via API ou admin. NSR é gerado no servidor.
