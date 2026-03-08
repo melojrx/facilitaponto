@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Ponto Digital{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1e2a3a;
+      --muted: #67758a;
+      --line: #d8e0ea;
+      --brand: #2f76c6;
+      --brand-contrast: #ffffff;
+      --danger: #ba3e3e;
+      --ok: #227a4d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .container {
+      width: min(960px, 92vw);
+      margin: 0 auto;
+    }
+    .topbar {
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+      margin-bottom: 28px;
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn,
+    button.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--text);
+      text-decoration: none;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .btn-primary,
+    button.btn-primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: var(--brand-contrast);
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .muted { color: var(--muted); }
+    .messages {
+      margin: 0 0 16px;
+      padding: 0;
+      list-style: none;
+    }
+    .messages li {
+      background: #eef4fc;
+      border: 1px solid #c7d9f2;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      color: #20486f;
+    }
+    .messages li.error {
+      background: #fdeeee;
+      border-color: #f2c9c9;
+      color: var(--danger);
+    }
+    .messages li.success {
+      background: #ecf9f1;
+      border-color: #bde8cd;
+      color: var(--ok);
+    }
+    form .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    label {
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.95rem;
+    }
+    .errorlist {
+      margin: 4px 0 0;
+      padding: 0;
+      list-style: none;
+      color: var(--danger);
+      font-size: 0.9rem;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="{% url 'web:landing' %}">ponto digital</a>
+      <nav class="nav">
+        {% if user.is_authenticated %}
+          <a class="btn" href="{% url 'web:painel' %}">Painel</a>
+          <form method="post" action="{% url 'web:logout' %}" style="margin:0;">
+            {% csrf_token %}
+            <button class="btn" type="submit">Sair</button>
+          </form>
+        {% else %}
+          <a class="btn" href="{% url 'web:login' %}">Entrar</a>
+          <a class="btn btn-primary" href="{% url 'web:signup' %}">Criar conta</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

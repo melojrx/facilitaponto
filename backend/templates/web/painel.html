@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Painel | Ponto Digital{% endblock %}
+
+{% block content %}
+  <section class="card">
+    <h1 style="margin-top: 0;">Painel</h1>
+    <p class="muted">Área autenticada inicial do produto.</p>
+  </section>
+
+  {% if not has_company %}
+    <section class="card">
+      <h2 style="margin-top: 0;">Crie sua primeira empresa</h2>
+      <p class="muted">
+        Você já tem acesso ao painel. O próximo passo é cadastrar a empresa para liberar os módulos seguintes.
+      </p>
+      <div class="actions">
+        <button class="btn btn-primary" type="button" disabled>
+          Criar empresa (em breve)
+        </button>
+      </div>
+    </section>
+  {% else %}
+    <section class="card">
+      <h2 style="margin-top: 0;">Empresa vinculada</h2>
+      <p class="muted">Conta pronta para seguir com as próximas etapas do onboarding.</p>
+    </section>
+  {% endif %}
+{% endblock %}

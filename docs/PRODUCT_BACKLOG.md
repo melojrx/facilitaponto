@@ -1,14 +1,15 @@
 # Product Backlog — Sistema de Ponto Eletrônico
-**Versão:** 1.1  
-**Data:** 2026-03-07  
+**Versão:** 1.2  
+**Data:** 2026-03-08  
 
 ---
 
-## Status de Execução (2026-03-07)
+## Status de Execução (2026-03-08)
 
 - ✅ Entregue no backend: PB-001 a PB-005, PB-010 a PB-014, PB-030 a PB-034.
 - 🟡 Parcial: PB-035 com carimbo MVP (`timestamp_carimbo` + `hash_carimbo`); integração TSA RFC 3161 externa permanece como evolução.
-- 🚧 Próximo bloco crítico: PB-020 a PB-028 (app mobile), com prioridade em autenticação do dispositivo, sync de funcionários/embeddings e fluxo offline.
+- 🆕 Regra de negócio formalizada: conta proprietária com vínculo **1:1** com empresa (CNPJ/CPF) e isolamento total por tenant.
+- 🚧 Próximo bloco crítico: PB-006 (onboarding conta+empresa 1:1) e PB-020 a PB-028 (app mobile).
 
 ---
 
@@ -24,6 +25,7 @@
 | PB-003 | Como sistema, preciso de variáveis de ambiente e settings separados por ambiente (dev/prod) | CRÍTICO |
 | PB-004 | Como sistema, preciso de migrations iniciais com todas as tabelas core | CRÍTICO |
 | PB-005 | Como sistema, preciso de autenticação JWT para o app mobile com device_id | CRÍTICO |
+| PB-006 | Como dono da conta, quero cadastrar meu usuário (nome, sobrenome, e-mail/login único global, CPF único global e telefone) e vincular exatamente uma empresa (CNPJ ou CPF), para que funcionários, turnos, relatórios e batidas fiquem isolados no tenant da minha conta | CRÍTICO |
 
 ### Épico 1.2 — Cadastro de Empresa e Funcionários
 

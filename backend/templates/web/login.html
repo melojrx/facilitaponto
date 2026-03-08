@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Login | Ponto Digital{% endblock %}
+
+{% block content %}
+  <section class="card" style="max-width: 560px;">
+    <h1 style="margin-top: 0;">Entrar</h1>
+    <p class="muted">Acesse com sua conta para continuar no painel.</p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+
+      {% if form.non_field_errors %}
+        {{ form.non_field_errors }}
+      {% endif %}
+
+      <div class="field">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {{ form.email.errors }}
+      </div>
+
+      <div class="field">
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        {{ form.password.errors }}
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Entrar</button>
+        <a class="btn" href="{% url 'web:signup' %}">Criar conta</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

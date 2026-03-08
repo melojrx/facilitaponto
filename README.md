@@ -222,6 +222,14 @@ make smoke-dev001  # Validação técnica DEV-001
 | [`docs/PRD.md`](docs/PRD.md) | Product Requirements Document |
 | [`docs/PRODUCT_BACKLOG.md`](docs/PRODUCT_BACKLOG.md) | Backlog priorizado |
 | [`docs/DEV_ROADMAP.md`](docs/DEV_ROADMAP.md) | Roadmap de desenvolvimento |
+| [`docs/DEV_008_ONBOARDING_MODELAGEM.md`](docs/DEV_008_ONBOARDING_MODELAGEM.md) | Especificação funcional e técnica do onboarding DEV-008 |
+| [`docs/DEV_008_TELA_NOVA_JORNADA.md`](docs/DEV_008_TELA_NOVA_JORNADA.md) | Especificação 1:1 da tela Nova Jornada de Trabalho (cards, estados, validações e mensagens) |
+| [`docs/DEV_008_AREA_COLABORADORES.md`](docs/DEV_008_AREA_COLABORADORES.md) | Especificação da área Colaboradores (listagem + novo colaborador + semântica de negócio) |
+| [`docs/DEV_008_AREA_RELOGIOS_PONTO.md`](docs/DEV_008_AREA_RELOGIOS_PONTO.md) | Especificação da área Relógios de Ponto (listagem, criação e estado pós-criação) |
+| [`docs/DEV_008_TRATAMENTO_PONTO.md`](docs/DEV_008_TRATAMENTO_PONTO.md) | Especificação da área Tratamento de Ponto e Espelho (filtros, indicadores, ocorrências, ajustes e contrato API) |
+| [`docs/DEV_008_AREA_RELATORIOS.md`](docs/DEV_008_AREA_RELATORIOS.md) | Especificação da área Relatórios (índice, filtros por período/colaborador e geração/download de PDF) |
+| [`docs/DEV_008_AREA_SOLICITACOES.md`](docs/DEV_008_AREA_SOLICITACOES.md) | Especificação da área Solicitações (cards de pendência, listas por tipo e decisão) |
+| [`docs/DEV_008_CHECKLIST.md`](docs/DEV_008_CHECKLIST.md) | Checklist de execução e validação do DEV-008 |
 | [`docs/LAYOUT_AFD.md`](docs/LAYOUT_AFD.md) | Layout do Arquivo de Fonte de Dados |
 | [`docs/LAYOUT_AEJ.md`](docs/LAYOUT_AEJ.md) | Layout do Arquivo Eletrônico de Jornada |
 

@@ -1,6 +1,6 @@
 # Roadmap de Desenvolvimento — Sistema de Ponto Eletrônico
-**Versão:** 1.2  
-**Data:** 2026-03-07  
+**Versão:** 2.1  
+**Data:** 2026-03-08  
 **Prazo MVP:** 8 semanas  
 **Stack:** Django 5 + DRF + React Native (Expo) + PostgreSQL + Redis + Celery  
 
@@ -16,10 +16,11 @@ Este projeto é um **SaaS multitenant de ponto eletrônico com reconhecimento fa
 
 O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seguindo os padrões definidos neste documento.
 
-### Snapshot de execução (2026-03-07)
+### Snapshot de execução (2026-03-08)
 - Backend concluído até **DEV-007** (biometria, registro de ponto, sync offline backend, comprovante eletrônico).
 - Upload de foto de batida já em **storage S3/MinIO** com `foto_hash` para auditoria.
-- Próxima frente principal: **DEV-010 a DEV-013** (app mobile completo com modo offline).
+- Ajuste prioritário aprovado: **DEV-008** para onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`.
+- Próxima frente após DEV-008: **DEV-010 a DEV-013** (app mobile completo com modo offline).
 
 ---
 
@@ -208,6 +209,179 @@ Tarefas:
 **Critério de aceite:** Comprovante gerado imediatamente após registro com todos os campos obrigatórios.
 
 ---
+
+## AJUSTE PRIORITÁRIO — ONBOARDING DE CONTA (ANTES DO MOBILE)
+
+### DEV-008 — Conta Proprietária + Empresa Única (CNPJ/CPF) + Tenant Isolado
+**Referência:** PB-006, PB-100  
+**Estimativa:** 16h
+
+**Cronograma sugerido (2 dias úteis):**
+- **Dia 1 (Backend + Modelagem):** novas entidades/constraints, migrations e serviços transacionais de onboarding.
+- **Dia 2 (Frontend Web + Integração + Testes):** telas de cadastro/login/logout/painel inicial e testes ponta a ponta do fluxo.
+
+**Detalhamento funcional e modelagem:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`
+**Especificação 1:1 da tela de jornada:** `docs/DEV_008_TELA_NOVA_JORNADA.md`
+**Especificação da área de colaboradores:** `docs/DEV_008_AREA_COLABORADORES.md`
+**Especificação da área de relógios de ponto:** `docs/DEV_008_AREA_RELOGIOS_PONTO.md`
+**Especificação da área de tratamento/espelho de ponto:** `docs/DEV_008_TRATAMENTO_PONTO.md`
+**Especificação da área de relatórios:** `docs/DEV_008_AREA_RELATORIOS.md`
+**Especificação da área de solicitações:** `docs/DEV_008_AREA_SOLICITACOES.md`
+
+Objetivo:
+- Garantir a regra de negócio do produto: **1 usuário dono da conta** possui **exatamente 1 empresa (CNPJ ou CPF)**; essa empresa define **1 tenant** e todo o domínio operacional (`funcionários`, `turnos`, `ponto`, `relatórios`) permanece isolado nesse tenant.
+
+Tarefas — Modelagem:
+- [ ] Evoluir model de conta proprietária (`accounts.User`) com campos de cadastro: `first_name`, `last_name`, `email` (login), `cpf`, `phone`, `is_account_owner`.
+- [ ] Definir regras de unicidade global da conta proprietária:
+  - `email` único em toda a aplicação (login)
+  - `cpf` único em toda a aplicação para usuário dono da conta
+  - `cpf` obrigatório no onboarding do dono da conta.
+- [ ] Evoluir model de empresa (`tenants.Tenant`) para suportar **PJ/PF**:
+  - `tipo_pessoa` (`PJ`/`PF`)
+  - `documento` único (normalizado, sem máscara)
+  - manter compatibilidade com campos atuais de empresa.
+- [ ] Adicionar constraints de negócio:
+  - `1 owner -> 1 tenant` (FK única por owner)
+  - `1 tenant -> 1 owner` (unique condicional para usuário owner)
+  - documento (`CNPJ`/`CPF`) único no cadastro de empresa.
+- [ ] Modelar dados complementares da empresa alinhados às telas:
+  - contato (`email`, `telefone`)
+  - endereço (`cep`, `logradouro`, `numero`, `complemento`, `bairro`, `cidade`, `estado`)
+  - responsável legal (`nome`, `cpf`, `cargo`)
+  - opcionais (`logo_url`, `website`, `cno_caepf`, `inscricao_estadual`, `inscricao_municipal`).
+- [ ] Modelar estado mínimo de onboarding por tenant para controlar stepper e liberação de menu:
+  - `onboarding_step`
+  - `onboarding_completed_at`.
+
+Tarefas — Backend:
+- [ ] Criar serviço transacional `AccountOnboardingService` para criar `User owner + Tenant + vínculo` em uma única operação atômica.
+- [ ] Criar endpoints públicos do fluxo web:
+  - `POST /api/public/signup/` (cadastro conta + empresa PJ/PF)
+  - `POST /api/public/login/`
+  - `POST /api/public/logout/`
+- [ ] Criar endpoint de consulta automática de CNPJ para o botão **Buscar CNPJ** (com validação de formato, timeout e tratamento de indisponibilidade do provedor externo), com decisão de integração:
+  - provider primário: **CNPJá Open**
+  - fallback: preenchimento manual no formulário
+  - evolução planejada (Fase 2): provider oficial **Serpro** opcional.
+- [ ] Criar endpoint de consulta automática de endereço por CEP via **API ViaCEP** (normalização de CEP, validação de retorno e fallback para preenchimento manual).
+- [ ] Impedir criação de segunda empresa para a mesma conta proprietária (retornar 409/400 com mensagem clara).
+- [ ] Garantir tenant context para todas as operações subsequentes da conta criada.
+- [ ] Ajustar serializers/validators para CPF/CNPJ, telefone e campos obrigatórios por tipo de pessoa.
+- [ ] Validar conflito de unicidade de `email` e `cpf` no signup com erro semântico (HTTP 409 ou 400 padronizado).
+
+Tarefas — Frontend Web (Django Templates):
+- [ ] Landing page pública com CTA para cadastro/login.
+- [ ] Tela de cadastro de conta com os campos:
+  - `nome`
+  - `sobrenome`
+  - `e-mail` (login)
+  - `cpf` (obrigatório)
+  - `telefone`
+  - `senha`
+  - `confirmar senha`.
+- [ ] Wizard de cadastro da empresa (PJ/PF) com os blocos:
+  - dados da empresa/empregador
+  - endereço
+  - representante
+  - dados adicionais.
+- [ ] Implementar ação **Buscar CNPJ** no formulário da empresa para autopreenchimento dos campos compatíveis (ex.: razão social e nome fantasia), mantendo edição manual disponível.
+- [ ] Implementar busca automática de endereço por CEP no formulário (ViaCEP), preenchendo logradouro/bairro/cidade/estado, com possibilidade de ajuste manual.
+- [ ] Tela de login e ação de logout.
+- [ ] Página inicial do painel (`/painel`) após autenticação com resumo básico do tenant.
+- [ ] Implementar layout base do painel no padrão definido para onboarding:
+  - sidebar fixa à esquerda com estados ativo/inativo/bloqueado
+  - topbar com seletor de empresa no centro e ações no canto direito
+  - cabeçalho de boas-vindas com stepper de progresso
+  - área de conteúdo limpa para cards/listagens.
+- [ ] Implementar banner/CTA de onboarding para **Criar primeira empresa** quando tenant ainda não existir.
+- [ ] Após cadastro da empresa, exibir card de pendências no `/painel` com etapa **Criar horário da equipe**.
+- [ ] Exibir modal contextual com CTA **Criar jornada** e navegar para formulário de `Nova Jornada de Trabalho`.
+- [ ] Implementar tela `Nova Jornada de Trabalho` conforme especificação 1:1:
+  - estrutura visual do layout aprovado
+  - estados de cards e botões
+  - estado expandido por tipo (`Semanal`, `12x36`, `Fracionada`, `Externa`) conforme referência visual
+  - validações de formulário
+  - semântica negocial por tipo de jornada (efeito no cálculo/validação de ponto)
+  - catálogo de mensagens de erro/sucesso.
+- [ ] Implementar liberação progressiva do menu lateral por estado de onboarding:
+  - sem empresa: somente `Início` e `Empresa` ativos
+  - com empresa e sem jornada: liberar `Jornadas de Trabalho`
+  - após primeira jornada: liberar demais módulos do menu.
+- [ ] Implementar módulo `Colaboradores` conforme especificação dedicada:
+  - listagem com filtros, abas de status e estado vazio
+  - estado pós-cadastro com linha em `Ativos`, badge de face pendente e paginação atualizada
+  - ação `Novo Colaborador`
+  - formulário em seções (`Dados Básicos`, `Informações de Trabalho`, `Jornada de Trabalho`, `Reconhecimento Facial`)
+  - estado de jornada no cadastro: template selecionado ativa card/tipo correspondente e expande bloco explicativo
+  - modal de captura facial com consentimento explícito antes de confirmar
+  - alternativa de envio de link de auto-cadastro facial por WhatsApp com modal de confirmação de envio
+  - ações rápidas na linha da listagem (reenviar link, editar, alterar status)
+  - regras de domínio de CPF/PIS, vínculo de jornada e fluxo de biometria.
+- [ ] Implementar módulo `Relógios de Ponto` conforme especificação dedicada:
+  - listagem inicial com banner, filtros e estado vazio
+  - formulário `Criar Relógio` com método de autenticação fixo (`Reconhecimento Facial`)
+  - validações de nome único por tenant e método fixo `FACIAL`
+  - card pós-criação com status, tipo REP e código de ativação
+  - suporte aos status operacionais do relógio: `Ativo`, `Inativo`, `Em Manutenção`
+  - ações `Gerenciar` e `Inativar Relógio`
+  - tela de detalhe (`/painel/relogios/{id}/`) com aba `Informações` padrão e card de `Cerca Virtual`
+  - aba `Colaboradores` com dupla listagem (`Disponíveis` x `No Relógio`) e ações em lote para mover/remover colaboradores.
+  - contrato API para `Editar Relógio` (`PATCH /api/relogios/{id}/`) com validações semânticas
+  - contrato API de ativação do relógio por código (`POST /api/relogios/ativar/`), com bloqueio para status `Inativo` e `Em Manutenção`
+  - contrato API de cerca virtual (`PUT|PATCH|DELETE /api/relogios/{id}/cerca-virtual/`) com regra geográfica de validação de batida
+  - contrato API da aba `Colaboradores` para mover/remover selecionados e mover/remover todos com contadores sincronizados no retorno
+  - pré-condições de batida no dispositivo: relógio ativo + colaborador atribuído + colaborador ativo + biometria facial válida
+- [ ] Implementar módulo `Tratamento de Ponto` conforme especificação dedicada:
+  - listagem mensal por colaborador com filtros (`período`, busca, inconsistências, pendências)
+  - ação `Ver Espelho` para abrir espelho individual por período
+  - tela `Espelho de Ponto` com cards de indicadores, legenda de status de marcações e tabela diária
+  - ação `Editar` por dia e `Ajuste Automático` com trilha auditável
+  - contrato API para listagem/resumo e ajustes por dia no período aberto
+- [ ] Implementar módulo `Relatórios` conforme especificação dedicada:
+  - tela índice com cards (`Espelho de Ponto`, `Cartão de Ponto`, `Detalhes dos Cálculos`)
+  - formulários com período, colaborador e geração/exportação de PDF
+  - `Detalhes dos Cálculos` com modos `Por Dia` e `Consolidado`
+  - contrato API de geração e download de relatórios
+- [ ] Implementar módulo `Solicitações` conforme especificação dedicada:
+  - tela índice com cards `Solicitações de Ajuste` e `Solicitações de Acesso`
+  - contadores de pendências e navegação `Acessar`
+  - telas internas de `Acessar` (ajustes e acessos) com filtros, tabela detalhada e ação `Visualizar`
+  - fluxo de decisão (aprovar/rejeitar) com trilha auditável
+  - contrato API de resumo, listagem, detalhe e decisão por tipo
+
+Tarefas — Qualidade, Segurança e Documentação:
+- [ ] Testes unitários de validação de CPF/CNPJ e regras 1:1 owner/tenant.
+- [ ] Testes de integração do fluxo completo: cadastro -> login -> painel -> logout.
+- [ ] Testes de autorização garantindo isolamento por tenant.
+- [ ] Testes de integração dos conectores externos:
+  - consulta de CNPJ com sucesso/erro/timeout
+  - consulta de CEP via ViaCEP com sucesso/CEP inválido/serviço indisponível.
+- [ ] Atualizar documentação de API e README com o novo fluxo de onboarding, incluindo:
+  - decisão de provider de CNPJ (CNPJá Open no MVP)
+  - fallback manual
+  - roadmap para Serpro opcional na Fase 2.
+
+**Entregáveis:**
+- Migrations versionadas de `accounts` e `tenants`.
+- Endpoints públicos de onboarding/login/logout.
+- Templates web de landing, cadastro, login e painel inicial.
+- Suíte de testes do fluxo de onboarding 1:1.
+- Documentação funcional e técnica atualizada.
+
+**Critério de aceite:**
+- Conta proprietária consegue se cadastrar com empresa **PJ ou PF** em fluxo único.
+- `email` (login) e `cpf` do dono da conta são únicos em toda a aplicação.
+- Botão **Buscar CNPJ** preenche automaticamente os dados disponíveis da empresa e permite edição manual antes de salvar.
+- Campo CEP realiza consulta automática no **ViaCEP** e preenche endereço com fallback manual em caso de erro.
+- Fluxo de CNPJ no MVP usa **CNPJá Open** como provider primário; indisponibilidade não bloqueia cadastro (fallback manual ativo).
+- Sistema bloqueia segunda empresa para a mesma conta proprietária.
+- Cada conta proprietária acessa somente dados do próprio tenant.
+- Após login, usuário entra no painel inicial; logout encerra sessão/token.
+- Funcionários, turnos, ponto e relatórios permanecem associados ao tenant da conta criada.
+- `/painel` renderiza o esqueleto visual de onboarding no padrão acordado (sidebar + topbar + boas-vindas + stepper + pendências).
+- Menu lateral respeita a liberação progressiva por tenant, sem vazamento de estado entre empresas.
+- Fluxo `Criar jornada` abre a tela de nova jornada a partir do modal de pendência pós-cadastro da empresa.
 
 ## SEMANAS 3–4 — App Mobile
 
@@ -447,8 +621,10 @@ Tarefas:
 
 ```
 DEV-001 → DEV-002 → DEV-003 → DEV-004 → DEV-005 → DEV-006 → DEV-007
-                                    ↓
-DEV-010 → DEV-011 → DEV-012 → DEV-013
+                      ↓
+                   DEV-008 → DEV-020
+
+DEV-003 → DEV-010 → DEV-011 → DEV-012 → DEV-013
                          ↑
                     DEV-005 (embeddings)
 
