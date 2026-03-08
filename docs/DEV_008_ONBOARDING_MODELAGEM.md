@@ -237,6 +237,27 @@ Observação: manter modelagem simples (sem motor de workflow); transições dis
 - `GET|POST /painel/empresa/nova/`
 - `GET|POST /painel/jornadas/nova/`
 
+### Status de implementação (P0 web/auth concluído em 2026-03-08)
+
+Implementado nesta etapa:
+- Landing pública em `GET /` com CTA de entrada e cadastro.
+- Autenticação web com sessões:
+  - `GET|POST /cadastro/`
+  - `GET|POST /login/`
+  - `POST /logout/`
+- Guarda de acesso em `GET /painel/` (redireciona para login quando não autenticado).
+- Cadastro de conta no fluxo web com campos atualmente persistidos:
+  - `first_name`
+  - `last_name`
+  - `email`
+  - `phone`
+  - `password`.
+
+Pendente para fechar escopo completo do DEV-008:
+- Onboarding completo da empresa (PJ/PF) com regra 1:1 owner/tenant.
+- Campos e validações de CPF do owner conforme premissas de negócio.
+- Etapas subsequentes do painel (empresa, jornada, liberações progressivas de menu).
+
 ---
 
 ## 8. Critérios de aceite específicos do onboarding visual

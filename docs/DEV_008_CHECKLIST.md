@@ -5,6 +5,16 @@
 
 **Documentos base:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/DEV_008_TELA_NOVA_JORNADA.md`, `docs/DEV_008_AREA_COLABORADORES.md`, `docs/DEV_008_AREA_RELOGIOS_PONTO.md`, `docs/DEV_008_TRATAMENTO_PONTO.md`, `docs/DEV_008_AREA_RELATORIOS.md`, `docs/DEV_008_AREA_SOLICITACOES.md`
 
+## Snapshot de execução (P0 Web/Auth — 2026-03-08)
+- [x] Landing pública (`/`) implementada com CTAs para `Entrar` e `Começar Agora`
+- [x] Login web (`/login/`) com UX atualizada no padrão visual da landing
+- [x] Cadastro web (`/cadastro/`) com UX atualizada e campos `nome`, `sobrenome`, `e-mail`, `telefone`, `senha` e `confirmar senha`
+- [x] Logout web (`POST /logout/`) com invalidação de sessão
+- [x] Guarda de acesso em `/painel/` para usuário não autenticado
+- [x] Testes de fluxo web inicial (signup/login/logout/guard) atualizados em `apps/accounts/test_web.py`
+- [ ] Cadastro completo com `CPF` do owner (premissa de negócio ainda pendente)
+- [ ] Onboarding da empresa (PJ/PF) e vínculo 1:1 owner/tenant
+
 ## 1) Premissas obrigatórias
 - [ ] Regra 1:1 preservada: `1 owner -> 1 empresa -> 1 tenant`
 - [ ] `email` do owner único global

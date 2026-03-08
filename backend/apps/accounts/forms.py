@@ -9,9 +9,24 @@ from .models import User
 
 
 class SignupForm(forms.Form):
+    first_name = forms.CharField(
+        label="Nome",
+        max_length=120,
+        widget=forms.TextInput(attrs={"placeholder": "João"}),
+    )
+    last_name = forms.CharField(
+        label="Sobrenome",
+        max_length=120,
+        widget=forms.TextInput(attrs={"placeholder": "Silva"}),
+    )
     email = forms.EmailField(
         label="E-mail",
         widget=forms.EmailInput(attrs={"placeholder": "voce@empresa.com"}),
+    )
+    phone = forms.CharField(
+        label="Telefone",
+        max_length=20,
+        widget=forms.TextInput(attrs={"placeholder": "(00) 00000-0000"}),
     )
     password1 = forms.CharField(
         label="Senha",
@@ -29,6 +44,25 @@ class SignupForm(forms.Form):
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("Já existe uma conta com este e-mail.")
         return email
+
+    def clean_first_name(self):
+        value = self.cleaned_data["first_name"].strip()
+        if len(value) < 2:
+            raise forms.ValidationError("Informe um nome válido.")
+        return value
+
+    def clean_last_name(self):
+        value = self.cleaned_data["last_name"].strip()
+        if len(value) < 2:
+            raise forms.ValidationError("Informe um sobrenome válido.")
+        return value
+
+    def clean_phone(self):
+        raw_value = self.cleaned_data["phone"]
+        digits = "".join(ch for ch in raw_value if ch.isdigit())
+        if len(digits) not in (10, 11):
+            raise forms.ValidationError("Informe um telefone válido com DDD.")
+        return digits
 
     def clean(self):
         cleaned_data = super().clean()
@@ -49,6 +83,9 @@ class SignupForm(forms.Form):
 
     def save(self):
         return User.objects.create_user(
+            first_name=self.cleaned_data["first_name"],
+            last_name=self.cleaned_data["last_name"],
+            phone=self.cleaned_data["phone"],
             email=self.cleaned_data["email"],
             password=self.cleaned_data["password1"],
             role=User.Role.ADMIN,

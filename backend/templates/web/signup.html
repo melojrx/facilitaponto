@@ -1,41 +1,392 @@
-{% extends "base.html" %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Criar conta | FacilitaPonto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --line: #dbe4ee;
+      --text: #252a3d;
+      --muted: #5f7390;
+      --brand: #2f74bd;
+      --field-bg: #ffffff;
+    }
 
-{% block title %}Cadastro | Ponto Digital{% endblock %}
+    * { box-sizing: border-box; }
 
-{% block content %}
-  <section class="card" style="max-width: 560px;">
-    <h1 style="margin-top: 0;">Criar conta</h1>
-    <p class="muted">Use e-mail e senha para iniciar o onboarding.</p>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+    }
 
-    <form method="post" novalidate>
-      {% csrf_token %}
+    .auth-shell {
+      width: 100%;
+      max-width: 620px;
+      text-align: center;
+    }
 
-      {% if form.non_field_errors %}
-        {{ form.non_field_errors }}
-      {% endif %}
+    .brand-logo {
+      width: min(100%, 340px);
+      height: auto;
+      margin: 0 auto;
+      display: block;
+    }
 
-      <div class="field">
-        {{ form.email.label_tag }}
-        {{ form.email }}
-        {{ form.email.errors }}
+    .brand-subtitle {
+      margin: 8px 0 24px;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .auth-card {
+      text-align: left;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: clamp(22px, 4.2vw, 34px);
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .auth-header {
+      margin-bottom: 18px;
+      text-align: center;
+    }
+
+    .auth-header h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 5vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .auth-header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 1.03rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      margin-top: 14px;
+    }
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .phone-icon {
+      width: 16px;
+      height: 16px;
+      color: #22c55e;
+      vertical-align: middle;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"],
+    input[type="tel"] {
+      width: 100%;
+      height: 58px;
+      padding: 0 14px;
+      border: 1px solid #c6d4e1;
+      border-radius: 10px;
+      background: var(--field-bg);
+      font-size: 1.02rem;
+      color: #111827;
+      outline: none;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    input:focus {
+      border-color: #7fa9d4;
+      box-shadow: 0 0 0 3px rgba(47, 116, 189, 0.18);
+    }
+
+    .password-wrap {
+      position: relative;
+    }
+
+    .password-wrap input {
+      padding-right: 52px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 0;
+      background: transparent;
+      color: #3f6083;
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .submit-btn {
+      margin-top: 22px;
+      width: 100%;
+      height: 58px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 1.14rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter .2s ease, transform .2s ease;
+    }
+
+    .submit-btn:hover {
+      filter: brightness(0.95);
+      transform: translateY(-1px);
+    }
+
+    .divider {
+      margin: 26px 0 0;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      padding-top: 18px;
+      color: #4f617e;
+      font-size: 1.02rem;
+    }
+
+    .divider a {
+      color: var(--brand);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .divider a:hover { text-decoration: underline; }
+
+    .errorlist,
+    .non-field-errors {
+      margin: 8px 0 0;
+      padding: 0;
+      list-style: none;
+      color: #c0392b;
+      font-size: .92rem;
+      font-weight: 500;
+    }
+
+    .global-errors {
+      margin: 0 0 10px;
+      padding: 12px 14px;
+      border: 1px solid #efc0ba;
+      border-radius: 10px;
+      background: #fff2f0;
+      color: #b1241d;
+      font-weight: 600;
+    }
+
+    @media (max-width: 640px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="auth-shell">
+    <img class="brand-logo" src="{% static 'img/logo-facilitaponto.png' %}" alt="FacilitaPonto Logo">
+    <p class="brand-subtitle">Sistema de Controle de Ponto Eletrônico</p>
+
+    <section class="auth-card">
+      <div class="auth-header">
+        <h1>Criar conta</h1>
+        <p>Preencha os dados abaixo para começar</p>
       </div>
 
-      <div class="field">
-        {{ form.password1.label_tag }}
-        {{ form.password1 }}
-        {{ form.password1.errors }}
-      </div>
+      <form method="post" novalidate>
+        {% csrf_token %}
 
-      <div class="field">
-        {{ form.password2.label_tag }}
-        {{ form.password2 }}
-        {{ form.password2.errors }}
-      </div>
+        {% if form.non_field_errors %}
+          <div class="global-errors">
+            {% for error in form.non_field_errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
 
-      <div class="actions">
-        <button class="btn btn-primary" type="submit">Criar e entrar</button>
-        <a class="btn" href="{% url 'web:login' %}">Já tenho conta</a>
-      </div>
-    </form>
-  </section>
-{% endblock %}
+        <div class="grid-2">
+          <div class="field">
+            <label for="id_first_name">Nome</label>
+            <input
+              id="id_first_name"
+              name="first_name"
+              type="text"
+              autocomplete="given-name"
+              value="{{ form.first_name.value|default:'' }}"
+              placeholder="João"
+              required
+            >
+            {{ form.first_name.errors }}
+          </div>
+
+          <div class="field">
+            <label for="id_last_name">Sobrenome</label>
+            <input
+              id="id_last_name"
+              name="last_name"
+              type="text"
+              autocomplete="family-name"
+              value="{{ form.last_name.value|default:'' }}"
+              placeholder="Silva"
+              required
+            >
+            {{ form.last_name.errors }}
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="id_email">E-mail</label>
+          <input
+            id="id_email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            value="{{ form.email.value|default:'' }}"
+            placeholder="seu@email.com"
+            required
+          >
+          {{ form.email.errors }}
+        </div>
+
+        <div class="field">
+          <label for="id_phone">
+            Telefone
+            <svg class="phone-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M16.75 13.96c.25.13 1.47.73 1.7.82.23.09.39.13.56-.13.17-.25.65-.82.8-.98.15-.17.3-.19.56-.06.25.13 1.07.39 2.04 1.25.75.67 1.26 1.5 1.4 1.75.13.25.01.39-.1.52-.1.1-.23.26-.35.39-.12.14-.17.23-.26.39-.09.17-.05.32.02.45.07.13.62 1.49.85 2.04.22.53.45.46.62.47.16.01.36.01.56.01.19 0 .5-.07.77-.35.26-.29 1-1 1-2.43 0-1.43-1.03-2.8-1.18-2.99-.15-.19-2.06-3.14-5.02-4.4-.7-.3-1.25-.48-1.68-.61-.71-.23-1.36-.2-1.87-.12-.57.09-1.47.6-1.68 1.18-.21.58-.21 1.08-.15 1.18.06.1.23.16.48.29z"/>
+              <path d="M12.05 2C6.5 2 2 6.5 2 12.05c0 1.74.45 3.37 1.23 4.8L2 22l5.3-1.2a10 10 0 0 0 4.75 1.21h.01c5.55 0 10.05-4.5 10.05-10.05S17.6 2 12.05 2zm0 18.2h-.01c-1.5 0-2.96-.4-4.24-1.15l-.3-.18-3.15.71.74-3.08-.2-.31a8.2 8.2 0 1 1 7.16 4.01z"/>
+            </svg>
+          </label>
+          <input
+            id="id_phone"
+            name="phone"
+            type="tel"
+            autocomplete="tel"
+            value="{{ form.phone.value|default:'' }}"
+            placeholder="(00) 00000-0000"
+            required
+          >
+          {{ form.phone.errors }}
+        </div>
+
+        <div class="field">
+          <label for="id_password1">Senha</label>
+          <div class="password-wrap">
+            <input
+              id="id_password1"
+              name="password1"
+              type="password"
+              autocomplete="new-password"
+              placeholder="********"
+              required
+            >
+            <button class="toggle-password" type="button" aria-label="Mostrar senha" data-toggle-password="id_password1">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
+          </div>
+          {{ form.password1.errors }}
+        </div>
+
+        <div class="field">
+          <label for="id_password2">Confirmar senha</label>
+          <div class="password-wrap">
+            <input
+              id="id_password2"
+              name="password2"
+              type="password"
+              autocomplete="new-password"
+              placeholder="********"
+              required
+            >
+            <button class="toggle-password" type="button" aria-label="Mostrar senha" data-toggle-password="id_password2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
+          </div>
+          {{ form.password2.errors }}
+        </div>
+
+        <button class="submit-btn" type="submit">Cadastrar</button>
+
+        <div class="divider">
+          Já tem uma conta? <a href="{% url 'web:login' %}">Faça login</a>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+        const inputId = btn.getAttribute('data-toggle-password');
+        const input = document.getElementById(inputId);
+        if (!input) return;
+
+        btn.addEventListener('click', function () {
+          const isPassword = input.type === 'password';
+          input.type = isPassword ? 'text' : 'password';
+          btn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
+        });
+      });
+
+      const phoneInput = document.getElementById('id_phone');
+      if (!phoneInput) return;
+
+      phoneInput.addEventListener('input', function () {
+        const digits = phoneInput.value.replace(/\D/g, '').slice(0, 11);
+        if (digits.length <= 2) {
+          phoneInput.value = digits;
+          return;
+        }
+        if (digits.length <= 6) {
+          phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+          return;
+        }
+        if (digits.length <= 10) {
+          phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6);
+          return;
+        }
+        phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
+      });
+    })();
+  </script>
+</body>
+</html>

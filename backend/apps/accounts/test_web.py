@@ -33,7 +33,10 @@ class TestSignupFlow:
         response = client.post(
             "/cadastro/",
             data={
+                "first_name": "Joao",
+                "last_name": "Silva",
                 "email": "novo@acme.com",
+                "phone": "85999998888",
                 "password1": "SenhaForte123!",
                 "password2": "SenhaForte123!",
             },
@@ -42,14 +45,20 @@ class TestSignupFlow:
 
         assert response.status_code == 302
         assert response.url == "/painel/"
-        assert User.objects.filter(email="novo@acme.com").exists()
+        user = User.objects.get(email="novo@acme.com")
+        assert user.first_name == "Joao"
+        assert user.last_name == "Silva"
+        assert user.phone == "85999998888"
         assert client.session.get("_auth_user_id") is not None
 
     def test_signup_rejeita_email_duplicado(self, client, user):
         response = client.post(
             "/cadastro/",
             data={
+                "first_name": "Joao",
+                "last_name": "Silva",
                 "email": user.email,
+                "phone": "85999998888",
                 "password1": "SenhaForte123!",
                 "password2": "SenhaForte123!",
             },

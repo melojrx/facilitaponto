@@ -51,6 +51,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True,
         db_index=True,
     )
+    first_name = models.CharField(max_length=120, blank=True, default="")
+    last_name = models.CharField(max_length=120, blank=True, default="")
+    phone = models.CharField(max_length=20, blank=True, default="")
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.VIEWER)
     is_active = models.BooleanField(default=True)

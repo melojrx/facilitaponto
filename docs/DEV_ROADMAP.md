@@ -216,6 +216,16 @@ Tarefas:
 **Referência:** PB-006, PB-100  
 **Estimativa:** 16h
 
+**Status atual (2026-03-08):**
+- ✅ Entregue bloco P0 web/auth:
+  - landing pública (`/`)
+  - cadastro (`/cadastro/`)
+  - login (`/login/`)
+  - logout (`POST /logout/`)
+  - guarda de acesso de `/painel/` para autenticados
+- ✅ Evolução de `accounts.User` para suportar dados básicos no signup web: `first_name`, `last_name`, `phone`
+- ⏳ Pendente: completar onboarding da empresa (PJ/PF), CPF obrigatório do owner e vínculo 1:1 owner/tenant
+
 **Cronograma sugerido (2 dias úteis):**
 - **Dia 1 (Backend + Modelagem):** novas entidades/constraints, migrations e serviços transacionais de onboarding.
 - **Dia 2 (Frontend Web + Integração + Testes):** telas de cadastro/login/logout/painel inicial e testes ponta a ponta do fluxo.

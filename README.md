@@ -52,6 +52,12 @@ O projeto está organizado para evoluir em três frentes:
 - Fundação do backend e ambiente Docker
 - Multitenancy com isolamento por tenant
 - Autenticação JWT (usuário e dispositivo)
+- Fluxo web P0 de autenticação (DEV-008 parcial):
+  - Landing pública (`/`)
+  - Cadastro de conta (`/cadastro/`)
+  - Login (`/login/`)
+  - Logout (`POST /logout/`)
+  - Guarda de acesso para `/painel/`
 - Cadastro de funcionários + sequência NSR atômica por tenant
 - Módulo de biometria DEV-005 concluído (consentimento, enroll, verify e cache mobile):
   - Consentimento LGPD
