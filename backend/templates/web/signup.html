@@ -283,6 +283,20 @@
         </div>
 
         <div class="field">
+          <label for="id_cpf">CPF</label>
+          <input
+            id="id_cpf"
+            name="cpf"
+            type="text"
+            autocomplete="off"
+            value="{{ form.cpf.value|default:'' }}"
+            placeholder="000.000.000-00"
+            required
+          >
+          {{ form.cpf.errors }}
+        </div>
+
+        <div class="field">
           <label for="id_phone">
             Telefone
             <svg class="phone-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -368,24 +382,45 @@
       });
 
       const phoneInput = document.getElementById('id_phone');
-      if (!phoneInput) return;
+      const cpfInput = document.getElementById('id_cpf');
 
-      phoneInput.addEventListener('input', function () {
-        const digits = phoneInput.value.replace(/\D/g, '').slice(0, 11);
-        if (digits.length <= 2) {
-          phoneInput.value = digits;
-          return;
-        }
-        if (digits.length <= 6) {
-          phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
-          return;
-        }
-        if (digits.length <= 10) {
-          phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6);
-          return;
-        }
-        phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
-      });
+      if (phoneInput) {
+        phoneInput.addEventListener('input', function () {
+          const digits = phoneInput.value.replace(/\D/g, '').slice(0, 11);
+          if (digits.length <= 2) {
+            phoneInput.value = digits;
+            return;
+          }
+          if (digits.length <= 6) {
+            phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+            return;
+          }
+          if (digits.length <= 10) {
+            phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6);
+            return;
+          }
+          phoneInput.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
+        });
+      }
+
+      if (cpfInput) {
+        cpfInput.addEventListener('input', function () {
+          const digits = cpfInput.value.replace(/\D/g, '').slice(0, 11);
+          if (digits.length <= 3) {
+            cpfInput.value = digits;
+            return;
+          }
+          if (digits.length <= 6) {
+            cpfInput.value = digits.slice(0, 3) + '.' + digits.slice(3);
+            return;
+          }
+          if (digits.length <= 9) {
+            cpfInput.value = digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6);
+            return;
+          }
+          cpfInput.value = digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6, 9) + '-' + digits.slice(9);
+        });
+      }
     })();
   </script>
 </body>

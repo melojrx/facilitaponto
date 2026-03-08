@@ -2,7 +2,18 @@
 
 from django.urls import path
 
-from .web_views import landing_view, login_view, logout_view, painel_view, signup_view
+from .web_views import (
+    company_view,
+    company_edit_view,
+    create_company_view,
+    landing_view,
+    login_view,
+    logout_view,
+    module_placeholder_view,
+    painel_view,
+    profile_view,
+    signup_view,
+)
 
 app_name = "web"
 
@@ -12,4 +23,20 @@ urlpatterns = [
     path("login/", login_view, name="login"),
     path("logout/", logout_view, name="logout"),
     path("painel/", painel_view, name="painel"),
+    path("painel/perfil/", profile_view, name="profile"),
+    path("painel/empresa/", company_view, name="company"),
+    path("painel/empresa/editar/", company_edit_view, name="company_edit"),
+    path("painel/empresa/nova/", create_company_view, name="company_create"),
+    path("painel/jornadas/", module_placeholder_view, {"module_key": "jornadas"}, name="jornadas"),
+    path("painel/colaboradores/", module_placeholder_view, {"module_key": "colaboradores"}, name="colaboradores"),
+    path("painel/relogio-digital/", module_placeholder_view, {"module_key": "relogio_digital"}, name="relogio_digital"),
+    path(
+        "painel/tratamento-ponto/",
+        module_placeholder_view,
+        {"module_key": "tratamento_ponto"},
+        name="tratamento_ponto",
+    ),
+    path("painel/relatorios/", module_placeholder_view, {"module_key": "relatorios"}, name="relatorios"),
+    path("painel/solicitacoes/", module_placeholder_view, {"module_key": "solicitacoes"}, name="solicitacoes"),
+    path("painel/configuracoes/", module_placeholder_view, {"module_key": "configuracoes"}, name="configuracoes"),
 ]

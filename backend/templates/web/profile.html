@@ -1,0 +1,184 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}Meu Perfil | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}Meu Perfil{% endblock %}
+{% block panel_heading_subtitle %}Gerencie suas informações pessoais{% endblock %}
+
+{% block panel_styles %}
+  .profile-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .profile-card h2 {
+    font-size: 36px;
+    margin-bottom: 6px;
+  }
+  .profile-subtitle {
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .breadcrumb {
+    color: #6b819d;
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+  .breadcrumb a {
+    color: #6b819d;
+    text-decoration: none;
+  }
+  .profile-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .field {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 12px;
+  }
+  .field label {
+    font-weight: 700;
+    font-size: 18px;
+    color: #32485f;
+  }
+  .field input {
+    width: 100%;
+    height: 44px;
+    border: 1px solid #ced9e8;
+    border-radius: 9px;
+    padding: 0 12px;
+    font-size: 18px;
+    color: #32485f;
+    background: #fff;
+  }
+  .field input[readonly] {
+    background: #edf1f6;
+    color: #7f90a6;
+  }
+  .errorlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: #c73f3f;
+    font-size: 14px;
+  }
+  .profile-actions {
+    margin-top: 8px;
+  }
+  @media (max-width: 860px) {
+    .profile-grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+{% endblock %}
+
+{% block panel_content %}
+  <div class="profile-wrap">
+    <div class="breadcrumb">
+      <a href="{% url 'web:painel' %}">Início</a> › <span>Perfil</span>
+    </div>
+
+    <section class="card profile-card">
+      <h2>Informações Pessoais</h2>
+      <p class="profile-subtitle">Seu CPF é obrigatório para utilizar o sistema conforme Portaria MTP 671/2021</p>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <ul class="errorlist">
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        <div class="profile-grid-2">
+          <div class="field">
+            <label for="id_first_name">Nome</label>
+            <input id="id_first_name" type="text" value="{{ form.first_name.value|default:'' }}" readonly>
+          </div>
+          <div class="field">
+            <label for="id_last_name">Sobrenome</label>
+            <input id="id_last_name" type="text" value="{{ form.last_name.value|default:'' }}" readonly>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="id_email">E-mail</label>
+          <input id="id_email" type="email" value="{{ form.email.value|default:'' }}" readonly>
+        </div>
+
+        <div class="field">
+          <label for="id_cpf">CPF *</label>
+          <input
+            id="id_cpf"
+            name="cpf"
+            type="text"
+            value="{{ form.cpf.value|default:'' }}"
+            placeholder="000.000.000-00"
+            required
+          >
+          {{ form.cpf.errors }}
+        </div>
+
+        <div class="field">
+          <label for="id_phone">Telefone</label>
+          <input
+            id="id_phone"
+            name="phone"
+            type="text"
+            value="{{ form.phone.value|default:'' }}"
+            placeholder="(00) 00000-0000"
+          >
+          {{ form.phone.errors }}
+        </div>
+
+        <div class="profile-actions">
+          <button class="btn btn-primary" type="submit">Salvar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}
+
+{% block panel_scripts %}
+  <script>
+    (function () {
+      const cpfInput = document.getElementById("id_cpf");
+      const phoneInput = document.getElementById("id_phone");
+
+      function onlyDigits(value) {
+        return (value || "").replace(/\D/g, "");
+      }
+
+      function maskCpf(value) {
+        const digits = onlyDigits(value).slice(0, 11);
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return digits.slice(0, 3) + "." + digits.slice(3);
+        if (digits.length <= 9) return digits.slice(0, 3) + "." + digits.slice(3, 6) + "." + digits.slice(6);
+        return digits.slice(0, 3) + "." + digits.slice(3, 6) + "." + digits.slice(6, 9) + "-" + digits.slice(9);
+      }
+
+      function maskPhone(value) {
+        const digits = onlyDigits(value).slice(0, 11);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 6) return "(" + digits.slice(0, 2) + ") " + digits.slice(2);
+        if (digits.length <= 10) return "(" + digits.slice(0, 2) + ") " + digits.slice(2, 6) + "-" + digits.slice(6);
+        return "(" + digits.slice(0, 2) + ") " + digits.slice(2, 7) + "-" + digits.slice(7);
+      }
+
+      if (cpfInput) {
+        cpfInput.addEventListener("input", function () {
+          cpfInput.value = maskCpf(cpfInput.value);
+        });
+      }
+
+      if (phoneInput) {
+        phoneInput.addEventListener("input", function () {
+          phoneInput.value = maskPhone(phoneInput.value);
+        });
+      }
+    })();
+  </script>
+{% endblock %}

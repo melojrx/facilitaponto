@@ -35,8 +35,8 @@
 ## 3) Integrações externas do onboarding
 - [ ] Consulta de CNPJ (provider primário: CNPJá Open)
 - [ ] Fallback manual ativo em falha/timeout do provider
-- [ ] Consulta de CEP via ViaCEP
-- [ ] Fallback manual ativo em CEP inválido/indisponibilidade
+- [x] Consulta de CEP via ViaCEP
+- [x] Fallback manual ativo em CEP inválido/indisponibilidade
 
 ## 4) Painel e UX de onboarding (`/painel`)
 - [ ] Esqueleto visual implementado:

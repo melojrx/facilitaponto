@@ -1,29 +1,93 @@
-{% extends "base.html" %}
+{% extends "web/panel_base.html" %}
 
-{% block title %}Painel | Ponto Digital{% endblock %}
+{% block title %}Início | Painel FacilitaPonto{% endblock %}
 
-{% block content %}
-  <section class="card">
-    <h1 style="margin-top: 0;">Painel</h1>
-    <p class="muted">Área autenticada inicial do produto.</p>
-  </section>
+{% block panel_heading_title %}
+  Bem-vindo,
+  {% if user.first_name %}
+    {{ user.first_name|capfirst }}!
+  {% else %}
+    {{ user.email }}!
+  {% endif %}
+{% endblock %}
+{% block panel_heading_subtitle %}Acompanhe seu onboarding e conclua os cadastros iniciais para liberar o painel completo.{% endblock %}
 
-  {% if not has_company %}
-    <section class="card">
-      <h2 style="margin-top: 0;">Crie sua primeira empresa</h2>
+{% block panel_styles %}
+  .pending-card {
+    max-width: 520px;
+    min-height: 262px;
+    display: grid;
+    align-content: space-between;
+  }
+  .pending-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    font-size: 22px;
+    color: #20b561;
+  }
+  .pending-title h3 {
+    margin: 0;
+    color: #2d3d50;
+    font-size: 32px;
+    font-weight: 700;
+  }
+  .pending-sub {
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .pending-empty {
+    text-align: center;
+    color: #20b561;
+    font-size: 52px;
+    margin-top: 18px;
+  }
+  .pending-empty p {
+    font-size: 35px;
+    margin: 8px 0 0;
+    font-weight: 600;
+  }
+  .helper-card {
+    max-width: 520px;
+  }
+{% endblock %}
+
+{% block panel_content %}
+  {% if show_company_cta %}
+    <section class="card helper-card" data-onboarding-state="sem-empresa">
+      <h2>Crie sua primeira empresa</h2>
       <p class="muted">
         Você já tem acesso ao painel. O próximo passo é cadastrar a empresa para liberar os módulos seguintes.
       </p>
-      <div class="actions">
-        <button class="btn btn-primary" type="button" disabled>
-          Criar empresa (em breve)
-        </button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="{% url 'web:company_create' %}">Criar empresa</a>
       </div>
     </section>
-  {% else %}
-    <section class="card">
-      <h2 style="margin-top: 0;">Empresa vinculada</h2>
-      <p class="muted">Conta pronta para seguir com as próximas etapas do onboarding.</p>
+  {% elif show_journey_cta %}
+    <section class="card helper-card" data-onboarding-state="empresa-sem-jornada">
+      <h2>Criar horário da equipe</h2>
+      <p class="muted">
+        Empresa cadastrada: <strong>{{ company_name }}</strong>.<br>
+        Agora crie a primeira jornada de trabalho para liberar os demais módulos.
+      </p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="{% url 'web:jornadas' %}">Criar jornada</a>
+      </div>
     </section>
   {% endif %}
+
+  <section class="card pending-card">
+    <div>
+      <div class="pending-title">
+        ✓
+        <h3>Pendências de Ponto</h3>
+      </div>
+      <div class="pending-sub">0 colaborador(es) com pendências</div>
+    </div>
+    <div class="pending-empty">
+      ✓
+      <p>Nenhuma pendência</p>
+    </div>
+  </section>
 {% endblock %}

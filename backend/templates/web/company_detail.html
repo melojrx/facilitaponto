@@ -1,0 +1,199 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}Empresa | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}Empresa{% endblock %}
+{% block panel_heading_subtitle %}Visualize e gerencie todos os dados cadastrais da sua empresa.{% endblock %}
+
+{% block panel_styles %}
+  .company-detail-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .company-detail-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+  .company-field {
+    border: 1px solid #d5deea;
+    border-radius: 10px;
+    background: #f8fbff;
+    padding: 10px 12px;
+    min-height: 66px;
+  }
+  .company-field-label {
+    font-size: 13px;
+    color: #607894;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .company-field-value {
+    font-size: 16px;
+    color: #2d4159;
+    font-weight: 600;
+    word-break: break-word;
+  }
+  .company-section-title {
+    margin: 0 0 10px;
+    font-size: 20px;
+  }
+  .company-card-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 920px) {
+    .company-detail-grid-2,
+    .company-detail-grid-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+{% endblock %}
+
+{% block panel_content %}
+  <section class="card">
+    <div class="company-card-actions">
+      <a class="btn btn-primary" href="{% url 'web:company_edit' %}">Editar empresa</a>
+      <a class="btn" href="{% url 'web:painel' %}">Voltar ao início</a>
+    </div>
+
+    <h2 style="margin-top:0;">{{ tenant.razao_social }}</h2>
+    <p class="muted" style="margin-top:0;">Empresa vinculada à conta proprietária.</p>
+
+    <div class="card" style="padding:14px;">
+      <h3 class="company-section-title">Dados da Empresa</h3>
+      <div class="company-detail-grid-2">
+        <div class="company-field">
+          <div class="company-field-label">Tipo de Pessoa</div>
+          <div class="company-field-value">{{ tenant.get_tipo_pessoa_display }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Documento (CNPJ/CPF)</div>
+          <div class="company-field-value">{{ tenant.documento|default:"Não informado" }}</div>
+        </div>
+      </div>
+      <div class="company-detail-grid-2" style="margin-top:10px;">
+        <div class="company-field">
+          <div class="company-field-label">Razão Social</div>
+          <div class="company-field-value">{{ tenant.razao_social|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Nome Fantasia</div>
+          <div class="company-field-value">{{ tenant.nome_fantasia|default:"Não informado" }}</div>
+        </div>
+      </div>
+      <div class="company-detail-grid-2" style="margin-top:10px;">
+        <div class="company-field">
+          <div class="company-field-label">Inscrição Estadual</div>
+          <div class="company-field-value">{{ tenant.inscricao_estadual|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Inscrição Municipal</div>
+          <div class="company-field-value">{{ tenant.inscricao_municipal|default:"Não informado" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;">
+      <h3 class="company-section-title">Contato</h3>
+      <div class="company-detail-grid-2">
+        <div class="company-field">
+          <div class="company-field-label">E-mail de Contato</div>
+          <div class="company-field-value">{{ tenant.email_contato|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Telefone de Contato</div>
+          <div class="company-field-value">{{ tenant.telefone_contato|default:"Não informado" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;">
+      <h3 class="company-section-title">Endereço</h3>
+      <div class="company-detail-grid-3">
+        <div class="company-field">
+          <div class="company-field-label">CEP</div>
+          <div class="company-field-value">{{ tenant.cep|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Cidade</div>
+          <div class="company-field-value">{{ tenant.cidade|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">UF</div>
+          <div class="company-field-value">{{ tenant.estado|default:"Não informado" }}</div>
+        </div>
+      </div>
+      <div class="company-detail-grid-2" style="margin-top:10px;">
+        <div class="company-field">
+          <div class="company-field-label">Logradouro</div>
+          <div class="company-field-value">{{ tenant.logradouro|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Bairro</div>
+          <div class="company-field-value">{{ tenant.bairro|default:"Não informado" }}</div>
+        </div>
+      </div>
+      <div class="company-detail-grid-2" style="margin-top:10px;">
+        <div class="company-field">
+          <div class="company-field-label">Número</div>
+          <div class="company-field-value">{{ tenant.numero|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Complemento</div>
+          <div class="company-field-value">{{ tenant.complemento|default:"Não informado" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;">
+      <h3 class="company-section-title">Responsável Legal</h3>
+      <div class="company-detail-grid-3">
+        <div class="company-field">
+          <div class="company-field-label">Nome</div>
+          <div class="company-field-value">{{ tenant.responsavel_nome|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">CPF</div>
+          <div class="company-field-value">{{ tenant.responsavel_cpf|default:"Não informado" }}</div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Cargo</div>
+          <div class="company-field-value">{{ tenant.responsavel_cargo|default:"Não informado" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;">
+      <h3 class="company-section-title">Dados Adicionais</h3>
+      <div class="company-detail-grid-3">
+        <div class="company-field">
+          <div class="company-field-label">URL do Logo</div>
+          <div class="company-field-value">
+            {% if tenant.logo_url %}
+              <a href="{{ tenant.logo_url }}" target="_blank" rel="noopener noreferrer">{{ tenant.logo_url }}</a>
+            {% else %}
+              Não informado
+            {% endif %}
+          </div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">Website</div>
+          <div class="company-field-value">
+            {% if tenant.website %}
+              <a href="{{ tenant.website }}" target="_blank" rel="noopener noreferrer">{{ tenant.website }}</a>
+            {% else %}
+              Não informado
+            {% endif %}
+          </div>
+        </div>
+        <div class="company-field">
+          <div class="company-field-label">CNO/CAEPF</div>
+          <div class="company-field-value">{{ tenant.cno_caepf|default:"Não informado" }}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

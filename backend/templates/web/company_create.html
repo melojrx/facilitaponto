@@ -1,0 +1,384 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}{% if is_edit_mode %}Editar Empresa{% else %}Criar Empresa{% endif %} | Painel FacilitaPonto{% endblock %}
+
+{% block panel_heading_title %}{% if is_edit_mode %}Editar Empresa{% else %}Cadastro da Empresa{% endif %}{% endblock %}
+{% block panel_heading_subtitle %}
+  {% if is_edit_mode %}
+    Atualize os dados cadastrais da empresa vinculada.
+  {% else %}
+    Preencha os dados da empresa para liberar jornadas e avançar no onboarding.
+  {% endif %}
+{% endblock %}
+
+{% block panel_styles %}
+  .company-form {
+    max-width: 980px;
+  }
+  .company-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .company-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .section-title { margin: 0 0 8px; font-size: 1.08rem; color: #2f4157; }
+  .section-subtitle { margin: 0 0 14px; color: var(--muted); font-size: .94rem; }
+  .company-form .field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .company-form .field label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #344a62;
+  }
+  .company-form input[type="text"],
+  .company-form input[type="email"],
+  .company-form input[type="url"],
+  .company-form select,
+  .company-form textarea {
+    width: 100%;
+    border: 1px solid #cad6e5;
+    border-radius: 8px;
+    background: #fff;
+    color: #2a3d56;
+    font-size: 14px;
+    padding: 10px 12px;
+    min-height: 42px;
+    font-family: inherit;
+  }
+  .company-form textarea {
+    min-height: 92px;
+    resize: vertical;
+  }
+  .company-form input:focus,
+  .company-form select:focus,
+  .company-form textarea:focus {
+    outline: none;
+    border-color: #78a8da;
+    box-shadow: 0 0 0 3px rgba(47, 116, 189, 0.12);
+  }
+  .company-form .errorlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: #c73f3f;
+    font-size: 13px;
+  }
+  .field-feedback {
+    font-size: 12px;
+    color: #637a98;
+    min-height: 16px;
+    margin: -2px 0 8px;
+    display: none;
+  }
+  .field-feedback.error {
+    color: #bf3d3d;
+    display: block;
+  }
+  .field-feedback.success {
+    color: #1f7e52;
+    display: block;
+  }
+  .company-form .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  @media (max-width: 820px) {
+    .company-grid-2, .company-grid-3 { grid-template-columns: 1fr; }
+  }
+{% endblock %}
+
+{% block panel_content %}
+  <section class="card company-form">
+    <h2 style="margin-top: 0;">{% if is_edit_mode %}Editar Empresa{% else %}Criar Empresa{% endif %}</h2>
+    <p class="muted">
+      {% if is_edit_mode %}
+        Revise e atualize as informações da empresa.
+      {% else %}
+        Cadastre sua empresa para liberar os módulos operacionais do painel.
+      {% endif %}
+    </p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        {{ form.non_field_errors }}
+      {% endif %}
+
+      <div class="card" style="margin-top: 12px;">
+        <h2 class="section-title">Dados da Empresa</h2>
+        <p class="section-subtitle">Informações básicas e contato</p>
+
+        <div class="company-grid-2">
+          <div class="field">
+            {{ form.tipo_pessoa.label_tag }}
+            {{ form.tipo_pessoa }}
+            {{ form.tipo_pessoa.errors }}
+          </div>
+          <div class="field">
+            {{ form.documento.label_tag }}
+            {{ form.documento }}
+            {{ form.documento.errors }}
+          </div>
+        </div>
+
+        <div class="field">
+          {{ form.razao_social.label_tag }}
+          {{ form.razao_social }}
+          {{ form.razao_social.errors }}
+        </div>
+
+        <div class="field">
+          {{ form.nome_fantasia.label_tag }}
+          {{ form.nome_fantasia }}
+          {{ form.nome_fantasia.errors }}
+        </div>
+
+        <div class="company-grid-2">
+          <div class="field">
+            {{ form.email_contato.label_tag }}
+            {{ form.email_contato }}
+            {{ form.email_contato.errors }}
+          </div>
+          <div class="field">
+            {{ form.telefone_contato.label_tag }}
+            {{ form.telefone_contato }}
+            {{ form.telefone_contato.errors }}
+          </div>
+        </div>
+
+        <div class="company-grid-2">
+          <div class="field">
+            {{ form.inscricao_estadual.label_tag }}
+            {{ form.inscricao_estadual }}
+            {{ form.inscricao_estadual.errors }}
+          </div>
+          <div class="field">
+            {{ form.inscricao_municipal.label_tag }}
+            {{ form.inscricao_municipal }}
+            {{ form.inscricao_municipal.errors }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Endereço</h2>
+        <p class="section-subtitle">Localização da empresa</p>
+
+        <div class="company-grid-3">
+          <div class="field">
+            {{ form.cep.label_tag }}
+            {{ form.cep }}
+            {{ form.cep.errors }}
+          </div>
+          <div class="field">
+            {{ form.estado.label_tag }}
+            {{ form.estado }}
+            {{ form.estado.errors }}
+          </div>
+          <div class="field">
+            {{ form.cidade.label_tag }}
+            {{ form.cidade }}
+            {{ form.cidade.errors }}
+          </div>
+        </div>
+        <span id="cep-feedback" class="field-feedback"></span>
+
+        <div class="company-grid-2">
+          <div class="field">
+            {{ form.logradouro.label_tag }}
+            {{ form.logradouro }}
+            {{ form.logradouro.errors }}
+          </div>
+          <div class="field">
+            {{ form.bairro.label_tag }}
+            {{ form.bairro }}
+            {{ form.bairro.errors }}
+          </div>
+        </div>
+
+        <div class="company-grid-2">
+          <div class="field">
+            {{ form.numero.label_tag }}
+            {{ form.numero }}
+            {{ form.numero.errors }}
+          </div>
+          <div class="field">
+            {{ form.complemento.label_tag }}
+            {{ form.complemento }}
+            {{ form.complemento.errors }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Quem representa a empresa?</h2>
+        <p class="section-subtitle">Informe os dados da pessoa responsável pela empresa</p>
+
+        <div class="company-grid-3">
+          <div class="field">
+            {{ form.responsavel_nome.label_tag }}
+            {{ form.responsavel_nome }}
+            {{ form.responsavel_nome.errors }}
+          </div>
+          <div class="field">
+            {{ form.responsavel_cpf.label_tag }}
+            {{ form.responsavel_cpf }}
+            {{ form.responsavel_cpf.errors }}
+          </div>
+          <div class="field">
+            {{ form.responsavel_cargo.label_tag }}
+            {{ form.responsavel_cargo }}
+            {{ form.responsavel_cargo.errors }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Dados Adicionais</h2>
+        <p class="section-subtitle">Informações complementares (opcional)</p>
+
+        <div class="company-grid-3">
+          <div class="field">
+            {{ form.logo_url.label_tag }}
+            {{ form.logo_url }}
+            {{ form.logo_url.errors }}
+          </div>
+          <div class="field">
+            {{ form.website.label_tag }}
+            {{ form.website }}
+            {{ form.website.errors }}
+          </div>
+          <div class="field">
+            {{ form.cno_caepf.label_tag }}
+            {{ form.cno_caepf }}
+            {{ form.cno_caepf.errors }}
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn" href="{% if is_edit_mode %}{% url 'web:company' %}{% else %}{% url 'web:painel' %}{% endif %}">Cancelar</a>
+        <button class="btn btn-primary" type="submit">{% if is_edit_mode %}Salvar alterações{% else %}Salvar empresa{% endif %}</button>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    (function () {
+      const tipoInput = document.getElementById('id_tipo_pessoa');
+      const documentoInput = document.getElementById('id_documento');
+      const telefoneInput = document.getElementById('id_telefone_contato');
+      const cepInput = document.getElementById('id_cep');
+      const logradouroInput = document.getElementById('id_logradouro');
+      const bairroInput = document.getElementById('id_bairro');
+      const cidadeInput = document.getElementById('id_cidade');
+      const estadoInput = document.getElementById('id_estado');
+      const cpfResponsavelInput = document.getElementById('id_responsavel_cpf');
+      const cepFeedback = document.getElementById('cep-feedback');
+
+      function onlyDigits(value) {
+        return value.replace(/\D/g, '');
+      }
+
+      function maskCpf(value) {
+        const digits = onlyDigits(value).slice(0, 11);
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return digits.slice(0, 3) + '.' + digits.slice(3);
+        if (digits.length <= 9) return digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6);
+        return digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6, 9) + '-' + digits.slice(9);
+      }
+
+      function maskCnpj(value) {
+        const digits = onlyDigits(value).slice(0, 14);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 5) return digits.slice(0, 2) + '.' + digits.slice(2);
+        if (digits.length <= 8) return digits.slice(0, 2) + '.' + digits.slice(2, 5) + '.' + digits.slice(5);
+        if (digits.length <= 12) return digits.slice(0, 2) + '.' + digits.slice(2, 5) + '.' + digits.slice(5, 8) + '/' + digits.slice(8);
+        return digits.slice(0, 2) + '.' + digits.slice(2, 5) + '.' + digits.slice(5, 8) + '/' + digits.slice(8, 12) + '-' + digits.slice(12);
+      }
+
+      function maskTelefone(value) {
+        const digits = onlyDigits(value).slice(0, 11);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 6) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+        if (digits.length <= 10) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6);
+        return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
+      }
+
+      function maskCep(value) {
+        const digits = onlyDigits(value).slice(0, 8);
+        if (digits.length <= 5) return digits;
+        return digits.slice(0, 5) + '-' + digits.slice(5);
+      }
+
+      if (documentoInput && tipoInput) {
+        documentoInput.addEventListener('input', function () {
+          documentoInput.value = tipoInput.value === 'PF' ? maskCpf(documentoInput.value) : maskCnpj(documentoInput.value);
+        });
+
+        tipoInput.addEventListener('change', function () {
+          documentoInput.value = tipoInput.value === 'PF' ? maskCpf(documentoInput.value) : maskCnpj(documentoInput.value);
+        });
+      }
+
+      if (telefoneInput) {
+        telefoneInput.addEventListener('input', function () {
+          telefoneInput.value = maskTelefone(telefoneInput.value);
+        });
+      }
+
+      if (cepInput) {
+        cepInput.addEventListener('input', function () {
+          cepInput.value = maskCep(cepInput.value);
+        });
+
+        cepInput.addEventListener('blur', function () {
+          lookupCep(cepInput.value);
+        });
+      }
+
+      if (cpfResponsavelInput) {
+        cpfResponsavelInput.addEventListener('input', function () {
+          cpfResponsavelInput.value = maskCpf(cpfResponsavelInput.value);
+        });
+      }
+
+      async function lookupCep(rawCep) {
+        const cep = onlyDigits(rawCep);
+        if (!cepFeedback) return;
+        if (cep.length !== 8) {
+          cepFeedback.textContent = cep ? 'CEP incompleto. Informe 8 dígitos.' : '';
+          cepFeedback.className = 'field-feedback error';
+          return;
+        }
+
+        cepFeedback.textContent = 'Buscando endereço...';
+        cepFeedback.className = 'field-feedback';
+
+        try {
+          const response = await fetch(`/api/public/cep/?cep=${cep}`);
+          const payload = await response.json();
+
+          if (!response.ok || !payload.ok) {
+            cepFeedback.textContent = payload.error || 'Não foi possível buscar o CEP. Preencha manualmente.';
+            cepFeedback.className = 'field-feedback error';
+            return;
+          }
+
+          const data = payload.data || {};
+          if (logradouroInput) logradouroInput.value = data.logradouro || '';
+          if (bairroInput) bairroInput.value = data.bairro || '';
+          if (cidadeInput) cidadeInput.value = data.cidade || '';
+          if (estadoInput) estadoInput.value = data.estado || '';
+          cepFeedback.textContent = 'Endereço preenchido automaticamente. Você pode ajustar manualmente.';
+          cepFeedback.className = 'field-feedback success';
+        } catch (error) {
+          cepFeedback.textContent = 'Serviço de CEP indisponível. Preencha manualmente.';
+          cepFeedback.className = 'field-feedback error';
+        }
+      }
+    })();
+  </script>
+{% endblock %}

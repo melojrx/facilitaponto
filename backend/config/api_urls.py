@@ -5,7 +5,7 @@ Cada app registra suas próprias rotas aqui via include().
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.accounts.views import DeviceRegisterView, TenantTokenObtainPairView
+from apps.accounts.views import DeviceRegisterView, PublicCepLookupView, TenantTokenObtainPairView
 from apps.biometrics.views import (
     BiometricVerifyView,
     EmployeeConsentView,
@@ -14,6 +14,7 @@ from apps.biometrics.views import (
 )
 
 urlpatterns = [
+    path("public/cep/", PublicCepLookupView.as_view(), name="public_cep_lookup"),
     # Autenticação JWT
     path("auth/token/", TenantTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

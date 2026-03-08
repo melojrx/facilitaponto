@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from apps.accounts.models import Device, User
 from apps.accounts.permissions import IsDeviceToken, IsTenantMember
 from apps.accounts.serializers import TenantTokenObtainPairSerializer
+from apps.accounts.services_cep import CepLookupError, CepNotFoundError
 from apps.tenants.models import Tenant
 
 
@@ -177,3 +178,62 @@ class TestDeviceRegisterEndpoint:
         device = Device.objects.get(tenant=tenant_a, device_id="tablet-entrada-03")
         assert device.nome == "Novo Nome"
         assert device.last_seen_at is not None
+
+
+@pytest.mark.django_db
+class TestPublicCepLookupEndpoint:
+    endpoint = "/api/public/cep/"
+
+    def test_consulta_cep_com_sucesso(self, monkeypatch):
+        monkeypatch.setattr(
+            "apps.accounts.views.lookup_cep_via_viacep",
+            lambda cep: {
+                "cep": cep,
+                "logradouro": "Rua das Flores",
+                "bairro": "Centro",
+                "cidade": "Fortaleza",
+                "estado": "CE",
+            },
+        )
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cep": "60711-165"})
+
+        assert response.status_code == 200
+        assert response.data["ok"] is True
+        assert response.data["data"]["cep"] == "60711165"
+        assert response.data["data"]["cidade"] == "Fortaleza"
+
+    def test_consulta_cep_invalido(self):
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cep": "123"})
+
+        assert response.status_code == 400
+        assert "cep" in response.data
+
+    def test_consulta_cep_nao_encontrado(self, monkeypatch):
+        def _raise_not_found(*args, **kwargs):
+            raise CepNotFoundError("not found")
+
+        monkeypatch.setattr("apps.accounts.views.lookup_cep_via_viacep", _raise_not_found)
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cep": "00000-000"})
+
+        assert response.status_code == 404
+        assert response.data["ok"] is False
+        assert response.data["code"] == "cep_not_found"
+
+    def test_consulta_cep_servico_indisponivel(self, monkeypatch):
+        def _raise_unavailable(*args, **kwargs):
+            raise CepLookupError("unavailable")
+
+        monkeypatch.setattr("apps.accounts.views.lookup_cep_via_viacep", _raise_unavailable)
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cep": "60711165"})
+
+        assert response.status_code == 503
+        assert response.data["ok"] is False
+        assert response.data["code"] == "provider_unavailable"

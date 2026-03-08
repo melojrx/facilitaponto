@@ -1,0 +1,15 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}{{ module_title }} | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}{{ module_title }}{% endblock %}
+{% block panel_heading_subtitle %}Módulo previsto na DEV-008. Estrutura base do painel já aplicada.{% endblock %}
+
+{% block panel_content %}
+  <section class="card">
+    <h2>{{ module_title }}</h2>
+    <p class="muted">
+      Esta área está disponível no menu conforme etapa de onboarding e será detalhada nas próximas implementações do backlog.
+    </p>
+    <a class="btn" href="{% url 'web:painel' %}">Voltar ao início</a>
+  </section>
+{% endblock %}

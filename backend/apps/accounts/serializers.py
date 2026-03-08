@@ -29,3 +29,13 @@ class DeviceRegisterSerializer(serializers.Serializer):
         if not normalized:
             raise serializers.ValidationError("device_id é obrigatório.")
         return normalized
+
+
+class PublicCepLookupSerializer(serializers.Serializer):
+    cep = serializers.CharField(max_length=9)
+
+    def validate_cep(self, value):
+        digits = "".join(ch for ch in (value or "") if ch.isdigit())
+        if len(digits) != 8:
+            raise serializers.ValidationError("Informe um CEP válido com 8 dígitos.")
+        return digits
