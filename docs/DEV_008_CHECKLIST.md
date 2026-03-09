@@ -1,5 +1,5 @@
 # DEV-008 Checklist (Versionado)
-**Versão:** 2.6  
+**Versão:** 2.7  
 **Data:** 2026-03-09  
 **Escopo:** onboarding conta proprietária + empresa única + liberação progressiva do painel
 
@@ -15,6 +15,8 @@
 - [x] Cadastro completo com `CPF` do owner (premissa de negócio)
 - [x] Onboarding da empresa (PJ/PF) com vínculo owner/tenant e bloqueio de segunda empresa no fluxo web
 - [x] Regra 1:1 endurecida com lock transacional no owner + constraint de banco para 1 owner por tenant
+- [x] CRUD web de jornadas implementado (`listar`, `criar`, `editar`, `excluir` com inativação segura)
+- [x] Exclusão de jornada com modal de confirmação, explicação de impacto e bloqueio visual quando há vínculos detectados
 
 ## 1) Premissas obrigatórias
 - [x] Regra 1:1 preservada: `1 owner -> 1 empresa -> 1 tenant`
@@ -52,10 +54,12 @@
 - [x] Tela de nova jornada MVP implementada (nome, descrição, 4 tipos e painel explicativo por tipo)
 - [ ] Tela de nova jornada 1:1 com layout aprovado (breadcrumb, card principal, 4 cards de tipo e ações)
 - [ ] Ao selecionar `Semanal`, exibir blocos expandidos: painel explicativo, `Dúvidas comuns`, atalhos de jornada, toggle de intervalo reduzido e grade semanal
-- [ ] Atalhos `Integral 44h`, `Comercial 40h`, `Parcial 30h` e `Personalizar` aplicados corretamente na grade
-- [ ] Ao selecionar `12x36`, exibir configuração de data/hora base + ação `Gerar/Atualizar escala` + grade alternada trabalho/folga
-- [ ] Ao selecionar `Fracionada`, exibir edição por múltiplos períodos no dia + ações `Adicionar Período` e `Copiar horários para os demais dias`
-- [ ] Ao selecionar `Externa`, exibir aviso de não uso de horários fixos e bloquear configuração de grade horária
+- [x] Atalhos `Integral 44h`, `Comercial 40h`, `Parcial 30h` e `Personalizar` aplicados corretamente na grade
+- [x] Ao selecionar `12x36`, exibir configuração de data/hora base + ação `Gerar/Atualizar escala` + grade alternada trabalho/folga
+- [x] Ao selecionar `Fracionada`, exibir edição por múltiplos períodos no dia + ações `Adicionar Período` e `Copiar horários para os demais dias`
+- [x] Ao selecionar `Externa`, exibir aviso de não uso de horários fixos e bloquear configuração de grade horária
+- [x] Tela de listagem de jornadas (`/painel/jornadas/`) com busca, filtro por status e ações de edição/exclusão
+- [x] Excluir jornada com modal explicativo de consequências e confirmação explícita
 - [ ] Estados de interação da tela aplicados (pristine, foco, selecionado, inválido, enviando, sucesso, erro)
 - [ ] Validações e mensagens implementadas conforme catálogo do anexo da tela
 - [x] Semântica negocial de cada tipo (`Semanal`, `12x36`, `Fracionada`, `Externa`) refletida nas regras de validação/cálculo

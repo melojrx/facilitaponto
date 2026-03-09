@@ -1,6 +1,6 @@
 {% extends "web/panel_base.html" %}
 
-{% block title %}Nova Jornada de Trabalho | Painel FacilitaPonto{% endblock %}
+{% block title %}{% if is_edit_mode %}Editar Jornada de Trabalho{% else %}Nova Jornada de Trabalho{% endif %} | Painel FacilitaPonto{% endblock %}
 
 {% block panel_heading_title %}
   <span style="display:inline-flex;align-items:center;gap:10px;">
@@ -9,7 +9,7 @@
         <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
       </svg>
     </span>
-    Nova Jornada de Trabalho
+    {% if is_edit_mode %}Editar Jornada de Trabalho{% else %}Nova Jornada de Trabalho{% endif %}
   </span>
 {% endblock %}
 {% block panel_heading_subtitle %}Gerencie os templates de jornada da empresa{% endblock %}
@@ -371,13 +371,210 @@
     background: #f1f5f9;
     color: #475569;
   }
-  .external-alert {
-    border: 1px solid #fcd34d;
-    background: #fffbeb;
-    color: #92400e;
-    border-radius: 10px;
-    padding: 10px 12px;
+  .weekly-personalizar-hint {
+    margin: 8px 0 0;
     font-size: 13px;
+    color: #dc2626;
+    font-weight: 600;
+  }
+  .x12x36-actions {
+    margin-top: 6px;
+    margin-bottom: 12px;
+  }
+  .x12x36-actions .btn {
+    padding: 9px 14px;
+    font-size: 14px;
+  }
+  .x12x36-preview {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 12px;
+  }
+  .x12x36-preview-head,
+  .x12x36-preview-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1.2fr 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .x12x36-preview-head {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #dbe3ee;
+  }
+  .x12x36-preview-row {
+    font-size: 14px;
+    color: #1e293b;
+    padding: 5px 0;
+  }
+  .x12x36-status-folga {
+    color: #64748b;
+  }
+  .x12x36-status-trabalho {
+    color: #1e293b;
+    font-weight: 600;
+  }
+  .x12x36-error {
+    margin: 0 0 10px;
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  @media (max-width: 760px) {
+    .x12x36-preview-head,
+    .x12x36-preview-row {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .fracionada-builder {
+    margin-top: 8px;
+  }
+  .fracionada-day {
+    border: 1px solid #dbe3ee;
+    border-radius: 10px;
+    background: #fff;
+    padding: 10px 12px;
+  }
+  .fracionada-day + .fracionada-day {
+    margin-top: 10px;
+  }
+  .fracionada-day-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .fracionada-day-pill {
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 5px 10px;
+    min-width: 104px;
+    text-align: center;
+  }
+  .fracionada-day-pill.active {
+    background: #2d72b8;
+    border-color: #2d72b8;
+    color: #fff;
+  }
+  .fracionada-day-total {
+    font-size: 13px;
+    color: #64748b;
+  }
+  .fracionada-period-list {
+    border-left: 1px solid #dbe3ee;
+    margin-left: 14px;
+    padding-left: 14px;
+  }
+  .fracionada-period-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .fracionada-period-label {
+    width: 74px;
+    font-size: 13px;
+    color: #64748b;
+  }
+  .fracionada-period-row input[type="time"] {
+    width: 120px;
+    padding: 7px 10px;
+    font-size: 14px;
+  }
+  .fracionada-period-sep {
+    color: #475569;
+  }
+  .fracionada-remove-period {
+    border: 0;
+    background: transparent;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+  }
+  .fracionada-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .fracionada-copy-btn {
+    border: 0;
+    background: transparent;
+    color: #334e68;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+  }
+  .fracionada-dsr {
+    margin-top: 6px;
+    margin-left: 14px;
+    font-size: 13px;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fracionada-weekly-total input[readonly] {
+    background: #f1f5f9;
+    color: #475569;
+  }
+  @media (max-width: 760px) {
+    .fracionada-period-row {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .fracionada-period-label {
+      width: 100%;
+    }
+  }
+  .external-card {
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .external-card + .external-card {
+    margin-top: 10px;
+  }
+  .external-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #dbe3ee;
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 15px;
+  }
+  .external-card-head svg {
+    width: 16px;
+    height: 16px;
+    color: #475569;
+    flex-shrink: 0;
+  }
+  .external-card-body {
+    padding: 10px 14px 12px;
+    color: #455a73;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .external-faq-list {
+    margin: 0;
+    padding: 0 0 0 2px;
+    list-style: none;
+  }
+  .external-faq-list li + li {
+    margin-top: 6px;
   }
 
   /* ===== Ações ===== */
@@ -397,17 +594,17 @@
     <span class="breadcrumb-sep">›</span>
     <span>{{ company_name }}</span>
     <span class="breadcrumb-sep">›</span>
-    <a href="{% url 'web:journey_create' %}">Jornadas de Trabalho</a>
+    <a href="{% url 'web:jornadas' %}">Jornadas de Trabalho</a>
     <span class="breadcrumb-sep">›</span>
-    <span aria-current="page">Nova Jornada de Trabalho</span>
+    <span aria-current="page">{% if is_edit_mode %}Editar Jornada{% else %}Nova Jornada de Trabalho{% endif %}</span>
   </nav>
 
-  <form method="post" action="{% url 'web:journey_create' %}" id="journey-form" novalidate class="journey-form">
+  <form method="post" action="{{ form_action_url }}" id="journey-form" novalidate class="journey-form">
     {% csrf_token %}
 
     <div class="form-card">
       <div class="form-card-heading">
-        <h2>Nova Jornada de Trabalho</h2>
+        <h2>{% if is_edit_mode %}Editar Jornada de Trabalho{% else %}Nova Jornada de Trabalho{% endif %}</h2>
         <p>Gerencie os templates de jornada da empresa</p>
       </div>
 
@@ -570,11 +767,15 @@
             >
           </div>
 
+          <p class="weekly-personalizar-hint" id="weekly-personalizar-hint">
+            Selecione pelo menos um dia de trabalho na escala semanal. Marque os horários nos dias com expediente.
+          </p>
+
           <div class="weekly-builder" id="weekly-builder"></div>
 
           <div class="field weekly-total">
             <label for="weekly-total-hours">Carga Horária Semanal (horas)</label>
-            <input type="text" id="weekly-total-hours" readonly value="0.00">
+            <input type="text" id="weekly-total-hours" readonly value="00:00">
           </div>
 
           {% for error in form.semanal_subtipo.errors %}
@@ -616,11 +817,32 @@
               {% endfor %}
             </div>
           </div>
+
+          <div class="x12x36-actions">
+            <button type="button" class="btn btn-primary" id="btn-generate-12x36">Gerar/Atualizar escala</button>
+          </div>
+
+          <p class="x12x36-error" id="x12x36-error" style="display:none;"></p>
+
+          <div class="x12x36-preview" id="x12x36-preview" style="display:none;">
+            <div class="x12x36-preview-head">
+              <span>Dia da Semana</span>
+              <span>Status</span>
+              <span>Entrada</span>
+              <span>Saída</span>
+            </div>
+            <div id="x12x36-preview-rows"></div>
+
+            <div class="field weekly-total">
+              <label for="x12x36-weekly-hours">Carga Horária Semanal (horas)</label>
+              <input type="text" id="x12x36-weekly-hours" readonly value="00:00">
+            </div>
+          </div>
         </div>
 
         <div class="config-block" id="config-fracionada">
           <h3 class="config-title">Configuração Fracionada (semântica completa)</h3>
-          <p class="config-help">Defina períodos por dia. O backend valida ordem, sobreposição e duração dos períodos.</p>
+          <p class="config-help">Configure múltiplos períodos por dia. Exemplo: 06:30-07:30, 11:30-12:30, 16:30-17:30.</p>
 
           <div class="config-grid-2">
             <div class="field">
@@ -642,27 +864,47 @@
             </label>
           </div>
 
-          <div class="field">
-            <label for="id_fracionada_dias_json">Configuração dos dias e períodos (JSON)</label>
-            <textarea
-              id="id_fracionada_dias_json"
-              name="fracionada_dias_json"
-              class="config-textarea {% if form.fracionada_dias_json.errors %}invalid{% endif %}"
-              placeholder='[{"dia_semana":"SEGUNDA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]}]'
-            >{{ form.fracionada_dias_json.value|default:'' }}</textarea>
-            {% for error in form.fracionada_dias_json.errors %}
-              <p class="field-error" role="alert">{{ error }}</p>
-            {% endfor %}
-            <div class="config-actions">
-              <button type="button" class="btn-chip" id="btn-fill-fracionada">Preencher exemplo fracionada</button>
-            </div>
+          <textarea id="id_fracionada_dias_json" name="fracionada_dias_json" hidden>{{ form.fracionada_dias_json.value|default:'' }}</textarea>
+
+          <div class="fracionada-builder" id="fracionada-builder"></div>
+
+          <div class="field fracionada-weekly-total">
+            <label for="fracionada-weekly-total-hours">Carga Horária Semanal (horas)</label>
+            <input type="text" id="fracionada-weekly-total-hours" readonly value="00:00">
           </div>
+
+          {% for error in form.fracionada_dias_json.errors %}
+            <p class="field-error" role="alert">{{ error }}</p>
+          {% endfor %}
         </div>
 
         <div class="config-block" id="config-externa">
-          <h3 class="config-title">Configuração Externa</h3>
-          <div class="external-alert">
-            Jornada externa não deve ter horários definidos. O sistema registrará marcações sem validar grade fixa.
+          <div class="external-card">
+            <div class="external-card-head">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Jornada Externa</span>
+            </div>
+            <div class="external-card-body">
+              Na jornada externa, o colaborador registra o ponto livremente.
+              O sistema não valida horários fixos, apenas registra as marcações.
+            </div>
+          </div>
+          <div class="external-card">
+            <div class="external-card-head">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 4.3 1.7c-.7.6-1.3 1-1.3 1.8"></path><line x1="12" y1="16.2" x2="12.01" y2="16.2"></line>
+              </svg>
+              <span>Dúvidas comuns</span>
+            </div>
+            <div class="external-card-body">
+              <ul class="external-faq-list">
+                <li>O colaborador pode bater ponto fora do horário da jornada. O ponto nunca é bloqueado.</li>
+                <li>Marcações dentro de ±10 minutos do horário são consideradas dentro da tolerância legal (Art. 58 CLT).</li>
+                <li>Horas extras geram apenas alertas, o sistema não impede o registro.</li>
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -674,8 +916,8 @@
     </div>{# /form-card #}
 
     <div class="journey-actions">
-      <a class="btn btn-lg" href="{% url 'web:painel' %}">Cancelar</a>
-      <button type="submit" class="btn btn-primary btn-lg" id="btn-salvar">Salvar Jornada</button>
+      <a class="btn btn-lg" href="{% url 'web:jornadas' %}">Cancelar</a>
+      <button type="submit" class="btn btn-primary btn-lg" id="btn-salvar">{% if is_edit_mode %}Salvar Alterações{% else %}Salvar Jornada{% endif %}</button>
     </div>
 
   </form>
@@ -688,7 +930,7 @@
     SEMANAL:    document.getElementById('benefits-semanal'),
     '12X36':    document.getElementById('benefits-12x36'),
     FRACIONADA: document.getElementById('benefits-fracionada'),
-    EXTERNA:    document.getElementById('benefits-externa'),
+    EXTERNA:    null,
   };
   var panel = document.getElementById('system-benefits-panel');
   var configMap = {
@@ -749,12 +991,6 @@
     });
   });
 
-  function setJson(id, payload) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.value = JSON.stringify(payload);
-  }
-
   var WEEK_DAYS = [
     { key: 'SEGUNDA', label: 'Segunda-feira' },
     { key: 'TERCA', label: 'Terça-feira' },
@@ -767,6 +1003,16 @@
   var WEEK_DAY_MAP = {};
   WEEK_DAYS.forEach(function (item) { WEEK_DAY_MAP[item.key] = item; });
   var TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  var PERSONALIZAR_TEMPLATE = WEEK_DAYS.map(function (day) {
+    return {
+      dia_semana: day.key,
+      dsr: day.key === 'DOMINGO',
+      entrada_1: '',
+      saida_1: '',
+      entrada_2: '',
+      saida_2: ''
+    };
+  });
 
   var WEEKLY_PRESETS = {
     INTEGRAL_44H: [
@@ -797,11 +1043,19 @@
       {"dia_semana":"DOMINGO","dsr":true}
     ]
   };
-  var fracionadaExemplo = [
-    {"dia_semana":"SEGUNDA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]},
-    {"dia_semana":"TERCA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]},
-    {"dia_semana":"QUARTA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]}
-  ];
+  var FRACIONADA_TEMPLATE = WEEK_DAYS.map(function (day) {
+    if (day.key === 'SABADO' || day.key === 'DOMINGO') {
+      return { dia_semana: day.key, dsr: true, periodos: [] };
+    }
+    return {
+      dia_semana: day.key,
+      dsr: false,
+      periodos: [
+        { inicio: '08:00', fim: '12:00' },
+        { inicio: '14:00', fim: '18:00' }
+      ]
+    };
+  });
 
   function clone(data) {
     return JSON.parse(JSON.stringify(data));
@@ -811,6 +1065,17 @@
     if (!TIME_RE.test(hhmm || '')) return null;
     var parts = hhmm.split(':');
     return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10);
+  }
+
+  function durationMinutesToHHMM(totalMinutes) {
+    var hours = Math.floor(totalMinutes / 60);
+    var minutes = totalMinutes % 60;
+    return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+  }
+
+  function clockMinutesToHHMM(totalMinutes) {
+    var wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+    return String(Math.floor(wrapped / 60)).padStart(2, '0') + ':' + String(wrapped % 60).padStart(2, '0');
   }
 
   function normalizeWeeklyDays(rawDays) {
@@ -920,9 +1185,27 @@
     return payload;
   }
 
-  function recalculateWeeklyHours() {
+  function hasWorkedDay(payload) {
+    return payload.some(function (day) {
+      if (!day || day.dsr) return false;
+      return TIME_RE.test(day.entrada_1 || '') && TIME_RE.test(day.saida_1 || '');
+    });
+  }
+
+  function syncPersonalizarHint(payload) {
+    var hint = document.getElementById('weekly-personalizar-hint');
+    var subtype = document.getElementById('id_semanal_subtipo');
+    if (!hint || !subtype) return;
+    if (subtype.value !== 'PERSONALIZAR') {
+      hint.style.display = 'none';
+      return;
+    }
+    hint.style.display = hasWorkedDay(payload) ? 'none' : 'block';
+  }
+
+  function recalculateWeeklyHours(payload) {
     var totalMinutes = 0;
-    buildWeeklyPayloadFromUi().forEach(function (day) {
+    payload.forEach(function (day) {
       if (day.dsr) return;
       var e1 = toMinutes(day.entrada_1);
       var s1 = toMinutes(day.saida_1);
@@ -933,14 +1216,18 @@
     });
 
     var weeklyTotalEl = document.getElementById('weekly-total-hours');
-    if (weeklyTotalEl) weeklyTotalEl.value = (totalMinutes / 60).toFixed(2);
+    if (weeklyTotalEl) {
+      weeklyTotalEl.value = durationMinutesToHHMM(totalMinutes);
+    }
   }
 
   function syncWeeklyJson() {
     var target = document.getElementById('id_semanal_dias_json');
     if (!target) return;
-    target.value = JSON.stringify(buildWeeklyPayloadFromUi());
-    recalculateWeeklyHours();
+    var payload = buildWeeklyPayloadFromUi();
+    target.value = JSON.stringify(payload);
+    recalculateWeeklyHours(payload);
+    syncPersonalizarHint(payload);
   }
 
   function renderWeeklyBuilder(daysPayload) {
@@ -992,7 +1279,10 @@
     if (weeklySubtypeEl) weeklySubtypeEl.value = subtipo;
     syncWeeklySubtypeUi();
 
-    if (subtipo === 'PERSONALIZAR') return;
+    if (subtipo === 'PERSONALIZAR') {
+      renderWeeklyBuilder(clone(PERSONALIZAR_TEMPLATE));
+      return;
+    }
     if (!WEEKLY_PRESETS[subtipo]) return;
     renderWeeklyBuilder(clone(WEEKLY_PRESETS[subtipo]));
   }
@@ -1021,14 +1311,338 @@
   if (!initialWeeklyPayload.length && weeklySubtypeEl && WEEKLY_PRESETS[weeklySubtypeEl.value]) {
     initialWeeklyPayload = clone(WEEKLY_PRESETS[weeklySubtypeEl.value]);
   }
+  if (!initialWeeklyPayload.length && weeklySubtypeEl && weeklySubtypeEl.value === 'PERSONALIZAR') {
+    initialWeeklyPayload = clone(PERSONALIZAR_TEMPLATE);
+  }
   renderWeeklyBuilder(initialWeeklyPayload);
 
-  var btnFrac = document.getElementById('btn-fill-fracionada');
-  if (btnFrac) btnFrac.addEventListener('click', function () { setJson('id_fracionada_dias_json', fracionadaExemplo); });
+  function parseIsoDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
+    var parts = value.split('-');
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10) - 1;
+    var day = parseInt(parts[2], 10);
+    var parsed = new Date(year, month, day);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  }
+
+  function jsWeekdayMondayFirst(dateObj) {
+    return (dateObj.getDay() + 6) % 7;
+  }
+
+  function show12x36Error(message) {
+    var errorEl = document.getElementById('x12x36-error');
+    if (!errorEl) return;
+    if (!message) {
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+      return;
+    }
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+  }
+
+  function build12x36Week(startDate, entryMinutes) {
+    var weekStart = new Date(
+      startDate.getFullYear(),
+      startDate.getMonth(),
+      startDate.getDate() - jsWeekdayMondayFirst(startDate)
+    );
+    var endMinutesAbsolute = entryMinutes + (12 * 60);
+    var endClock = clockMinutesToHHMM(endMinutesAbsolute);
+    var endsNextDay = endMinutesAbsolute >= 1440;
+    var rows = [];
+    var weeklyMinutes = 0;
+
+    for (var idx = 0; idx < WEEK_DAYS.length; idx += 1) {
+      var currentDate = new Date(
+        weekStart.getFullYear(),
+        weekStart.getMonth(),
+        weekStart.getDate() + idx
+      );
+      var deltaDays = Math.round((currentDate.getTime() - startDate.getTime()) / 86400000);
+      var isWorkDay = ((deltaDays % 2) + 2) % 2 === 0;
+
+      rows.push({
+        dia_semana: WEEK_DAYS[idx].key,
+        dia_semana_label: WEEK_DAYS[idx].label,
+        tipo_dia: isWorkDay ? 'TRABALHO' : 'FOLGA',
+        entrada: isWorkDay ? clockMinutesToHHMM(entryMinutes) : '-',
+        saida: isWorkDay ? (endClock + (endsNextDay ? ' (+1)' : '')) : '-',
+      });
+
+      if (isWorkDay) weeklyMinutes += 12 * 60;
+    }
+
+    return {
+      rows: rows,
+      weeklyMinutes: weeklyMinutes,
+    };
+  }
+
+  function render12x36Preview(rows, weeklyMinutes) {
+    var previewEl = document.getElementById('x12x36-preview');
+    var rowsEl = document.getElementById('x12x36-preview-rows');
+    var weeklyHoursEl = document.getElementById('x12x36-weekly-hours');
+    if (!previewEl || !rowsEl || !weeklyHoursEl) return;
+
+    rowsEl.innerHTML = rows.map(function (row) {
+      var statusClass = row.tipo_dia === 'TRABALHO' ? 'x12x36-status-trabalho' : 'x12x36-status-folga';
+      var statusLabel = row.tipo_dia === 'TRABALHO' ? 'Dia de Trabalho' : 'Folga';
+      return '' +
+        '<div class="x12x36-preview-row">' +
+          '<span>' + row.dia_semana_label + '</span>' +
+          '<span class="' + statusClass + '">' + statusLabel + '</span>' +
+          '<span>' + row.entrada + '</span>' +
+          '<span>' + row.saida + '</span>' +
+        '</div>';
+    }).join('');
+
+    weeklyHoursEl.value = durationMinutesToHHMM(weeklyMinutes);
+    previewEl.style.display = 'block';
+  }
+
+  function generate12x36Preview() {
+    var dateEl = document.getElementById('id_x12x36_data_inicio_escala');
+    var entryEl = document.getElementById('id_x12x36_horario_entrada');
+    var previewEl = document.getElementById('x12x36-preview');
+    if (!dateEl || !entryEl) return;
+
+    var startDate = parseIsoDate(dateEl.value || '');
+    if (!startDate) {
+      show12x36Error('Informe uma data válida para gerar a escala 12x36.');
+      if (previewEl) previewEl.style.display = 'none';
+      return;
+    }
+
+    var entryMinutes = toMinutes(entryEl.value || '');
+    if (entryMinutes === null) {
+      show12x36Error('Informe um horário de entrada válido para gerar a escala 12x36.');
+      if (previewEl) previewEl.style.display = 'none';
+      return;
+    }
+
+    show12x36Error('');
+    var built = build12x36Week(startDate, entryMinutes);
+    render12x36Preview(built.rows, built.weeklyMinutes);
+  }
+
+  var btnGenerate12x36 = document.getElementById('btn-generate-12x36');
+  if (btnGenerate12x36) {
+    btnGenerate12x36.addEventListener('click', generate12x36Preview);
+  }
+  var x12x36DateEl = document.getElementById('id_x12x36_data_inicio_escala');
+  var x12x36TimeEl = document.getElementById('id_x12x36_horario_entrada');
+  if (x12x36DateEl) x12x36DateEl.addEventListener('change', generate12x36Preview);
+  if (x12x36TimeEl) x12x36TimeEl.addEventListener('change', generate12x36Preview);
+  if (x12x36DateEl && x12x36TimeEl && (x12x36DateEl.value || '').trim() && (x12x36TimeEl.value || '').trim()) {
+    generate12x36Preview();
+  }
+
+  var fracionadaState = [];
+
+  function normalizeFracionadaDays(rawDays) {
+    var map = {};
+    if (Array.isArray(rawDays)) {
+      rawDays.forEach(function (item) {
+        if (!item || typeof item !== 'object') return;
+        var dayKey = String(item.dia_semana || '').toUpperCase();
+        if (!WEEK_DAY_MAP[dayKey]) return;
+        var periodos = Array.isArray(item.periodos) ? item.periodos : [];
+        map[dayKey] = {
+          dia_semana: dayKey,
+          dsr: Boolean(item.dsr),
+          periodos: periodos.map(function (periodo) {
+            return {
+              inicio: (periodo && periodo.inicio) ? String(periodo.inicio) : '',
+              fim: (periodo && periodo.fim) ? String(periodo.fim) : '',
+            };
+          }),
+        };
+      });
+    }
+
+    return WEEK_DAYS.map(function (day) {
+      var normalized = map[day.key];
+      if (normalized) return normalized;
+      var defaultDay = FRACIONADA_TEMPLATE.find(function (item) { return item.dia_semana === day.key; });
+      return clone(defaultDay || { dia_semana: day.key, dsr: false, periodos: [] });
+    });
+  }
+
+  function computeFracionadaDayMinutes(day) {
+    if (!day || day.dsr || !Array.isArray(day.periodos)) return 0;
+    return day.periodos.reduce(function (acc, periodo) {
+      var ini = toMinutes(periodo.inicio || '');
+      var fim = toMinutes(periodo.fim || '');
+      if (ini === null || fim === null || fim <= ini) return acc;
+      return acc + (fim - ini);
+    }, 0);
+  }
+
+  function buildFracionadaPayload() {
+    return fracionadaState.map(function (day) {
+      return {
+        dia_semana: day.dia_semana,
+        dsr: Boolean(day.dsr),
+        periodos: (day.periodos || []).map(function (periodo) {
+          return {
+            inicio: (periodo.inicio || '').trim(),
+            fim: (periodo.fim || '').trim(),
+          };
+        }),
+      };
+    });
+  }
+
+  function syncFracionadaJson() {
+    var payload = buildFracionadaPayload();
+    var hiddenEl = document.getElementById('id_fracionada_dias_json');
+    if (hiddenEl) hiddenEl.value = JSON.stringify(payload);
+
+    var weeklyMinutes = payload.reduce(function (acc, day) {
+      return acc + computeFracionadaDayMinutes(day);
+    }, 0);
+    var weeklyEl = document.getElementById('fracionada-weekly-total-hours');
+    if (weeklyEl) weeklyEl.value = durationMinutesToHHMM(weeklyMinutes);
+  }
+
+  function renderFracionadaBuilder() {
+    var builderEl = document.getElementById('fracionada-builder');
+    if (!builderEl) return;
+
+    builderEl.innerHTML = fracionadaState.map(function (day, dayIndex) {
+      var dayMinutes = computeFracionadaDayMinutes(day);
+      var dayHours = (dayMinutes / 60).toFixed(1);
+      var hasPeriods = Array.isArray(day.periodos) && day.periodos.length > 0;
+      var isActiveDay = !day.dsr && hasPeriods;
+
+      var periodsHtml = '';
+      if (!day.dsr) {
+        var periodRows = (day.periodos || []).map(function (periodo, periodIndex) {
+          return '' +
+            '<div class="fracionada-period-row">' +
+              '<span class="fracionada-period-label">Período ' + (periodIndex + 1) + '</span>' +
+              '<input type="time" data-frac-input="inicio" data-day-index="' + dayIndex + '" data-period-index="' + periodIndex + '" value="' + (periodo.inicio || '') + '">' +
+              '<span class="fracionada-period-sep">—</span>' +
+              '<input type="time" data-frac-input="fim" data-day-index="' + dayIndex + '" data-period-index="' + periodIndex + '" value="' + (periodo.fim || '') + '">' +
+              '<button type="button" class="fracionada-remove-period" data-frac-remove="' + dayIndex + ':' + periodIndex + '" aria-label="Remover período">x</button>' +
+            '</div>';
+        }).join('');
+
+        periodsHtml = '' +
+          '<div class="fracionada-period-list">' +
+            periodRows +
+            '<div class="fracionada-actions">' +
+              '<button type="button" class="btn-chip" data-frac-add="' + dayIndex + '">+ Adicionar Período</button>' +
+              '<button type="button" class="fracionada-copy-btn" data-frac-copy="' + dayIndex + '">Copiar horários para os demais dias</button>' +
+            '</div>' +
+          '</div>';
+      }
+
+      return '' +
+        '<div class="fracionada-day">' +
+          '<div class="fracionada-day-head">' +
+            '<span class="fracionada-day-pill ' + (isActiveDay ? 'active' : '') + '">' + WEEK_DAY_MAP[day.dia_semana].label + '</span>' +
+            '<span class="fracionada-day-total">Total do dia: ' + dayHours + 'h</span>' +
+          '</div>' +
+          periodsHtml +
+          '<label class="fracionada-dsr">' +
+            '<input type="checkbox" data-frac-dsr="' + dayIndex + '" ' + (day.dsr ? 'checked' : '') + '> DSR (Descanso Semanal Remunerado)' +
+          '</label>' +
+        '</div>';
+    }).join('');
+
+    builderEl.querySelectorAll('[data-frac-add]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var dayIndex = parseInt(btn.dataset.fracAdd, 10);
+        if (Number.isNaN(dayIndex) || !fracionadaState[dayIndex]) return;
+        fracionadaState[dayIndex].periodos = fracionadaState[dayIndex].periodos || [];
+        fracionadaState[dayIndex].periodos.push({ inicio: '', fim: '' });
+        renderFracionadaBuilder();
+      });
+    });
+
+    builderEl.querySelectorAll('[data-frac-remove]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var parts = String(btn.dataset.fracRemove || '').split(':');
+        var dayIndex = parseInt(parts[0], 10);
+        var periodIndex = parseInt(parts[1], 10);
+        if (Number.isNaN(dayIndex) || Number.isNaN(periodIndex) || !fracionadaState[dayIndex]) return;
+        fracionadaState[dayIndex].periodos.splice(periodIndex, 1);
+        renderFracionadaBuilder();
+      });
+    });
+
+    builderEl.querySelectorAll('[data-frac-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var sourceDayIndex = parseInt(btn.dataset.fracCopy, 10);
+        if (Number.isNaN(sourceDayIndex) || !fracionadaState[sourceDayIndex]) return;
+        var sourcePeriods = clone(fracionadaState[sourceDayIndex].periodos || []);
+        fracionadaState.forEach(function (day, idx) {
+          if (idx === sourceDayIndex) return;
+          if (day.dsr) return;
+          day.periodos = clone(sourcePeriods);
+        });
+        renderFracionadaBuilder();
+      });
+    });
+
+    builderEl.querySelectorAll('[data-frac-dsr]').forEach(function (checkbox) {
+      checkbox.addEventListener('change', function () {
+        var dayIndex = parseInt(checkbox.dataset.fracDsr, 10);
+        if (Number.isNaN(dayIndex) || !fracionadaState[dayIndex]) return;
+        fracionadaState[dayIndex].dsr = checkbox.checked;
+        if (checkbox.checked) {
+          fracionadaState[dayIndex].periodos = [];
+        } else if (!fracionadaState[dayIndex].periodos.length) {
+          fracionadaState[dayIndex].periodos = [{ inicio: '', fim: '' }];
+        }
+        renderFracionadaBuilder();
+      });
+    });
+
+    builderEl.querySelectorAll('[data-frac-input]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var dayIndex = parseInt(input.dataset.dayIndex, 10);
+        var periodIndex = parseInt(input.dataset.periodIndex, 10);
+        var key = input.dataset.fracInput;
+        if (Number.isNaN(dayIndex) || Number.isNaN(periodIndex) || !fracionadaState[dayIndex]) return;
+        if (!fracionadaState[dayIndex].periodos[periodIndex]) return;
+        fracionadaState[dayIndex].periodos[periodIndex][key] = input.value || '';
+        syncFracionadaJson();
+        var container = input.closest('.fracionada-day');
+        if (container) {
+          var dayMinutes = computeFracionadaDayMinutes(fracionadaState[dayIndex]);
+          var dayTotalEl = container.querySelector('.fracionada-day-total');
+          if (dayTotalEl) dayTotalEl.textContent = 'Total do dia: ' + (dayMinutes / 60).toFixed(1) + 'h';
+        }
+      });
+    });
+
+    syncFracionadaJson();
+  }
+
+  var fracionadaRawEl = document.getElementById('id_fracionada_dias_json');
+  var fracionadaRawPayload = [];
+  if (fracionadaRawEl && (fracionadaRawEl.value || '').trim()) {
+    try {
+      fracionadaRawPayload = JSON.parse(fracionadaRawEl.value);
+    } catch (err) {
+      fracionadaRawPayload = [];
+    }
+  }
+  if (!fracionadaRawPayload.length) {
+    fracionadaRawPayload = clone(FRACIONADA_TEMPLATE);
+  }
+  fracionadaState = normalizeFracionadaDays(fracionadaRawPayload);
+  renderFracionadaBuilder();
 
   // Anti-duplo-submit
   document.getElementById('journey-form').addEventListener('submit', function () {
     syncWeeklyJson();
+    syncFracionadaJson();
     var btn = document.getElementById('btn-salvar');
     btn.disabled = true;
     btn.textContent = 'Salvando…';

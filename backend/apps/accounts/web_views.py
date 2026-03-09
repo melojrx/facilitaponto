@@ -3,12 +3,14 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.employees.forms import WorkScheduleForm
+from apps.employees.models import WorkSchedule
 from core.tenant_resolution import resolve_tenant_from_user
 
 from .forms import CompanyOnboardingForm, LoginForm, ProfileForm, SignupForm
@@ -32,7 +34,7 @@ PANEL_MENU = [
     {
         "key": "jornadas",
         "label": "Jornadas de Trabalho",
-        "url_name": "web:journey_create",
+        "url_name": "web:jornadas",
         "min_step": 2,
         "locked_reason": "Cadastre sua empresa para liberar Jornadas de Trabalho.",
     },
@@ -396,7 +398,7 @@ def create_journey_view(request):
             tenant.onboarding_step = max(3, int(tenant.onboarding_step or 2))
             tenant.save(update_fields=["onboarding_step"])
             messages.success(request, "Jornada criada com sucesso.")
-            return redirect("web:painel")
+            return redirect("web:jornadas")
     else:
         form = WorkScheduleForm(tenant=tenant)
 
@@ -404,5 +406,228 @@ def create_journey_view(request):
         request,
         "web/journey_create.html",
         current_menu="jornadas",
-        extra_context={"form": form},
+        extra_context={
+            "form": form,
+            "is_edit_mode": False,
+            "form_action_url": reverse("web:journey_create"),
+        },
+    )
+
+
+def _schedule_usage_warnings(schedule):
+    warnings = []
+    for relation in schedule._meta.related_objects:
+        accessor = relation.get_accessor_name()
+        if not accessor:
+            continue
+
+        try:
+            if relation.one_to_one:
+                related_object = getattr(schedule, accessor)
+                count = 1 if related_object else 0
+            else:
+                related_manager = getattr(schedule, accessor, None)
+                if not related_manager:
+                    continue
+                count = related_manager.all().count()
+        except Exception:
+            continue
+        if count > 0:
+            warnings.append(
+                {
+                    "label": relation.related_model._meta.verbose_name_plural,
+                    "count": count,
+                }
+            )
+    return warnings
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def edit_journey_view(request, journey_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de editar uma jornada.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=2)
+    if guard_redirect:
+        return guard_redirect
+
+    schedule = get_object_or_404(WorkSchedule.all_objects, tenant=tenant, id=journey_id)
+
+    if request.method == "POST":
+        form = WorkScheduleForm(request.POST, tenant=tenant, instance=schedule)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Jornada atualizada com sucesso.")
+            return redirect("web:jornadas")
+    else:
+        form = WorkScheduleForm(tenant=tenant, instance=schedule)
+
+    return _render_panel(
+        request,
+        "web/journey_create.html",
+        current_menu="jornadas",
+        extra_context={
+            "form": form,
+            "is_edit_mode": True,
+            "journey": schedule,
+            "form_action_url": reverse("web:journey_edit", kwargs={"journey_id": schedule.id}),
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_POST
+def delete_journey_view(request, journey_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de excluir uma jornada.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=2)
+    if guard_redirect:
+        return guard_redirect
+
+    with transaction.atomic():
+        schedule = get_object_or_404(
+            WorkSchedule.all_objects.select_for_update(),
+            tenant=tenant,
+            id=journey_id,
+        )
+        if not schedule.ativo:
+            messages.info(request, "A jornada selecionada já está inativa.")
+            return redirect("web:jornadas")
+
+        usages = _schedule_usage_warnings(schedule)
+        if usages:
+            usage_text = ", ".join([f"{item['label']} ({item['count']})" for item in usages])
+            messages.error(
+                request,
+                f"Não foi possível excluir a jornada porque ela possui vínculos ativos: {usage_text}.",
+            )
+            return redirect("web:jornadas")
+
+        schedule.ativo = False
+        schedule.save(update_fields=["ativo"])
+
+    messages.success(request, "Jornada excluída com sucesso.")
+    return redirect("web:jornadas")
+
+
+def _to_minutes(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        hour, minute = value.strip().split(":")
+        parsed = int(hour) * 60 + int(minute)
+    except (TypeError, ValueError):
+        return None
+    return parsed if 0 <= parsed < (24 * 60) else None
+
+
+def _format_weekly_hours(minutes):
+    if minutes is None:
+        return "-"
+    return f"{(minutes / 60):.2f}h"
+
+
+def _schedule_weekly_minutes(schedule):
+    config = schedule.configuracao or {}
+
+    if schedule.tipo == WorkSchedule.TipoJornada.SEMANAL:
+        total = 0
+        for day in config.get("dias", []):
+            if not isinstance(day, dict) or day.get("dsr"):
+                continue
+            for start_key, end_key in (("entrada_1", "saida_1"), ("entrada_2", "saida_2")):
+                start = _to_minutes(day.get(start_key))
+                end = _to_minutes(day.get(end_key))
+                if start is None or end is None or end <= start:
+                    continue
+                total += end - start
+        return total
+
+    if schedule.tipo == WorkSchedule.TipoJornada.X12X36:
+        explicit_minutes = config.get("carga_horaria_semanal_minutos")
+        if isinstance(explicit_minutes, int) and explicit_minutes >= 0:
+            return explicit_minutes
+        return None
+
+    if schedule.tipo == WorkSchedule.TipoJornada.FRACIONADA:
+        total = 0
+        for day in config.get("dias", []):
+            if not isinstance(day, dict) or day.get("dsr"):
+                continue
+            for period in day.get("periodos", []):
+                if not isinstance(period, dict):
+                    continue
+                start = _to_minutes(period.get("inicio"))
+                end = _to_minutes(period.get("fim"))
+                if start is None or end is None or end <= start:
+                    continue
+                total += end - start
+        return total
+
+    if schedule.tipo == WorkSchedule.TipoJornada.EXTERNA:
+        return None
+
+    return None
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET"])
+def journey_list_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Jornadas de Trabalho.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=2)
+    if guard_redirect:
+        return guard_redirect
+
+    query = (request.GET.get("q") or "").strip()
+    status_filter = (request.GET.get("status") or "ativo").strip().lower()
+    if status_filter not in {"ativo", "inativo", "todos"}:
+        status_filter = "ativo"
+
+    schedules_qs = WorkSchedule.all_objects.filter(tenant=tenant)
+    if query:
+        schedules_qs = schedules_qs.filter(nome__icontains=query)
+    if status_filter == "ativo":
+        schedules_qs = schedules_qs.filter(ativo=True)
+    elif status_filter == "inativo":
+        schedules_qs = schedules_qs.filter(ativo=False)
+
+    schedules = []
+    for schedule in schedules_qs.order_by("nome"):
+        usage_warnings = _schedule_usage_warnings(schedule)
+        schedules.append(
+            {
+                "id": schedule.id,
+                "nome": schedule.nome,
+                "tipo_label": schedule.get_tipo_display(),
+                "weekly_hours_label": _format_weekly_hours(_schedule_weekly_minutes(schedule)),
+                "status_label": "Ativo" if schedule.ativo else "Inativo",
+                "status_class": "active" if schedule.ativo else "inactive",
+                "edit_url": reverse("web:journey_edit", kwargs={"journey_id": schedule.id}),
+                "delete_url": reverse("web:journey_delete", kwargs={"journey_id": schedule.id}),
+                "usage_warnings": usage_warnings,
+                "usage_summary": ", ".join(
+                    [f"{item['label']} ({item['count']})" for item in usage_warnings]
+                ),
+            }
+        )
+
+    return _render_panel(
+        request,
+        "web/journey_list.html",
+        current_menu="jornadas",
+        extra_context={
+            "journeys": schedules,
+            "journey_query": query,
+            "journey_status_filter": status_filter,
+        },
     )

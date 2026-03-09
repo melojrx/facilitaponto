@@ -1,0 +1,412 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}Jornadas de Trabalho | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}Jornadas de Trabalho{% endblock %}
+{% block panel_heading_subtitle %}Gerencie os templates de jornada da empresa{% endblock %}
+
+{% block panel_styles %}
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--brand); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb-sep { color: #CBD5E1; font-size: 12px; }
+
+  .journey-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  }
+  .card + .card {
+    margin-top: 12px;
+  }
+
+  .filters-form {
+    display: grid;
+    grid-template-columns: 1fr 220px auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .field input[type="search"],
+  .field select {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--text);
+  }
+  .filters-form .btn {
+    height: 40px;
+    padding: 0 14px;
+  }
+  @media (max-width: 860px) {
+    .filters-form {
+      grid-template-columns: 1fr;
+    }
+    .filters-form .btn {
+      width: 100%;
+    }
+  }
+
+  .journey-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .journey-table th,
+  .journey-table td {
+    text-align: left;
+    padding: 11px 8px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .journey-table th {
+    font-weight: 700;
+    color: #334155;
+    font-size: 13px;
+  }
+  .journey-table tr:last-child td {
+    border-bottom: 0;
+  }
+  .journey-table .num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .status-badge.active {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  .status-badge.inactive {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .actions-cell {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .action-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .action-icon {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+  }
+  .action-icon svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .action-icon:hover {
+    color: var(--brand);
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+  .action-icon.disabled {
+    color: #94a3b8;
+    background: #f8fafc;
+    cursor: not-allowed;
+  }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 1200;
+  }
+  .modal-backdrop.open {
+    display: flex;
+  }
+  .modal-card {
+    width: min(560px, 100%);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 20px 35px rgba(15, 23, 42, 0.2);
+    overflow: hidden;
+  }
+  .modal-head {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .modal-body {
+    padding: 14px 16px;
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .modal-body p {
+    margin: 0 0 8px;
+  }
+  .modal-warning {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+    border-radius: 10px;
+    font-size: 13px;
+    display: none;
+  }
+  .modal-warning.open {
+    display: block;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--line);
+  }
+  .btn-danger {
+    border: 1px solid #dc2626;
+    background: #dc2626;
+    color: #fff;
+  }
+  .btn-danger:hover {
+    border-color: #b91c1c;
+    background: #b91c1c;
+  }
+  .btn-danger:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+  }
+
+  .empty-state {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+{% endblock %}
+
+{% block panel_content %}
+  <nav class="breadcrumb" aria-label="Navegação estrutural">
+    <a href="{% url 'web:painel' %}">Início</a>
+    <span class="breadcrumb-sep">›</span>
+    <span>{{ company_name }}</span>
+    <span class="breadcrumb-sep">›</span>
+    <span aria-current="page">Jornadas de Trabalho</span>
+  </nav>
+
+  <div class="journey-head">
+    <div></div>
+    <a class="btn btn-primary" href="{% url 'web:journey_create' %}">+ Nova Jornada</a>
+  </div>
+
+  <section class="card">
+    <form method="get" action="{% url 'web:jornadas' %}" class="filters-form">
+      <div class="field">
+        <label for="id_q">Buscar...</label>
+        <input type="search" id="id_q" name="q" value="{{ journey_query }}" placeholder="Buscar por nome da jornada">
+      </div>
+      <div class="field">
+        <label for="id_status">Status</label>
+        <select id="id_status" name="status">
+          <option value="ativo" {% if journey_status_filter == "ativo" %}selected{% endif %}>Ativo</option>
+          <option value="inativo" {% if journey_status_filter == "inativo" %}selected{% endif %}>Inativo</option>
+          <option value="todos" {% if journey_status_filter == "todos" %}selected{% endif %}>Todos</option>
+        </select>
+      </div>
+      <button type="submit" class="btn">Filtrar</button>
+    </form>
+  </section>
+
+  <section class="card">
+    {% if journeys %}
+      <table class="journey-table">
+        <thead>
+          <tr>
+            <th>Nome da Jornada</th>
+            <th>Tipo de Jornada</th>
+            <th class="num">Carga Horária Semanal (horas)</th>
+            <th>Status</th>
+            <th class="actions-cell">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for journey in journeys %}
+            <tr>
+              <td>{{ journey.nome }}</td>
+              <td>{{ journey.tipo_label }}</td>
+              <td class="num">{{ journey.weekly_hours_label }}</td>
+              <td><span class="status-badge {{ journey.status_class }}">{{ journey.status_label }}</span></td>
+              <td class="actions-cell">
+                <div class="action-icons">
+                  <a
+                    href="{{ journey.edit_url }}"
+                    class="action-icon"
+                    title="Editar jornada"
+                    aria-label="Editar jornada {{ journey.nome }}"
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 20h9"></path>
+                      <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                    </svg>
+                  </a>
+                  <button
+                    type="button"
+                    class="action-icon js-open-delete-modal"
+                    title="Excluir jornada"
+                    aria-label="Excluir jornada {{ journey.nome }}"
+                    data-journey-name="{{ journey.nome }}"
+                    data-delete-url="{{ journey.delete_url }}"
+                    data-has-usage="{% if journey.usage_warnings %}1{% else %}0{% endif %}"
+                    data-usage-summary="{{ journey.usage_summary|default:'' }}"
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                      <path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-state">Nenhuma jornada encontrada com os filtros aplicados.</p>
+    {% endif %}
+  </section>
+
+  <div class="modal-backdrop" id="delete-journey-modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="delete-journey-title">
+      <div class="modal-head" id="delete-journey-title">Confirmar exclusão de jornada</div>
+      <div class="modal-body">
+        <p id="delete-journey-message"></p>
+        <p>
+          Consequências: a jornada será inativada e poderá impactar colaboradores que dependam dela em rotinas operacionais.
+        </p>
+        <p>Essa ação exige confirmação explícita.</p>
+        <div class="modal-warning" id="delete-journey-warning"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="delete-journey-cancel">Cancelar</button>
+        <form method="post" id="delete-journey-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" id="delete-journey-confirm">Excluir jornada</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block panel_scripts %}
+<script>
+(function () {
+  var modal = document.getElementById('delete-journey-modal');
+  var openButtons = document.querySelectorAll('.js-open-delete-modal');
+  var cancelButton = document.getElementById('delete-journey-cancel');
+  var form = document.getElementById('delete-journey-form');
+  var confirmButton = document.getElementById('delete-journey-confirm');
+  var message = document.getElementById('delete-journey-message');
+  var warning = document.getElementById('delete-journey-warning');
+
+  if (!modal || !form || !confirmButton || !message || !warning) return;
+
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function openModal(button) {
+    var journeyName = button.getAttribute('data-journey-name') || 'jornada selecionada';
+    var deleteUrl = button.getAttribute('data-delete-url') || '';
+    var hasUsage = button.getAttribute('data-has-usage') === '1';
+    var usageSummary = button.getAttribute('data-usage-summary') || '';
+
+    message.textContent = 'Você está prestes a excluir a jornada "' + journeyName + '".';
+    form.setAttribute('action', deleteUrl);
+
+    if (hasUsage) {
+      warning.textContent = 'Esta jornada possui vínculos ativos (' + usageSummary + '). Remova os vínculos antes de excluir.';
+      warning.classList.add('open');
+      confirmButton.disabled = true;
+    } else {
+      warning.textContent = '';
+      warning.classList.remove('open');
+      confirmButton.disabled = false;
+    }
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  openButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      openModal(button);
+    });
+  });
+
+  if (cancelButton) {
+    cancelButton.addEventListener('click', closeModal);
+  }
+
+  modal.addEventListener('click', function (event) {
+    if (event.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') closeModal();
+  });
+})();
+</script>
+{% endblock %}

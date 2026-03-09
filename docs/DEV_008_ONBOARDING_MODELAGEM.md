@@ -235,7 +235,10 @@ Observação: manter modelagem simples (sem motor de workflow); transições dis
 ### Rotas web do painel (MVP)
 - `GET /painel/`
 - `GET|POST /painel/empresa/nova/`
+- `GET /painel/jornadas/`
 - `GET|POST /painel/jornadas/nova/`
+- `GET|POST /painel/jornadas/{id}/editar/`
+- `POST /painel/jornadas/{id}/excluir/`
 
 ### Status de implementação (snapshot real em 2026-03-09)
 
@@ -255,6 +258,10 @@ Implementado até o momento:
 - `AccountOnboardingService` implementado para encapsular transação de criação de owner e vínculo/atualização de empresa no onboarding.
 - Painel com liberação progressiva por `onboarding_step` e CTA para jornada.
 - Tela de jornada em `GET|POST /painel/jornadas/nova/` com tipos (`Semanal`, `12x36`, `Fracionada`, `Externa`) e avanço para `onboarding_step >= 3`.
+- Listagem de jornadas em `GET /painel/jornadas/` com busca, filtro por status e ações de CRUD.
+- Edição de jornada em `GET|POST /painel/jornadas/{id}/editar/`, reaproveitando as mesmas validações semânticas por tipo.
+- Exclusão segura de jornada em `POST /painel/jornadas/{id}/excluir/` com proteção de tenant, checagem de vínculos relacionais e inativação lógica (`ativo=False`).
+- Fluxo de exclusão com modal explicativo de consequências, confirmação explícita e desabilitação preventiva da ação quando há vínculos detectados na listagem.
 - Persistência completa de `WorkSchedule.configuracao` com validação forte por tipo (ordem/sobreposição de períodos, regras de `12x36`, bloqueio de horários em `EXTERNA`).
 - Endpoint público de CEP via ViaCEP com fallback manual (`GET /api/public/cep/`).
 - Resolução de tenant unificada entre web/API e rate limit nas rotas públicas de autenticação.

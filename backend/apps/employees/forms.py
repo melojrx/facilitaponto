@@ -1,5 +1,7 @@
 """Forms do domínio de funcionários."""
 
+import json
+
 from django import forms
 from django.core.exceptions import ValidationError
 
@@ -84,17 +86,63 @@ class WorkScheduleForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.tenant = kwargs.pop("tenant")
+        self.instance = kwargs.pop("instance", None)
+        if self.instance and not args and "initial" not in kwargs:
+            kwargs["initial"] = self.initial_from_schedule(self.instance)
         super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def initial_from_schedule(schedule: WorkSchedule) -> dict:
+        configuracao = schedule.configuracao or {}
+        initial = {
+            "nome": schedule.nome,
+            "descricao": schedule.descricao,
+            "tipo": schedule.tipo,
+        }
+
+        if schedule.tipo == WorkSchedule.TipoJornada.SEMANAL:
+            initial.update(
+                {
+                    "semanal_subtipo": configuracao.get("subtipo", "PERSONALIZAR"),
+                    "semanal_intervalo_reduzido": bool(
+                        configuracao.get("intervalo_reduzido_convencao", False)
+                    ),
+                    "semanal_norma_coletiva_ref": configuracao.get("norma_coletiva_ref", ""),
+                    "semanal_dias_json": json.dumps(configuracao.get("dias", [])),
+                }
+            )
+        elif schedule.tipo == WorkSchedule.TipoJornada.X12X36:
+            initial.update(
+                {
+                    "x12x36_data_inicio_escala": configuracao.get("data_inicio_escala", ""),
+                    "x12x36_horario_entrada": configuracao.get("horario_entrada", ""),
+                }
+            )
+        elif schedule.tipo == WorkSchedule.TipoJornada.FRACIONADA:
+            initial.update(
+                {
+                    "fracionada_intervalo_reduzido": bool(
+                        configuracao.get("intervalo_reduzido_convencao", False)
+                    ),
+                    "fracionada_norma_coletiva_ref": configuracao.get("norma_coletiva_ref", ""),
+                    "fracionada_dias_json": json.dumps(configuracao.get("dias", [])),
+                }
+            )
+
+        return initial
 
     def clean_nome(self):
         nome = self.cleaned_data["nome"].strip()
         if len(nome) < 3:
             raise forms.ValidationError("O nome da jornada deve ter pelo menos 3 caracteres.")
-        duplicado = WorkSchedule.all_objects.filter(
+        duplicado_qs = WorkSchedule.all_objects.filter(
             tenant=self.tenant,
             nome__iexact=nome,
             ativo=True,
-        ).exists()
+        )
+        if self.instance:
+            duplicado_qs = duplicado_qs.exclude(pk=self.instance.pk)
+        duplicado = duplicado_qs.exists()
         if duplicado:
             raise forms.ValidationError("Já existe uma jornada com este nome na sua empresa.")
         return nome
@@ -152,6 +200,14 @@ class WorkScheduleForm(forms.Form):
         return cleaned_data
 
     def save(self) -> WorkSchedule:
+        if self.instance:
+            self.instance.nome = self.cleaned_data["nome"]
+            self.instance.descricao = self.cleaned_data["descricao"]
+            self.instance.tipo = self.cleaned_data["tipo"]
+            self.instance.configuracao = self.cleaned_data.get("configuracao", {})
+            self.instance.save(update_fields=["nome", "descricao", "tipo", "configuracao"])
+            return self.instance
+
         return WorkSchedule.all_objects.create(
             tenant=self.tenant,
             nome=self.cleaned_data["nome"],

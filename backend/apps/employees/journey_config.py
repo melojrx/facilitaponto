@@ -1,7 +1,7 @@
 """Valida e normaliza configurações de jornada por tipo."""
 
 import json
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from django.core.exceptions import ValidationError
 
@@ -54,6 +54,62 @@ def _to_hhmm(value, *, field_label: str):
 def _to_minutes(hhmm: str) -> int:
     hour, minute = hhmm.split(":")
     return int(hour) * 60 + int(minute)
+
+
+def _minutes_to_hhmm(total_minutes: int) -> str:
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    return f"{hours:02d}:{minutes:02d}"
+
+
+def _add_hours_to_hhmm(hhmm: str, hours: int) -> tuple[str, bool]:
+    total = _to_minutes(hhmm) + (hours * 60)
+    wrapped = total >= (24 * 60)
+    wrapped_minutes = total % (24 * 60)
+    return _minutes_to_hhmm(wrapped_minutes), wrapped
+
+
+def _js_weekday_index(value: date) -> int:
+    # Monday=0 ... Sunday=6
+    return value.weekday()
+
+
+def _build_12x36_weekly_scale(*, data_inicio_escala: date, horario_entrada: str, horario_saida: str):
+    week_start = data_inicio_escala - timedelta(days=_js_weekday_index(data_inicio_escala))
+    saida_no_dia_seguinte = _to_minutes(horario_saida) <= _to_minutes(horario_entrada)
+    escala = []
+    total_minutes = 0
+
+    for offset, day_key in enumerate(WEEK_DAYS):
+        current_date = week_start + timedelta(days=offset)
+        day_delta = (current_date - data_inicio_escala).days
+        is_work_day = (day_delta % 2) == 0
+
+        if is_work_day:
+            total_minutes += 12 * 60
+            escala.append(
+                {
+                    "data": current_date.isoformat(),
+                    "dia_semana": day_key,
+                    "tipo_dia": "TRABALHO",
+                    "entrada": horario_entrada,
+                    "saida": horario_saida,
+                    "saida_no_dia_seguinte": saida_no_dia_seguinte,
+                }
+            )
+        else:
+            escala.append(
+                {
+                    "data": current_date.isoformat(),
+                    "dia_semana": day_key,
+                    "tipo_dia": "FOLGA",
+                    "entrada": None,
+                    "saida": None,
+                    "saida_no_dia_seguinte": False,
+                }
+            )
+
+    return escala, total_minutes
 
 
 def normalize_semanal_config(
@@ -157,12 +213,26 @@ def normalize_12x36_config(*, data_inicio_escala, horario_entrada) -> dict:
     horario = _to_hhmm(horario_entrada, field_label="Horário de entrada da escala")
     if not horario:
         raise ValidationError("Informe o horário de entrada da escala 12x36.")
+    horario_saida, _ = _add_hours_to_hhmm(horario, 12)
+    escala_referencia_semanal, carga_horaria_semanal_minutos = _build_12x36_weekly_scale(
+        data_inicio_escala=data_inicio,
+        horario_entrada=horario,
+        horario_saida=horario_saida,
+    )
 
     return {
         "data_inicio_escala": data_inicio.isoformat(),
         "horario_entrada": horario,
+        "horario_saida": horario_saida,
         "duracao_turno_horas": 12,
         "duracao_descanso_horas": 36,
+        "ciclo_dias": [
+            {"ordem": 1, "tipo_dia": "TRABALHO", "duracao_horas": 12},
+            {"ordem": 2, "tipo_dia": "FOLGA", "duracao_horas": 36},
+        ],
+        "escala_referencia_semanal": escala_referencia_semanal,
+        "carga_horaria_semanal_minutos": carga_horaria_semanal_minutos,
+        "carga_horaria_semanal_hhmm": _minutes_to_hhmm(carga_horaria_semanal_minutos),
     }
 
 
@@ -190,9 +260,12 @@ def normalize_fracionada_config(
             raise ValidationError(f"Dia da semana duplicado na configuração fracionada: {day_name}.")
         seen_days.add(day_name)
 
+        dsr = bool(day.get("dsr", False))
         periods_payload = day.get("periodos", [])
         if not isinstance(periods_payload, list):
             raise ValidationError(f"{day_name}: 'periodos' deve ser uma lista.")
+        if dsr and periods_payload:
+            raise ValidationError(f"{day_name}: não é permitido informar períodos quando o dia está em DSR.")
 
         normalized_periods = []
         last_end = None
@@ -212,7 +285,7 @@ def normalize_fracionada_config(
             last_end = end
             total_periods += 1
 
-        normalized_days.append({"dia_semana": day_name, "periodos": normalized_periods})
+        normalized_days.append({"dia_semana": day_name, "dsr": dsr, "periodos": normalized_periods})
 
     if total_periods == 0:
         raise ValidationError("Informe ao menos um período válido na configuração fracionada.")

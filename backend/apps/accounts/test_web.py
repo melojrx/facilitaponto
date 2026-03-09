@@ -501,6 +501,7 @@ class TestJourneyOnboardingFlow:
     """Testa GET|POST /painel/jornadas/nova/ e o avanço de onboarding_step."""
 
     URL = "/painel/jornadas/nova/"
+    LIST_URL = "/painel/jornadas/"
 
     def _make_tenant(self, step=2):
         return Tenant.objects.create(
@@ -562,6 +563,87 @@ class TestJourneyOnboardingFlow:
         assert "Fracionada" in content
         assert "Externa" in content
 
+    def test_lista_jornadas_exibe_jornada_cadastrada(self, client, user):
+        from apps.employees.models import WorkSchedule
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada Integral",
+            tipo="SEMANAL",
+            configuracao={
+                "subtipo": "INTEGRAL_44H",
+                "intervalo_reduzido_convencao": False,
+                "norma_coletiva_ref": "",
+                "dias": [
+                    {
+                        "dia_semana": "SEGUNDA",
+                        "dsr": False,
+                        "entrada_1": "07:30",
+                        "saida_1": "11:30",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:30",
+                    },
+                    {
+                        "dia_semana": "TERCA",
+                        "dsr": False,
+                        "entrada_1": "07:30",
+                        "saida_1": "11:30",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:30",
+                    },
+                    {
+                        "dia_semana": "QUARTA",
+                        "dsr": False,
+                        "entrada_1": "07:30",
+                        "saida_1": "11:30",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:30",
+                    },
+                    {
+                        "dia_semana": "QUINTA",
+                        "dsr": False,
+                        "entrada_1": "07:30",
+                        "saida_1": "11:30",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:30",
+                    },
+                    {
+                        "dia_semana": "SEXTA",
+                        "dsr": False,
+                        "entrada_1": "07:30",
+                        "saida_1": "11:30",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:30",
+                    },
+                    {
+                        "dia_semana": "SABADO",
+                        "dsr": False,
+                        "entrada_1": "07:30",
+                        "saida_1": "11:30",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:30",
+                    },
+                    {"dia_semana": "DOMINGO", "dsr": True},
+                ],
+            },
+        )
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Jornadas de Trabalho" in content
+        assert "Jornada Integral" in content
+        assert "51.00h" in content
+        assert "/painel/jornadas/nova/" in content
+        assert f"/painel/jornadas/{schedule.id}/editar/" in content
+        assert f"/painel/jornadas/{schedule.id}/excluir/" in content
+        assert "Confirmar exclusão de jornada" in content
+        assert "Consequências: a jornada será inativada" in content
+
     # --- POST válido ---
 
     def test_post_valido_cria_jornada_e_avanca_onboarding(self, client, user):
@@ -585,9 +667,174 @@ class TestJourneyOnboardingFlow:
 
         tenant.refresh_from_db()
         assert response.status_code == 302
-        assert response.url == "/painel/"
+        assert response.url == "/painel/jornadas/"
         assert tenant.onboarding_step == 3
         assert WorkSchedule.all_objects.filter(tenant=tenant, nome="Jornada Padrão 44h").exists()
+
+    def test_get_editar_jornada_renderiza_formulario_preenchido(self, client, user):
+        from apps.employees.models import WorkSchedule
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada Comercial",
+            descricao="Base semanal",
+            tipo="SEMANAL",
+            configuracao={
+                "subtipo": "COMERCIAL_40H",
+                "intervalo_reduzido_convencao": False,
+                "norma_coletiva_ref": "",
+                "dias": [
+                    {
+                        "dia_semana": "SEGUNDA",
+                        "dsr": False,
+                        "entrada_1": "08:00",
+                        "saida_1": "12:00",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:00",
+                    },
+                    {"dia_semana": "DOMINGO", "dsr": True},
+                ],
+            },
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/jornadas/{schedule.id}/editar/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Editar Jornada de Trabalho" in content
+        assert 'value="Jornada Comercial"' in content
+        assert f'action="/painel/jornadas/{schedule.id}/editar/"' in content
+
+    def test_post_editar_jornada_atualiza_registro(self, client, user):
+        from apps.employees.models import WorkSchedule
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada Comercial",
+            descricao="Base semanal",
+            tipo="SEMANAL",
+            configuracao={
+                "subtipo": "COMERCIAL_40H",
+                "intervalo_reduzido_convencao": False,
+                "norma_coletiva_ref": "",
+                "dias": [
+                    {
+                        "dia_semana": "SEGUNDA",
+                        "dsr": False,
+                        "entrada_1": "08:00",
+                        "saida_1": "12:00",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:00",
+                    },
+                    {"dia_semana": "DOMINGO", "dsr": True},
+                ],
+            },
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/jornadas/{schedule.id}/editar/",
+            data={
+                "nome": "Jornada Comercial Atualizada",
+                "descricao": "Atualizada",
+                "tipo": "SEMANAL",
+                "semanal_subtipo": "INTEGRAL_44H",
+                "semanal_dias_json": json.dumps(
+                    [
+                        {
+                            "dia_semana": "SEGUNDA",
+                            "dsr": False,
+                            "entrada_1": "08:00",
+                            "saida_1": "12:00",
+                            "entrada_2": "13:00",
+                            "saida_2": "17:48",
+                        },
+                        {"dia_semana": "DOMINGO", "dsr": True},
+                    ]
+                ),
+            },
+            follow=False,
+        )
+
+        schedule.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == "/painel/jornadas/"
+        assert schedule.nome == "Jornada Comercial Atualizada"
+        assert schedule.descricao == "Atualizada"
+        assert schedule.configuracao["subtipo"] == "INTEGRAL_44H"
+
+    def test_post_excluir_jornada_desativa_registro(self, client, user):
+        from apps.employees.models import WorkSchedule
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada para excluir",
+            tipo="EXTERNA",
+            configuracao={},
+        )
+        client.force_login(user)
+
+        response = client.post(f"/painel/jornadas/{schedule.id}/excluir/", follow=False)
+
+        schedule.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == "/painel/jornadas/"
+        assert schedule.ativo is False
+
+    def test_post_excluir_jornada_de_outro_tenant_retorna_404(self, client, user):
+        from apps.employees.models import WorkSchedule
+
+        tenant_user = self._make_tenant(step=3)
+        tenant_other = Tenant.objects.create(
+            tipo_pessoa="PJ",
+            documento="32324680000140",
+            cnpj="32324680000140",
+            razao_social="Outro Tenant LTDA",
+            onboarding_step=3,
+        )
+        self._attach_tenant(user, tenant_user)
+        schedule_other = WorkSchedule.all_objects.create(
+            tenant=tenant_other,
+            nome="Jornada de outro tenant",
+            tipo="EXTERNA",
+            configuracao={},
+        )
+        client.force_login(user)
+
+        response = client.post(f"/painel/jornadas/{schedule_other.id}/excluir/", follow=False)
+
+        assert response.status_code == 404
+
+    def test_get_editar_jornada_de_outro_tenant_retorna_404(self, client, user):
+        from apps.employees.models import WorkSchedule
+
+        tenant_user = self._make_tenant(step=3)
+        tenant_other = Tenant.objects.create(
+            tipo_pessoa="PJ",
+            documento="42930073000106",
+            cnpj="42930073000106",
+            razao_social="Tenant Externo LTDA",
+            onboarding_step=3,
+        )
+        self._attach_tenant(user, tenant_user)
+        schedule_other = WorkSchedule.all_objects.create(
+            tenant=tenant_other,
+            nome="Jornada externa tenant",
+            tipo="EXTERNA",
+            configuracao={},
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/jornadas/{schedule_other.id}/editar/", follow=False)
+
+        assert response.status_code == 404
 
     def test_post_tipo_12x36_salva_corretamente(self, client, user):
         from apps.employees.models import WorkSchedule
@@ -611,6 +858,53 @@ class TestJourneyOnboardingFlow:
         schedule = WorkSchedule.all_objects.get(tenant=tenant, nome="Plantão 12x36", tipo="12X36")
         assert schedule.configuracao["data_inicio_escala"] == "2026-03-09"
         assert schedule.configuracao["horario_entrada"] == "08:00"
+        assert schedule.configuracao["horario_saida"] == "20:00"
+        assert schedule.configuracao["carga_horaria_semanal_hhmm"] == "48:00"
+        escala = schedule.configuracao["escala_referencia_semanal"]
+        assert len(escala) == 7
+        assert escala[0]["dia_semana"] == "SEGUNDA"
+        assert escala[0]["tipo_dia"] == "TRABALHO"
+        assert escala[0]["entrada"] == "08:00"
+        assert escala[1]["dia_semana"] == "TERCA"
+        assert escala[1]["tipo_dia"] == "FOLGA"
+
+    def test_post_tipo_fracionada_com_dsr_salva_corretamente(self, client, user):
+        from apps.employees.models import WorkSchedule
+
+        tenant = self._make_tenant(step=2)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        client.post(
+            self.URL,
+            data={
+                "nome": "Fracionada Base",
+                "descricao": "",
+                "tipo": "FRACIONADA",
+                "fracionada_dias_json": json.dumps(
+                    [
+                        {
+                            "dia_semana": "SEGUNDA",
+                            "dsr": False,
+                            "periodos": [
+                                {"inicio": "08:00", "fim": "12:00"},
+                                {"inicio": "14:00", "fim": "18:00"},
+                            ],
+                        },
+                        {"dia_semana": "DOMINGO", "dsr": True, "periodos": []},
+                    ]
+                ),
+            },
+            follow=False,
+        )
+
+        schedule = WorkSchedule.all_objects.get(tenant=tenant, nome="Fracionada Base", tipo="FRACIONADA")
+        assert len(schedule.configuracao["dias"]) == 2
+        assert schedule.configuracao["dias"][0]["dia_semana"] == "SEGUNDA"
+        assert schedule.configuracao["dias"][0]["dsr"] is False
+        assert schedule.configuracao["dias"][1]["dia_semana"] == "DOMINGO"
+        assert schedule.configuracao["dias"][1]["dsr"] is True
+        assert schedule.configuracao["dias"][1]["periodos"] == []
 
     def test_post_avanca_step_apenas_para_3_nunca_regride(self, client, user):
         """Se tenant já está em step 4, não deve regredir para 3."""
