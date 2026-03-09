@@ -133,6 +133,13 @@ LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/painel/"
 LOGOUT_REDIRECT_URL = "/"
 
+# Rate limiting (auth pública)
+AUTH_RATE_LIMITS = {
+    "web_login": {"limit": 60, "window_seconds": 300},
+    "web_signup": {"limit": 20, "window_seconds": 600},
+    "api_token": {"limit": 60, "window_seconds": 300},
+}
+
 # -----------------------------------------------------------------------------
 # DRF
 # -----------------------------------------------------------------------------

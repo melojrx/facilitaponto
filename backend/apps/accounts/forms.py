@@ -7,8 +7,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 
-from .models import User
 from apps.tenants.models import Tenant
+
+from .models import User
 
 
 def _only_digits(value: str) -> str:

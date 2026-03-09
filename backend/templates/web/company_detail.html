@@ -1,199 +1,346 @@
 {% extends "web/panel_base.html" %}
 
 {% block title %}Empresa | Painel FacilitaPonto{% endblock %}
-{% block panel_heading_title %}Empresa{% endblock %}
+
+{% block panel_heading_title %}
+  <span style="display:inline-flex;align-items:center;gap:10px;">
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:#e8f0fb;color:var(--brand);flex-shrink:0;">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18M3 10h18M3 6l9-3 9 3M4 10v11M8 10v11M12 10v11M16 10v11M20 10v11"/>
+      </svg>
+    </span>
+    Empresa
+  </span>
+{% endblock %}
 {% block panel_heading_subtitle %}Visualize e gerencie todos os dados cadastrais da sua empresa.{% endblock %}
 
 {% block panel_styles %}
-  .company-detail-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .company-detail-grid-3 {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 14px;
-  }
-  .company-field {
-    border: 1px solid #d5deea;
-    border-radius: 10px;
-    background: #f8fbff;
-    padding: 10px 12px;
-    min-height: 66px;
-  }
-  .company-field-label {
+  /* ===== Breadcrumb ===== */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 13px;
-    color: #607894;
-    margin-bottom: 4px;
-    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
   }
-  .company-field-value {
-    font-size: 16px;
-    color: #2d4159;
+  .breadcrumb a { color: var(--brand); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb-sep { color: #CBD5E1; font-size: 12px; }
+
+  /* ===== Layout ===== */
+  .detail-wrapper { width: 100%; }
+
+  /* ===== Header da empresa ===== */
+  .company-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .company-header-info {}
+  .company-header-name { margin: 0 0 4px; font-size: 22px; font-weight: 800; color: var(--text); }
+  .company-header-sub  { margin: 0; font-size: 14px; color: var(--muted); }
+  .company-header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* ===== Cards de seção ===== */
+  .section-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 10px rgba(15,23,42,.04);
+  }
+  .section-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-card-icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: #EFF6FF;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-card-icon svg { width: 18px; height: 18px; }
+  .section-card-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--text); }
+
+  /* ===== Grid de campos de leitura ===== */
+  .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) {
+    .field-grid-2, .field-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .read-field {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    padding: 11px 14px;
+    min-height: 60px;
+  }
+  .read-field-label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .read-field-value {
+    font-size: 15px;
+    color: var(--text);
     font-weight: 600;
     word-break: break-word;
   }
-  .company-section-title {
-    margin: 0 0 10px;
-    font-size: 20px;
-  }
-  .company-card-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-  }
-  @media (max-width: 920px) {
-    .company-detail-grid-2,
-    .company-detail-grid-3 {
-      grid-template-columns: 1fr;
-    }
-  }
+  .read-field-value a { color: var(--brand); text-decoration: none; }
+  .read-field-value a:hover { text-decoration: underline; }
+  .read-field-empty { color: #94A3B8; font-weight: 400; font-style: italic; }
 {% endblock %}
 
 {% block panel_content %}
-  <section class="card">
-    <div class="company-card-actions">
-      <a class="btn btn-primary" href="{% url 'web:company_edit' %}">Editar empresa</a>
-      <a class="btn" href="{% url 'web:painel' %}">Voltar ao início</a>
-    </div>
+  <nav class="breadcrumb" aria-label="Navegação estrutural">
+    <a href="{% url 'web:painel' %}">Início</a>
+    <span class="breadcrumb-sep">›</span>
+    <span aria-current="page">Empresa</span>
+  </nav>
 
-    <h2 style="margin-top:0;">{{ tenant.razao_social }}</h2>
-    <p class="muted" style="margin-top:0;">Empresa vinculada à conta proprietária.</p>
+  <div class="detail-wrapper">
 
-    <div class="card" style="padding:14px;">
-      <h3 class="company-section-title">Dados da Empresa</h3>
-      <div class="company-detail-grid-2">
-        <div class="company-field">
-          <div class="company-field-label">Tipo de Pessoa</div>
-          <div class="company-field-value">{{ tenant.get_tipo_pessoa_display }}</div>
-        </div>
-        <div class="company-field">
-          <div class="company-field-label">Documento (CNPJ/CPF)</div>
-          <div class="company-field-value">{{ tenant.documento|default:"Não informado" }}</div>
-        </div>
+    {# Cabeçalho com nome e ações #}
+    <div class="company-header">
+      <div class="company-header-info">
+        <h2 class="company-header-name">{{ tenant.razao_social }}</h2>
+        <p class="company-header-sub">Empresa vinculada à conta proprietária.</p>
       </div>
-      <div class="company-detail-grid-2" style="margin-top:10px;">
-        <div class="company-field">
-          <div class="company-field-label">Razão Social</div>
-          <div class="company-field-value">{{ tenant.razao_social|default:"Não informado" }}</div>
-        </div>
-        <div class="company-field">
-          <div class="company-field-label">Nome Fantasia</div>
-          <div class="company-field-value">{{ tenant.nome_fantasia|default:"Não informado" }}</div>
-        </div>
-      </div>
-      <div class="company-detail-grid-2" style="margin-top:10px;">
-        <div class="company-field">
-          <div class="company-field-label">Inscrição Estadual</div>
-          <div class="company-field-value">{{ tenant.inscricao_estadual|default:"Não informado" }}</div>
-        </div>
-        <div class="company-field">
-          <div class="company-field-label">Inscrição Municipal</div>
-          <div class="company-field-value">{{ tenant.inscricao_municipal|default:"Não informado" }}</div>
-        </div>
+      <div class="company-header-actions">
+        <a class="btn btn-primary" href="{% url 'web:company_edit' %}">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Editar empresa
+        </a>
+        <a class="btn" href="{% url 'web:painel' %}">Voltar ao início</a>
       </div>
     </div>
 
-    <div class="card" style="padding:14px;">
-      <h3 class="company-section-title">Contato</h3>
-      <div class="company-detail-grid-2">
-        <div class="company-field">
-          <div class="company-field-label">E-mail de Contato</div>
-          <div class="company-field-value">{{ tenant.email_contato|default:"Não informado" }}</div>
-        </div>
-        <div class="company-field">
-          <div class="company-field-label">Telefone de Contato</div>
-          <div class="company-field-value">{{ tenant.telefone_contato|default:"Não informado" }}</div>
-        </div>
+    {# Seção: Dados da Empresa #}
+    <div class="section-card">
+      <div class="section-card-heading">
+        <span class="section-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          </svg>
+        </span>
+        <h3 class="section-card-title">Dados da Empresa</h3>
       </div>
-    </div>
 
-    <div class="card" style="padding:14px;">
-      <h3 class="company-section-title">Endereço</h3>
-      <div class="company-detail-grid-3">
-        <div class="company-field">
-          <div class="company-field-label">CEP</div>
-          <div class="company-field-value">{{ tenant.cep|default:"Não informado" }}</div>
+      <div class="field-grid-2">
+        <div class="read-field">
+          <div class="read-field-label">Tipo de Pessoa</div>
+          <div class="read-field-value">{{ tenant.get_tipo_pessoa_display|default:"—" }}</div>
         </div>
-        <div class="company-field">
-          <div class="company-field-label">Cidade</div>
-          <div class="company-field-value">{{ tenant.cidade|default:"Não informado" }}</div>
-        </div>
-        <div class="company-field">
-          <div class="company-field-label">UF</div>
-          <div class="company-field-value">{{ tenant.estado|default:"Não informado" }}</div>
+        <div class="read-field">
+          <div class="read-field-label">Documento (CNPJ / CPF)</div>
+          <div class="read-field-value">{{ tenant.documento|default:"<span class='read-field-empty'>Não informado</span>" }}</div>
         </div>
       </div>
-      <div class="company-detail-grid-2" style="margin-top:10px;">
-        <div class="company-field">
-          <div class="company-field-label">Logradouro</div>
-          <div class="company-field-value">{{ tenant.logradouro|default:"Não informado" }}</div>
+      <div class="field-grid-2" style="margin-top:12px;">
+        <div class="read-field">
+          <div class="read-field-label">Razão Social</div>
+          <div class="read-field-value">{{ tenant.razao_social|default:"<span class='read-field-empty'>Não informado</span>" }}</div>
         </div>
-        <div class="company-field">
-          <div class="company-field-label">Bairro</div>
-          <div class="company-field-value">{{ tenant.bairro|default:"Não informado" }}</div>
+        <div class="read-field">
+          <div class="read-field-label">Nome Fantasia</div>
+          <div class="read-field-value">
+            {% if tenant.nome_fantasia %}{{ tenant.nome_fantasia }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
         </div>
       </div>
-      <div class="company-detail-grid-2" style="margin-top:10px;">
-        <div class="company-field">
-          <div class="company-field-label">Número</div>
-          <div class="company-field-value">{{ tenant.numero|default:"Não informado" }}</div>
+      <div class="field-grid-2" style="margin-top:12px;">
+        <div class="read-field">
+          <div class="read-field-label">Inscrição Estadual</div>
+          <div class="read-field-value">
+            {% if tenant.inscricao_estadual %}{{ tenant.inscricao_estadual }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
         </div>
-        <div class="company-field">
-          <div class="company-field-label">Complemento</div>
-          <div class="company-field-value">{{ tenant.complemento|default:"Não informado" }}</div>
+        <div class="read-field">
+          <div class="read-field-label">Inscrição Municipal</div>
+          <div class="read-field-value">
+            {% if tenant.inscricao_municipal %}{{ tenant.inscricao_municipal }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="card" style="padding:14px;">
-      <h3 class="company-section-title">Responsável Legal</h3>
-      <div class="company-detail-grid-3">
-        <div class="company-field">
-          <div class="company-field-label">Nome</div>
-          <div class="company-field-value">{{ tenant.responsavel_nome|default:"Não informado" }}</div>
+    {# Seção: Contato #}
+    <div class="section-card">
+      <div class="section-card-heading">
+        <span class="section-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.39 19 19.46 19.46 0 0 1 4.19 12 19.79 19.79 0 0 1 2.09 4.18 2 2 0 0 1 4.07 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </span>
+        <h3 class="section-card-title">Contato</h3>
+      </div>
+
+      <div class="field-grid-2">
+        <div class="read-field">
+          <div class="read-field-label">E-mail de Contato</div>
+          <div class="read-field-value">
+            {% if tenant.email_contato %}{{ tenant.email_contato }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
         </div>
-        <div class="company-field">
-          <div class="company-field-label">CPF</div>
-          <div class="company-field-value">{{ tenant.responsavel_cpf|default:"Não informado" }}</div>
-        </div>
-        <div class="company-field">
-          <div class="company-field-label">Cargo</div>
-          <div class="company-field-value">{{ tenant.responsavel_cargo|default:"Não informado" }}</div>
+        <div class="read-field">
+          <div class="read-field-label">Telefone de Contato</div>
+          <div class="read-field-value">
+            {% if tenant.telefone_contato %}{{ tenant.telefone_contato }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="card" style="padding:14px;">
-      <h3 class="company-section-title">Dados Adicionais</h3>
-      <div class="company-detail-grid-3">
-        <div class="company-field">
-          <div class="company-field-label">URL do Logo</div>
-          <div class="company-field-value">
+    {# Seção: Endereço #}
+    <div class="section-card">
+      <div class="section-card-heading">
+        <span class="section-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+        </span>
+        <h3 class="section-card-title">Endereço</h3>
+      </div>
+
+      <div class="field-grid-3">
+        <div class="read-field">
+          <div class="read-field-label">CEP</div>
+          <div class="read-field-value">
+            {% if tenant.cep %}{{ tenant.cep }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+        <div class="read-field">
+          <div class="read-field-label">Cidade</div>
+          <div class="read-field-value">
+            {% if tenant.cidade %}{{ tenant.cidade }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+        <div class="read-field">
+          <div class="read-field-label">UF</div>
+          <div class="read-field-value">
+            {% if tenant.estado %}{{ tenant.estado }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="field-grid-2" style="margin-top:12px;">
+        <div class="read-field">
+          <div class="read-field-label">Logradouro</div>
+          <div class="read-field-value">
+            {% if tenant.logradouro %}{{ tenant.logradouro }}{% if tenant.numero %}, {{ tenant.numero }}{% endif %}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+        <div class="read-field">
+          <div class="read-field-label">Bairro</div>
+          <div class="read-field-value">
+            {% if tenant.bairro %}{{ tenant.bairro }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% if tenant.complemento %}
+      <div style="margin-top:12px;">
+        <div class="read-field">
+          <div class="read-field-label">Complemento</div>
+          <div class="read-field-value">{{ tenant.complemento }}</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {# Seção: Responsável Legal #}
+    <div class="section-card">
+      <div class="section-card-heading">
+        <span class="section-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/>
+          </svg>
+        </span>
+        <h3 class="section-card-title">Responsável Legal</h3>
+      </div>
+
+      <div class="field-grid-3">
+        <div class="read-field">
+          <div class="read-field-label">Nome</div>
+          <div class="read-field-value">
+            {% if tenant.responsavel_nome %}{{ tenant.responsavel_nome }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+        <div class="read-field">
+          <div class="read-field-label">CPF</div>
+          <div class="read-field-value">
+            {% if tenant.responsavel_cpf %}{{ tenant.responsavel_cpf }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+        <div class="read-field">
+          <div class="read-field-label">Cargo</div>
+          <div class="read-field-value">
+            {% if tenant.responsavel_cargo %}{{ tenant.responsavel_cargo }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Seção: Dados Adicionais #}
+    <div class="section-card">
+      <div class="section-card-heading">
+        <span class="section-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </span>
+        <h3 class="section-card-title">Dados Adicionais</h3>
+      </div>
+
+      <div class="field-grid-3">
+        <div class="read-field">
+          <div class="read-field-label">URL do Logo</div>
+          <div class="read-field-value">
             {% if tenant.logo_url %}
               <a href="{{ tenant.logo_url }}" target="_blank" rel="noopener noreferrer">{{ tenant.logo_url }}</a>
             {% else %}
-              Não informado
+              <span class="read-field-empty">Não informado</span>
             {% endif %}
           </div>
         </div>
-        <div class="company-field">
-          <div class="company-field-label">Website</div>
-          <div class="company-field-value">
+        <div class="read-field">
+          <div class="read-field-label">Website</div>
+          <div class="read-field-value">
             {% if tenant.website %}
               <a href="{{ tenant.website }}" target="_blank" rel="noopener noreferrer">{{ tenant.website }}</a>
             {% else %}
-              Não informado
+              <span class="read-field-empty">Não informado</span>
             {% endif %}
           </div>
         </div>
-        <div class="company-field">
-          <div class="company-field-label">CNO/CAEPF</div>
-          <div class="company-field-value">{{ tenant.cno_caepf|default:"Não informado" }}</div>
+        <div class="read-field">
+          <div class="read-field-label">CNO / CAEPF</div>
+          <div class="read-field-value">
+            {% if tenant.cno_caepf %}{{ tenant.cno_caepf }}{% else %}<span class="read-field-empty">Não informado</span>{% endif %}
+          </div>
         </div>
       </div>
     </div>
-  </section>
+
+  </div>{# /detail-wrapper #}
 {% endblock %}

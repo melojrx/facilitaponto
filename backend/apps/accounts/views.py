@@ -2,8 +2,7 @@
 
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -11,7 +10,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Device
 from .permissions import IsTenantMember
-from .serializers import DeviceRegisterSerializer, PublicCepLookupSerializer, TenantTokenObtainPairSerializer
+from .rate_limit import is_api_token_limited
+from .serializers import (
+    DeviceRegisterSerializer,
+    PublicCepLookupSerializer,
+    TenantTokenObtainPairSerializer,
+)
 from .services_cep import CepLookupError, CepNotFoundError, lookup_cep_via_viacep
 
 
@@ -19,6 +23,14 @@ class TenantTokenObtainPairView(TokenObtainPairView):
     """Endpoint JWT que inclui tenant_id no token quando disponível."""
 
     serializer_class = TenantTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        if is_api_token_limited(request):
+            return Response(
+                {"detail": "Muitas tentativas de autenticação. Tente novamente em instantes."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        return super().post(request, *args, **kwargs)
 
 
 class DeviceRegisterView(APIView):

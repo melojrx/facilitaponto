@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
 import pytest
+from django.core.cache import cache
+from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -89,6 +91,32 @@ class TestTenantTokenObtainPairSerializer:
         token = TenantTokenObtainPairSerializer.get_token(user)
 
         assert "tenant_id" not in token
+
+
+@pytest.mark.django_db
+class TestTokenObtainRateLimit:
+    endpoint = "/api/auth/token/"
+
+    @override_settings(
+        AUTH_RATE_LIMITS={
+            "web_login": {"limit": 10, "window_seconds": 60},
+            "web_signup": {"limit": 5, "window_seconds": 60},
+            "api_token": {"limit": 2, "window_seconds": 60},
+        }
+    )
+    def test_aplica_rate_limit_no_token_obtain_pair(self, user_a):
+        cache.clear()
+        client = APIClient()
+        payload = {"email": user_a.email, "password": "senha-errada"}
+
+        first_response = client.post(self.endpoint, data=payload, format="json")
+        second_response = client.post(self.endpoint, data=payload, format="json")
+        third_response = client.post(self.endpoint, data=payload, format="json")
+
+        assert first_response.status_code == 401
+        assert second_response.status_code == 401
+        assert third_response.status_code == 429
+        assert "Muitas tentativas de autenticação" in third_response.data["detail"]
 
 
 @pytest.mark.django_db

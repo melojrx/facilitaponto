@@ -2,383 +2,452 @@
 
 {% block title %}{% if is_edit_mode %}Editar Empresa{% else %}Criar Empresa{% endif %} | Painel FacilitaPonto{% endblock %}
 
-{% block panel_heading_title %}{% if is_edit_mode %}Editar Empresa{% else %}Cadastro da Empresa{% endif %}{% endblock %}
+{% block panel_heading_title %}
+  <span style="display:inline-flex;align-items:center;gap:10px;">
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:#e8f0fb;color:var(--brand);flex-shrink:0;">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18M3 10h18M3 6l9-3 9 3M4 10v11M8 10v11M12 10v11M16 10v11M20 10v11"/>
+      </svg>
+    </span>
+    {% if is_edit_mode %}Editar Empresa{% else %}Cadastro da Empresa{% endif %}
+  </span>
+{% endblock %}
+
 {% block panel_heading_subtitle %}
-  {% if is_edit_mode %}
-    Atualize os dados cadastrais da empresa vinculada.
-  {% else %}
-    Preencha os dados da empresa para liberar jornadas e avançar no onboarding.
-  {% endif %}
+  {% if is_edit_mode %}Atualize os dados cadastrais da empresa vinculada.{% else %}Preencha os dados da empresa para liberar jornadas e avançar no onboarding.{% endif %}
 {% endblock %}
 
 {% block panel_styles %}
-  .company-form {
-    max-width: 980px;
-  }
-  .company-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .company-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-  .section-title { margin: 0 0 8px; font-size: 1.08rem; color: #2f4157; }
-  .section-subtitle { margin: 0 0 14px; color: var(--muted); font-size: .94rem; }
-  .company-form .field {
-    display: grid;
+  /* ===== Breadcrumb ===== */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
     gap: 6px;
-    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
   }
-  .company-form .field label {
-    font-size: 14px;
-    font-weight: 700;
-    color: #344a62;
+  .breadcrumb a { color: var(--brand); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb-sep { color: #CBD5E1; font-size: 12px; }
+
+  /* ===== Wrapper ===== */
+  .company-form-wrapper { width: 100%; }
+
+  /* ===== Form card ===== */
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 10px rgba(15,23,42,.04);
   }
-  .company-form input[type="text"],
-  .company-form input[type="email"],
-  .company-form input[type="url"],
-  .company-form select,
-  .company-form textarea {
+  .form-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .form-card-icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: #EFF6FF;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .form-card-icon svg { width: 18px; height: 18px; }
+  .form-card-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--text); }
+  .form-card-subtitle { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+  /* ===== Campos ===== */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 7px;
+  }
+  .field input[type="text"],
+  .field input[type="email"],
+  .field input[type="url"],
+  .field select,
+  .field textarea {
     width: 100%;
-    border: 1px solid #cad6e5;
+    border: 1px solid var(--line);
     border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 15px;
+    color: var(--text);
     background: #fff;
-    color: #2a3d56;
-    font-size: 14px;
-    padding: 10px 12px;
-    min-height: 42px;
-    font-family: inherit;
-  }
-  .company-form textarea {
-    min-height: 92px;
-    resize: vertical;
-  }
-  .company-form input:focus,
-  .company-form select:focus,
-  .company-form textarea:focus {
     outline: none;
-    border-color: #78a8da;
-    box-shadow: 0 0 0 3px rgba(47, 116, 189, 0.12);
+    transition: border-color .18s ease, box-shadow .18s ease;
+    font-family: inherit;
+    min-height: 42px;
   }
-  .company-form .errorlist {
-    margin: 0;
+  .field select { appearance: auto; }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, .12);
+  }
+  .field .errorlist {
+    margin: 6px 0 0;
     padding: 0;
     list-style: none;
-    color: #c73f3f;
-    font-size: 13px;
+    font-size: 12px;
+    color: var(--danger);
   }
+
+  /* Feedback CEP */
   .field-feedback {
     font-size: 12px;
-    color: #637a98;
+    color: var(--muted);
     min-height: 16px;
-    margin: -2px 0 8px;
+    margin: 4px 0 0;
     display: none;
   }
-  .field-feedback.error {
-    color: #bf3d3d;
-    display: block;
-  }
-  .field-feedback.success {
-    color: #1f7e52;
-    display: block;
-  }
-  .company-form .actions {
+  .field-feedback.error   { color: var(--danger); display: block; }
+  .field-feedback.success { color: var(--success); display: block; }
+
+  /* ===== Ações ===== */
+  .form-actions {
+    width: 100%;
     display: flex;
+    justify-content: flex-end;
     gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 6px;
+    margin-top: 4px;
   }
-  @media (max-width: 820px) {
-    .company-grid-2, .company-grid-3 { grid-template-columns: 1fr; }
-  }
+  .btn-lg { padding: 11px 22px; font-size: 15px; }
 {% endblock %}
 
 {% block panel_content %}
-  <section class="card company-form">
-    <h2 style="margin-top: 0;">{% if is_edit_mode %}Editar Empresa{% else %}Criar Empresa{% endif %}</h2>
-    <p class="muted">
-      {% if is_edit_mode %}
-        Revise e atualize as informações da empresa.
-      {% else %}
-        Cadastre sua empresa para liberar os módulos operacionais do painel.
-      {% endif %}
-    </p>
+  <nav class="breadcrumb" aria-label="Navegação estrutural">
+    <a href="{% url 'web:painel' %}">Início</a>
+    <span class="breadcrumb-sep">›</span>
+    {% if is_edit_mode %}
+      <a href="{% url 'web:company' %}">Empresa</a>
+      <span class="breadcrumb-sep">›</span>
+      <span aria-current="page">Editar</span>
+    {% else %}
+      <span aria-current="page">Criar Empresa</span>
+    {% endif %}
+  </nav>
 
-    <form method="post" novalidate>
-      {% csrf_token %}
+  <form method="post" novalidate class="company-form-wrapper" id="company-form">
+    {% csrf_token %}
 
-      {% if form.non_field_errors %}
-        {{ form.non_field_errors }}
-      {% endif %}
+    {% if form.non_field_errors %}
+      <div style="margin-bottom:14px;">
+        {% for error in form.non_field_errors %}
+          <p style="background:#fff0f0;border:1px solid #f0c5c5;color:#a23333;border-radius:10px;padding:10px 14px;margin:0 0 8px;font-size:14px;">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
 
-      <div class="card" style="margin-top: 12px;">
-        <h2 class="section-title">Dados da Empresa</h2>
-        <p class="section-subtitle">Informações básicas e contato</p>
-
-        <div class="company-grid-2">
-          <div class="field">
-            {{ form.tipo_pessoa.label_tag }}
-            {{ form.tipo_pessoa }}
-            {{ form.tipo_pessoa.errors }}
-          </div>
-          <div class="field">
-            {{ form.documento.label_tag }}
-            {{ form.documento }}
-            {{ form.documento.errors }}
-          </div>
+    {# ---- Dados da Empresa ---- #}
+    <div class="form-card">
+      <div class="form-card-heading">
+        <span class="form-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          </svg>
+        </span>
+        <div>
+          <p class="form-card-title">Dados da Empresa</p>
+          <p class="form-card-subtitle">Informações básicas e contato</p>
         </div>
+      </div>
 
+      <div class="grid-2">
         <div class="field">
-          {{ form.razao_social.label_tag }}
-          {{ form.razao_social }}
-          {{ form.razao_social.errors }}
+          {{ form.tipo_pessoa.label_tag }}
+          {{ form.tipo_pessoa }}
+          {{ form.tipo_pessoa.errors }}
         </div>
-
         <div class="field">
-          {{ form.nome_fantasia.label_tag }}
-          {{ form.nome_fantasia }}
-          {{ form.nome_fantasia.errors }}
-        </div>
-
-        <div class="company-grid-2">
-          <div class="field">
-            {{ form.email_contato.label_tag }}
-            {{ form.email_contato }}
-            {{ form.email_contato.errors }}
-          </div>
-          <div class="field">
-            {{ form.telefone_contato.label_tag }}
-            {{ form.telefone_contato }}
-            {{ form.telefone_contato.errors }}
-          </div>
-        </div>
-
-        <div class="company-grid-2">
-          <div class="field">
-            {{ form.inscricao_estadual.label_tag }}
-            {{ form.inscricao_estadual }}
-            {{ form.inscricao_estadual.errors }}
-          </div>
-          <div class="field">
-            {{ form.inscricao_municipal.label_tag }}
-            {{ form.inscricao_municipal }}
-            {{ form.inscricao_municipal.errors }}
-          </div>
+          {{ form.documento.label_tag }}
+          {{ form.documento }}
+          {{ form.documento.errors }}
         </div>
       </div>
 
-      <div class="card">
-        <h2 class="section-title">Endereço</h2>
-        <p class="section-subtitle">Localização da empresa</p>
+      <div class="field">
+        {{ form.razao_social.label_tag }}
+        {{ form.razao_social }}
+        {{ form.razao_social.errors }}
+      </div>
 
-        <div class="company-grid-3">
-          <div class="field">
-            {{ form.cep.label_tag }}
-            {{ form.cep }}
-            {{ form.cep.errors }}
-          </div>
-          <div class="field">
-            {{ form.estado.label_tag }}
-            {{ form.estado }}
-            {{ form.estado.errors }}
-          </div>
-          <div class="field">
-            {{ form.cidade.label_tag }}
-            {{ form.cidade }}
-            {{ form.cidade.errors }}
-          </div>
+      <div class="field">
+        {{ form.nome_fantasia.label_tag }}
+        {{ form.nome_fantasia }}
+        {{ form.nome_fantasia.errors }}
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          {{ form.email_contato.label_tag }}
+          {{ form.email_contato }}
+          {{ form.email_contato.errors }}
         </div>
-        <span id="cep-feedback" class="field-feedback"></span>
-
-        <div class="company-grid-2">
-          <div class="field">
-            {{ form.logradouro.label_tag }}
-            {{ form.logradouro }}
-            {{ form.logradouro.errors }}
-          </div>
-          <div class="field">
-            {{ form.bairro.label_tag }}
-            {{ form.bairro }}
-            {{ form.bairro.errors }}
-          </div>
-        </div>
-
-        <div class="company-grid-2">
-          <div class="field">
-            {{ form.numero.label_tag }}
-            {{ form.numero }}
-            {{ form.numero.errors }}
-          </div>
-          <div class="field">
-            {{ form.complemento.label_tag }}
-            {{ form.complemento }}
-            {{ form.complemento.errors }}
-          </div>
+        <div class="field">
+          {{ form.telefone_contato.label_tag }}
+          {{ form.telefone_contato }}
+          {{ form.telefone_contato.errors }}
         </div>
       </div>
 
-      <div class="card">
-        <h2 class="section-title">Quem representa a empresa?</h2>
-        <p class="section-subtitle">Informe os dados da pessoa responsável pela empresa</p>
+      <div class="grid-2">
+        <div class="field">
+          {{ form.inscricao_estadual.label_tag }}
+          {{ form.inscricao_estadual }}
+          {{ form.inscricao_estadual.errors }}
+        </div>
+        <div class="field">
+          {{ form.inscricao_municipal.label_tag }}
+          {{ form.inscricao_municipal }}
+          {{ form.inscricao_municipal.errors }}
+        </div>
+      </div>
+    </div>
 
-        <div class="company-grid-3">
-          <div class="field">
-            {{ form.responsavel_nome.label_tag }}
-            {{ form.responsavel_nome }}
-            {{ form.responsavel_nome.errors }}
-          </div>
-          <div class="field">
-            {{ form.responsavel_cpf.label_tag }}
-            {{ form.responsavel_cpf }}
-            {{ form.responsavel_cpf.errors }}
-          </div>
-          <div class="field">
-            {{ form.responsavel_cargo.label_tag }}
-            {{ form.responsavel_cargo }}
-            {{ form.responsavel_cargo.errors }}
-          </div>
+    {# ---- Endereço ---- #}
+    <div class="form-card">
+      <div class="form-card-heading">
+        <span class="form-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+        </span>
+        <div>
+          <p class="form-card-title">Endereço</p>
+          <p class="form-card-subtitle">Localização da empresa</p>
         </div>
       </div>
 
-      <div class="card">
-        <h2 class="section-title">Dados Adicionais</h2>
-        <p class="section-subtitle">Informações complementares (opcional)</p>
+      <div class="grid-3">
+        <div class="field">
+          {{ form.cep.label_tag }}
+          {{ form.cep }}
+          {{ form.cep.errors }}
+        </div>
+        <div class="field">
+          {{ form.estado.label_tag }}
+          {{ form.estado }}
+          {{ form.estado.errors }}
+        </div>
+        <div class="field">
+          {{ form.cidade.label_tag }}
+          {{ form.cidade }}
+          {{ form.cidade.errors }}
+        </div>
+      </div>
+      <span id="cep-feedback" class="field-feedback"></span>
 
-        <div class="company-grid-3">
-          <div class="field">
-            {{ form.logo_url.label_tag }}
-            {{ form.logo_url }}
-            {{ form.logo_url.errors }}
-          </div>
-          <div class="field">
-            {{ form.website.label_tag }}
-            {{ form.website }}
-            {{ form.website.errors }}
-          </div>
-          <div class="field">
-            {{ form.cno_caepf.label_tag }}
-            {{ form.cno_caepf }}
-            {{ form.cno_caepf.errors }}
-          </div>
+      <div class="grid-2">
+        <div class="field">
+          {{ form.logradouro.label_tag }}
+          {{ form.logradouro }}
+          {{ form.logradouro.errors }}
+        </div>
+        <div class="field">
+          {{ form.bairro.label_tag }}
+          {{ form.bairro }}
+          {{ form.bairro.errors }}
         </div>
       </div>
 
-      <div class="actions">
-        <a class="btn" href="{% if is_edit_mode %}{% url 'web:company' %}{% else %}{% url 'web:painel' %}{% endif %}">Cancelar</a>
-        <button class="btn btn-primary" type="submit">{% if is_edit_mode %}Salvar alterações{% else %}Salvar empresa{% endif %}</button>
+      <div class="grid-2">
+        <div class="field">
+          {{ form.numero.label_tag }}
+          {{ form.numero }}
+          {{ form.numero.errors }}
+        </div>
+        <div class="field">
+          {{ form.complemento.label_tag }}
+          {{ form.complemento }}
+          {{ form.complemento.errors }}
+        </div>
       </div>
-    </form>
-  </section>
+    </div>
+
+    {# ---- Responsável Legal ---- #}
+    <div class="form-card">
+      <div class="form-card-heading">
+        <span class="form-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/>
+          </svg>
+        </span>
+        <div>
+          <p class="form-card-title">Responsável Legal</p>
+          <p class="form-card-subtitle">Informe os dados da pessoa responsável pela empresa</p>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          {{ form.responsavel_nome.label_tag }}
+          {{ form.responsavel_nome }}
+          {{ form.responsavel_nome.errors }}
+        </div>
+        <div class="field">
+          {{ form.responsavel_cpf.label_tag }}
+          {{ form.responsavel_cpf }}
+          {{ form.responsavel_cpf.errors }}
+        </div>
+        <div class="field">
+          {{ form.responsavel_cargo.label_tag }}
+          {{ form.responsavel_cargo }}
+          {{ form.responsavel_cargo.errors }}
+        </div>
+      </div>
+    </div>
+
+    {# ---- Dados Adicionais ---- #}
+    <div class="form-card">
+      <div class="form-card-heading">
+        <span class="form-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </span>
+        <div>
+          <p class="form-card-title">Dados Adicionais</p>
+          <p class="form-card-subtitle">Informações complementares (opcional)</p>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          {{ form.logo_url.label_tag }}
+          {{ form.logo_url }}
+          {{ form.logo_url.errors }}
+        </div>
+        <div class="field">
+          {{ form.website.label_tag }}
+          {{ form.website }}
+          {{ form.website.errors }}
+        </div>
+        <div class="field">
+          {{ form.cno_caepf.label_tag }}
+          {{ form.cno_caepf }}
+          {{ form.cno_caepf.errors }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a class="btn btn-lg" href="{% if is_edit_mode %}{% url 'web:company' %}{% else %}{% url 'web:painel' %}{% endif %}">Cancelar</a>
+      <button class="btn btn-primary btn-lg" type="submit" id="btn-salvar">
+        {% if is_edit_mode %}Salvar alterações{% else %}Salvar empresa{% endif %}
+      </button>
+    </div>
+  </form>
 
   <script>
     (function () {
-      const tipoInput = document.getElementById('id_tipo_pessoa');
-      const documentoInput = document.getElementById('id_documento');
-      const telefoneInput = document.getElementById('id_telefone_contato');
-      const cepInput = document.getElementById('id_cep');
-      const logradouroInput = document.getElementById('id_logradouro');
-      const bairroInput = document.getElementById('id_bairro');
-      const cidadeInput = document.getElementById('id_cidade');
-      const estadoInput = document.getElementById('id_estado');
-      const cpfResponsavelInput = document.getElementById('id_responsavel_cpf');
-      const cepFeedback = document.getElementById('cep-feedback');
+      const tipoInput         = document.getElementById('id_tipo_pessoa');
+      const documentoInput    = document.getElementById('id_documento');
+      const telefoneInput     = document.getElementById('id_telefone_contato');
+      const cepInput          = document.getElementById('id_cep');
+      const logradouroInput   = document.getElementById('id_logradouro');
+      const bairroInput       = document.getElementById('id_bairro');
+      const cidadeInput       = document.getElementById('id_cidade');
+      const estadoInput       = document.getElementById('id_estado');
+      const cpfRespInput      = document.getElementById('id_responsavel_cpf');
+      const cepFeedback       = document.getElementById('cep-feedback');
 
-      function onlyDigits(value) {
-        return value.replace(/\D/g, '');
+      function onlyDigits(v) { return (v || '').replace(/\D/g, ''); }
+
+      function maskCpf(v) {
+        const d = onlyDigits(v).slice(0, 11);
+        if (d.length <= 3) return d;
+        if (d.length <= 6) return d.slice(0,3)+'.'+d.slice(3);
+        if (d.length <= 9) return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6);
+        return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
       }
-
-      function maskCpf(value) {
-        const digits = onlyDigits(value).slice(0, 11);
-        if (digits.length <= 3) return digits;
-        if (digits.length <= 6) return digits.slice(0, 3) + '.' + digits.slice(3);
-        if (digits.length <= 9) return digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6);
-        return digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6, 9) + '-' + digits.slice(9);
+      function maskCnpj(v) {
+        const d = onlyDigits(v).slice(0, 14);
+        if (d.length <= 2) return d;
+        if (d.length <= 5) return d.slice(0,2)+'.'+d.slice(2);
+        if (d.length <= 8) return d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5);
+        if (d.length <= 12) return d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5,8)+'/'+d.slice(8);
+        return d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5,8)+'/'+d.slice(8,12)+'-'+d.slice(12);
       }
-
-      function maskCnpj(value) {
-        const digits = onlyDigits(value).slice(0, 14);
-        if (digits.length <= 2) return digits;
-        if (digits.length <= 5) return digits.slice(0, 2) + '.' + digits.slice(2);
-        if (digits.length <= 8) return digits.slice(0, 2) + '.' + digits.slice(2, 5) + '.' + digits.slice(5);
-        if (digits.length <= 12) return digits.slice(0, 2) + '.' + digits.slice(2, 5) + '.' + digits.slice(5, 8) + '/' + digits.slice(8);
-        return digits.slice(0, 2) + '.' + digits.slice(2, 5) + '.' + digits.slice(5, 8) + '/' + digits.slice(8, 12) + '-' + digits.slice(12);
+      function maskTel(v) {
+        const d = onlyDigits(v).slice(0, 11);
+        if (d.length <= 2) return d;
+        if (d.length <= 6) return '('+d.slice(0,2)+') '+d.slice(2);
+        if (d.length <= 10) return '('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);
+        return '('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);
       }
-
-      function maskTelefone(value) {
-        const digits = onlyDigits(value).slice(0, 11);
-        if (digits.length <= 2) return digits;
-        if (digits.length <= 6) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
-        if (digits.length <= 10) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6);
-        return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
-      }
-
-      function maskCep(value) {
-        const digits = onlyDigits(value).slice(0, 8);
-        if (digits.length <= 5) return digits;
-        return digits.slice(0, 5) + '-' + digits.slice(5);
+      function maskCep(v) {
+        const d = onlyDigits(v).slice(0, 8);
+        return d.length <= 5 ? d : d.slice(0,5)+'-'+d.slice(5);
       }
 
       if (documentoInput && tipoInput) {
-        documentoInput.addEventListener('input', function () {
-          documentoInput.value = tipoInput.value === 'PF' ? maskCpf(documentoInput.value) : maskCnpj(documentoInput.value);
-        });
-
-        tipoInput.addEventListener('change', function () {
-          documentoInput.value = tipoInput.value === 'PF' ? maskCpf(documentoInput.value) : maskCnpj(documentoInput.value);
-        });
+        const applyDoc = () => { documentoInput.value = tipoInput.value === 'PF' ? maskCpf(documentoInput.value) : maskCnpj(documentoInput.value); };
+        documentoInput.addEventListener('input', applyDoc);
+        tipoInput.addEventListener('change', applyDoc);
       }
-
-      if (telefoneInput) {
-        telefoneInput.addEventListener('input', function () {
-          telefoneInput.value = maskTelefone(telefoneInput.value);
-        });
-      }
-
+      if (telefoneInput) { telefoneInput.addEventListener('input', () => { telefoneInput.value = maskTel(telefoneInput.value); }); }
       if (cepInput) {
-        cepInput.addEventListener('input', function () {
-          cepInput.value = maskCep(cepInput.value);
-        });
-
-        cepInput.addEventListener('blur', function () {
-          lookupCep(cepInput.value);
-        });
+        cepInput.addEventListener('input', () => { cepInput.value = maskCep(cepInput.value); });
+        cepInput.addEventListener('blur', () => lookupCep(cepInput.value));
       }
-
-      if (cpfResponsavelInput) {
-        cpfResponsavelInput.addEventListener('input', function () {
-          cpfResponsavelInput.value = maskCpf(cpfResponsavelInput.value);
-        });
-      }
+      if (cpfRespInput) { cpfRespInput.addEventListener('input', () => { cpfRespInput.value = maskCpf(cpfRespInput.value); }); }
 
       async function lookupCep(rawCep) {
         const cep = onlyDigits(rawCep);
         if (!cepFeedback) return;
         if (cep.length !== 8) {
-          cepFeedback.textContent = cep ? 'CEP incompleto. Informe 8 dígitos.' : '';
-          cepFeedback.className = 'field-feedback error';
+          if (cep) { cepFeedback.textContent = 'CEP incompleto.'; cepFeedback.className = 'field-feedback error'; }
           return;
         }
-
-        cepFeedback.textContent = 'Buscando endereço...';
-        cepFeedback.className = 'field-feedback';
-
+        cepFeedback.textContent = 'Buscando endereço…'; cepFeedback.className = 'field-feedback';
         try {
-          const response = await fetch(`/api/public/cep/?cep=${cep}`);
-          const payload = await response.json();
-
-          if (!response.ok || !payload.ok) {
+          const res = await fetch(`/api/public/cep/?cep=${cep}`);
+          const payload = await res.json();
+          if (!res.ok || !payload.ok) {
             cepFeedback.textContent = payload.error || 'Não foi possível buscar o CEP. Preencha manualmente.';
             cepFeedback.className = 'field-feedback error';
             return;
           }
-
-          const data = payload.data || {};
-          if (logradouroInput) logradouroInput.value = data.logradouro || '';
-          if (bairroInput) bairroInput.value = data.bairro || '';
-          if (cidadeInput) cidadeInput.value = data.cidade || '';
-          if (estadoInput) estadoInput.value = data.estado || '';
-          cepFeedback.textContent = 'Endereço preenchido automaticamente. Você pode ajustar manualmente.';
+          const d = payload.data || {};
+          if (logradouroInput) logradouroInput.value = d.logradouro || '';
+          if (bairroInput)     bairroInput.value     = d.bairro     || '';
+          if (cidadeInput)     cidadeInput.value     = d.cidade     || '';
+          if (estadoInput)     estadoInput.value     = d.estado     || '';
+          cepFeedback.textContent = 'Endereço preenchido automaticamente.';
           cepFeedback.className = 'field-feedback success';
-        } catch (error) {
+        } catch {
           cepFeedback.textContent = 'Serviço de CEP indisponível. Preencha manualmente.';
           cepFeedback.className = 'field-feedback error';
         }
       }
+
+      // Anti-duplo-submit
+      document.getElementById('company-form').addEventListener('submit', function () {
+        const btn = document.getElementById('btn-salvar');
+        btn.disabled = true;
+        btn.textContent = 'Salvando…';
+      });
     })();
   </script>
 {% endblock %}

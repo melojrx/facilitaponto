@@ -1,0 +1,429 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}Nova Jornada de Trabalho | Painel FacilitaPonto{% endblock %}
+
+{% block panel_heading_title %}
+  <span style="display:inline-flex;align-items:center;gap:10px;">
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:#e8f0fb;color:var(--brand);flex-shrink:0;">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
+      </svg>
+    </span>
+    Nova Jornada de Trabalho
+  </span>
+{% endblock %}
+{% block panel_heading_subtitle %}Gerencie os templates de jornada da empresa{% endblock %}
+
+{% block panel_styles %}
+  /* ===== Breadcrumb ===== */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--brand); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb-sep { color: #CBD5E1; font-size: 12px; }
+
+  /* ===== Form layout ===== */
+  .journey-form { width: 100%; }
+
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  }
+  .form-card-heading { margin: 0 0 22px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .form-card-heading h2 { margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--text); }
+  .form-card-heading p  { margin: 0; color: var(--muted); font-size: 13px; }
+
+  /* ===== Campos ===== */
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 7px;
+  }
+  .field input[type="text"],
+  .field textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 15px;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .field input[type="text"]:focus,
+  .field textarea:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, .12);
+  }
+  .field input.invalid,
+  .field textarea.invalid { border-color: var(--danger); }
+  .field-error { margin-top: 5px; font-size: 12px; color: var(--danger); }
+
+  /* ===== Tipo de Jornada ===== */
+  .tipo-section-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .tipo-section-label .help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid #94A3B8;
+    font-size: 10px;
+    color: var(--muted);
+    cursor: default;
+    user-select: none;
+    font-weight: 700;
+  }
+
+  .tipo-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 700px) { .tipo-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px) { .tipo-grid { grid-template-columns: 1fr; } }
+
+  .tipo-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 20px 14px 16px;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    background: #fff;
+    gap: 8px;
+    min-height: 132px;
+  }
+  .tipo-card:hover { border-color: #93C5FD; background: #F8FAFC; }
+  .tipo-card input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+
+  .tipo-card.selected {
+    border-color: var(--brand);
+    background: #EFF6FF;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, .10);
+  }
+
+  .tipo-card-icon {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    background: #EFF6FF;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .18s, color .18s;
+    flex-shrink: 0;
+  }
+  .tipo-card-icon svg { width: 20px; height: 20px; }
+  .tipo-card.selected .tipo-card-icon { background: #DBEAFE; color: var(--brand); }
+
+  .tipo-card-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .tipo-card.selected .tipo-card-name { color: var(--brand); }
+
+  .tipo-card-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .tipo-field-error { margin-top: 8px; font-size: 12px; color: var(--danger); }
+
+  /* ===== Painel informativo "O que o sistema faz" ===== */
+  .system-benefits {
+    margin-top: 16px;
+    border: 1px solid #BFDBFE;
+    border-radius: 12px;
+    padding: 18px 20px;
+    background: #EFF6FF;
+    display: none;
+  }
+  .system-benefits.visible { display: block; }
+  .system-benefits-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1E40AF;
+    margin-bottom: 12px;
+  }
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+  }
+  @media (max-width: 600px) { .benefits-grid { grid-template-columns: 1fr; } }
+  .benefit-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .benefit-item-icon {
+    color: var(--brand);
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: inline-flex;
+  }
+  .benefit-item-icon svg { width: 14px; height: 14px; }
+
+  /* ===== Ações ===== */
+  .journey-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .btn-lg { padding: 11px 22px; font-size: 15px; }
+{% endblock %}
+
+{% block panel_content %}
+  <nav class="breadcrumb" aria-label="Navegação estrutural">
+    <a href="{% url 'web:painel' %}">Início</a>
+    <span class="breadcrumb-sep">›</span>
+    <span>{{ company_name }}</span>
+    <span class="breadcrumb-sep">›</span>
+    <a href="{% url 'web:journey_create' %}">Jornadas de Trabalho</a>
+    <span class="breadcrumb-sep">›</span>
+    <span aria-current="page">Nova Jornada de Trabalho</span>
+  </nav>
+
+  <form method="post" action="{% url 'web:journey_create' %}" id="journey-form" novalidate class="journey-form">
+    {% csrf_token %}
+
+    <div class="form-card">
+      <div class="form-card-heading">
+        <h2>Nova Jornada de Trabalho</h2>
+        <p>Gerencie os templates de jornada da empresa</p>
+      </div>
+
+      {# Nome #}
+      <div class="field">
+        <label for="id_nome">Nome da Jornada</label>
+        <input
+          type="text"
+          id="id_nome"
+          name="nome"
+          maxlength="80"
+          placeholder="Jornada Integral"
+          value="{{ form.nome.value|default:'' }}"
+          class="{% if form.nome.errors %}invalid{% endif %}"
+          autocomplete="off"
+        >
+        {% for error in form.nome.errors %}
+          <p class="field-error" role="alert">{{ error }}</p>
+        {% endfor %}
+      </div>
+
+      {# Descrição #}
+      <div class="field">
+        <label for="id_descricao">Descrição</label>
+        <textarea
+          id="id_descricao"
+          name="descricao"
+          maxlength="255"
+          placeholder="Descrição opcional da jornada"
+          rows="3"
+          class="{% if form.descricao.errors %}invalid{% endif %}"
+        >{{ form.descricao.value|default:'' }}</textarea>
+        {% for error in form.descricao.errors %}
+          <p class="field-error" role="alert">{{ error }}</p>
+        {% endfor %}
+      </div>
+
+      {# Tipo de Jornada #}
+      <div class="field">
+        <div class="tipo-section-label">
+          Tipo de Jornada
+          <span class="help-icon" title="O tipo define como o sistema valida horários e calcula ponto.">i</span>
+        </div>
+
+        <div class="tipo-grid" role="radiogroup" aria-label="Tipo de jornada">
+
+          {# Semanal #}
+          <label class="tipo-card {% if form.tipo.value == 'SEMANAL' %}selected{% endif %}" for="tipo_SEMANAL">
+            <input type="radio" id="tipo_SEMANAL" name="tipo" value="SEMANAL" {% if form.tipo.value == 'SEMANAL' %}checked{% endif %}>
+            <span class="tipo-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h2M8 18h2M13 14h2M13 18h2"/>
+              </svg>
+            </span>
+            <span class="tipo-card-name">Semanal</span>
+            <span class="tipo-card-desc">Horários fixos por dia da semana. Ideal para CLT padrão.</span>
+          </label>
+
+          {# 12x36 #}
+          <label class="tipo-card {% if form.tipo.value == '12X36' %}selected{% endif %}" for="tipo_12X36">
+            <input type="radio" id="tipo_12X36" name="tipo" value="12X36" {% if form.tipo.value == '12X36' %}checked{% endif %}>
+            <span class="tipo-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+              </svg>
+            </span>
+            <span class="tipo-card-name">12x36</span>
+            <span class="tipo-card-desc">12h trabalho, 36h descanso. Comum em saúde e segurança.</span>
+          </label>
+
+          {# Fracionada #}
+          <label class="tipo-card {% if form.tipo.value == 'FRACIONADA' %}selected{% endif %}" for="tipo_FRACIONADA">
+            <input type="radio" id="tipo_FRACIONADA" name="tipo" value="FRACIONADA" {% if form.tipo.value == 'FRACIONADA' %}checked{% endif %}>
+            <span class="tipo-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/>
+              </svg>
+            </span>
+            <span class="tipo-card-name">Fracionada</span>
+            <span class="tipo-card-desc">Múltiplos períodos por dia. Comum em restaurantes e escolas.</span>
+          </label>
+
+          {# Externa #}
+          <label class="tipo-card {% if form.tipo.value == 'EXTERNA' %}selected{% endif %}" for="tipo_EXTERNA">
+            <input type="radio" id="tipo_EXTERNA" name="tipo" value="EXTERNA" {% if form.tipo.value == 'EXTERNA' %}checked{% endif %}>
+            <span class="tipo-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </span>
+            <span class="tipo-card-name">Externa</span>
+            <span class="tipo-card-desc">Ponto livre, sem horário fixo. Para vendedores externos.</span>
+          </label>
+
+        </div>
+
+        {% for error in form.tipo.errors %}
+          <p class="tipo-field-error" role="alert">{{ error }}</p>
+        {% endfor %}
+
+        {# Painel informativo — exibido via JS ao selecionar tipo #}
+        <div class="system-benefits {% if form.tipo.value %}visible{% endif %}" id="system-benefits-panel">
+          <div class="system-benefits-title">O que o sistema faz com a jornada</div>
+          <div class="benefits-grid" id="benefits-semanal" style="display:none;">
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Notifica marcações pendentes quando o colaborador esquece de bater o ponto</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Calcula atrasos e saídas antecipadas automaticamente</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Controla horas extras e alerta quando ultrapassar o limite de 2h/dia (CLT)</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Valida intervalos intrajornada obrigatórios (1h para jornadas acima de 6h)</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Gera o espelho de ponto com saldo diário (horas trabalhadas vs. esperadas)</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Processa o banco de horas automaticamente com base na carga horária</div>
+          </div>
+          <div class="benefits-grid" id="benefits-12x36" style="display:none;">
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Gera escala cíclica automaticamente a partir da data e horário base</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Identifica marcações em dias de folga e trata como exceção operacional</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Controla jornada de 12h contínuas e valida extrapolação de turno</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Gera espelho de ponto respeitando ciclos de trabalho e folga</div>
+          </div>
+          <div class="benefits-grid" id="benefits-fracionada" style="display:none;">
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Suporta múltiplos períodos de trabalho por dia</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Valida aderência por período, não apenas pela carga total diária</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Detecta sobreposição e intervalos inválidos entre períodos</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Gera espelho de ponto com resumo por período e total diário</div>
+          </div>
+          <div class="benefits-grid" id="benefits-externa" style="display:none;">
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Registra todas as marcações sem validar horário fixo</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Mantém rastreabilidade completa de presença para auditoria</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Não aplica cálculo de atraso ou saída antecipada por grade esperada</div>
+            <div class="benefit-item"><span class="benefit-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></span>Conformidade e ajustes geridos por política da empresa</div>
+          </div>
+        </div>
+
+      </div>{# /tipo field #}
+    </div>{# /form-card #}
+
+    <div class="journey-actions">
+      <a class="btn btn-lg" href="{% url 'web:painel' %}">Cancelar</a>
+      <button type="submit" class="btn btn-primary btn-lg" id="btn-salvar">Salvar Jornada</button>
+    </div>
+
+  </form>
+{% endblock %}
+
+{% block panel_scripts %}
+<script>
+(function () {
+  var benefitMap = {
+    SEMANAL:    document.getElementById('benefits-semanal'),
+    '12X36':    document.getElementById('benefits-12x36'),
+    FRACIONADA: document.getElementById('benefits-fracionada'),
+    EXTERNA:    document.getElementById('benefits-externa'),
+  };
+  var panel = document.getElementById('system-benefits-panel');
+
+  function showBenefits(value) {
+    Object.keys(benefitMap).forEach(function (k) {
+      if (benefitMap[k]) benefitMap[k].style.display = 'none';
+    });
+    if (value && benefitMap[value]) {
+      benefitMap[value].style.display = 'grid';
+      panel.classList.add('visible');
+    } else {
+      panel.classList.remove('visible');
+    }
+  }
+
+  // Inicializar com valor já selecionado (reexibição de erro)
+  var checked = document.querySelector('.tipo-card input[type="radio"]:checked');
+  if (checked) showBenefits(checked.value);
+
+  // Listener nos radio cards
+  document.querySelectorAll('.tipo-card input[type="radio"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      document.querySelectorAll('.tipo-card').forEach(function (c) { c.classList.remove('selected'); });
+      if (radio.checked) {
+        radio.closest('.tipo-card').classList.add('selected');
+        showBenefits(radio.value);
+      }
+    });
+  });
+
+  // Clique no label também seleciona (acessibilidade)
+  document.querySelectorAll('.tipo-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      var radio = card.querySelector('input[type="radio"]');
+      if (radio && !radio.checked) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+
+  // Anti-duplo-submit
+  document.getElementById('journey-form').addEventListener('submit', function () {
+    var btn = document.getElementById('btn-salvar');
+    btn.disabled = true;
+    btn.textContent = 'Salvando…';
+  });
+})();
+</script>
+{% endblock %}

@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.accounts.serializers import TenantTokenObtainPairSerializer
-from apps.employees.models import Employee, NSRSequence
+from apps.employees.models import Employee, NSRSequence, WorkSchedule
 from apps.employees.services import get_next_nsr
 from apps.tenants.models import Tenant
 from core.tenant_context import tenant_context
@@ -221,3 +221,51 @@ class TestActiveEmployeesEndpoint:
 
         with tenant_context(tenant_b):
             assert list(Employee.objects.values_list("nome", flat=True)) == ["Contexto B"]
+
+
+@pytest.mark.django_db
+class TestWorkScheduleModel:
+    def test_cria_jornada_com_sucesso(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Jornada Comercial",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        assert schedule.pk is not None
+        assert schedule.ativo is True
+
+    def test_nome_duplicado_no_mesmo_tenant_levanta_erro(self, tenant_a):
+        WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Jornada Duplicada",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        from django.db import IntegrityError
+        with pytest.raises(IntegrityError):
+            WorkSchedule.all_objects.create(
+                tenant=tenant_a,
+                nome="Jornada Duplicada",
+                tipo=WorkSchedule.TipoJornada.X12X36,
+            )
+
+    def test_mesmo_nome_em_tenants_diferentes_e_permitido(self, tenant_a, tenant_b):
+        WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Jornada Padrão",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        schedule_b = WorkSchedule.all_objects.create(
+            tenant=tenant_b,
+            nome="Jornada Padrão",
+            tipo=WorkSchedule.TipoJornada.FRACIONADA,
+        )
+        assert schedule_b.tenant == tenant_b
+
+    def test_str_retorna_nome_e_tipo(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Escala Saúde",
+            tipo=WorkSchedule.TipoJornada.X12X36,
+        )
+        assert "Escala Saúde" in str(schedule)
+        assert "12X36" in str(schedule)

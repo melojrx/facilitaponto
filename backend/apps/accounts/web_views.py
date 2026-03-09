@@ -8,9 +8,11 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import CompanyOnboardingForm, LoginForm, ProfileForm, SignupForm
-from apps.tenants.models import Tenant
+from apps.employees.forms import WorkScheduleForm
+from core.tenant_resolution import resolve_tenant_from_user
 
+from .forms import CompanyOnboardingForm, LoginForm, ProfileForm, SignupForm
+from .rate_limit import is_web_login_limited, is_web_signup_limited
 
 PANEL_MENU = [
     {
@@ -30,7 +32,7 @@ PANEL_MENU = [
     {
         "key": "jornadas",
         "label": "Jornadas de Trabalho",
-        "url_name": "web:jornadas",
+        "url_name": "web:journey_create",
         "min_step": 2,
         "locked_reason": "Cadastre sua empresa para liberar Jornadas de Trabalho.",
     },
@@ -105,42 +107,7 @@ def _get_onboarding_step(user):
 
 
 def _resolve_user_tenant(user):
-    if user.tenant_id:
-        return user.tenant
-
-    candidate_filters = []
-    if user.email:
-        candidate_filters.append({"email_contato__iexact": user.email})
-    if user.cpf:
-        candidate_filters.extend(
-            [
-                {"documento": user.cpf},
-                {"cnpj": user.cpf},
-                {"responsavel_cpf": user.cpf},
-            ]
-        )
-
-    if not candidate_filters:
-        return None
-
-    qs = Tenant.objects.none()
-    for filter_kwargs in candidate_filters:
-        qs = qs | Tenant.objects.filter(**filter_kwargs)
-
-    candidates = qs.distinct()
-    if candidates.count() != 1:
-        return None
-
-    tenant = candidates.first()
-    # Auto-correção para manter painel coerente com dados já existentes no banco.
-    update_fields = []
-    user.tenant = tenant
-    update_fields.append("tenant")
-    if not user.is_account_owner:
-        user.is_account_owner = True
-        update_fields.append("is_account_owner")
-    user.save(update_fields=update_fields)
-    return tenant
+    return resolve_tenant_from_user(user)
 
 
 def _build_panel_context(request, current_menu):
@@ -229,6 +196,9 @@ def signup_view(request):
 
     if request.method == "POST":
         form = SignupForm(request.POST)
+        if is_web_signup_limited(request):
+            form.add_error(None, "Muitas tentativas de cadastro. Tente novamente em instantes.")
+            return render(request, "web/signup.html", {"form": form}, status=429)
         if form.is_valid():
             user = form.save()
             login(request, user)
@@ -247,6 +217,14 @@ def login_view(request):
 
     if request.method == "POST":
         form = LoginForm(request.POST, request=request)
+        if is_web_login_limited(request):
+            form.add_error(None, "Muitas tentativas de login. Tente novamente em instantes.")
+            return render(
+                request,
+                "web/login.html",
+                {"form": form, "next": _resolve_next_url(request, "")},
+                status=429,
+            )
         if form.is_valid():
             login(request, form.cleaned_data["user"])
             messages.success(request, "Login realizado com sucesso.")
@@ -396,4 +374,35 @@ def module_placeholder_view(request, module_key):
         "web/panel_placeholder.html",
         current_menu=item["key"],
         extra_context={"module_title": item["label"]},
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def create_journey_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de criar uma jornada.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=2)
+    if guard_redirect:
+        return guard_redirect
+
+    if request.method == "POST":
+        form = WorkScheduleForm(request.POST, tenant=tenant)
+        if form.is_valid():
+            form.save()
+            tenant.onboarding_step = max(3, int(tenant.onboarding_step or 2))
+            tenant.save(update_fields=["onboarding_step"])
+            messages.success(request, "Jornada criada com sucesso.")
+            return redirect("web:painel")
+    else:
+        form = WorkScheduleForm(tenant=tenant)
+
+    return _render_panel(
+        request,
+        "web/journey_create.html",
+        current_menu="jornadas",
+        extra_context={"form": form},
     )

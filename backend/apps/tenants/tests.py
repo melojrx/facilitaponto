@@ -9,6 +9,7 @@ from django.http import HttpResponse
 from django.test import RequestFactory
 from rest_framework_simplejwt.tokens import AccessToken
 
+from apps.accounts.models import User
 from apps.tenants.models import Tenant
 from core.managers import TenantManager
 from core.middleware import TenantMiddleware
@@ -152,6 +153,44 @@ class TestTenantMiddleware:
         assert response.status_code == 200
         assert captured["tenant"] == tenant_a
 
+    def test_resolve_tenant_por_usuario_autenticado(self, tenant_a):
+        request_factory = RequestFactory()
+        captured = {}
+        user = User.objects.create_user(email="owner@tenant-a.com", password="Forte123!", tenant=tenant_a)
+
+        def get_response(request):
+            captured["tenant"] = request.tenant
+            return HttpResponse("ok")
+
+        middleware = TenantMiddleware(get_response)
+        request = request_factory.get("/")
+        request.user = user
+
+        response = middleware(request)
+
+        assert response.status_code == 200
+        assert captured["tenant"] == tenant_a
+
+    def test_jwt_tem_precedencia_sobre_usuario_autenticado(self, tenant_a, tenant_b):
+        request_factory = RequestFactory()
+        captured = {}
+        token = AccessToken()
+        token["tenant_id"] = str(tenant_a.id)
+        user = User.objects.create_user(email="owner@tenant-b.com", password="Forte123!", tenant=tenant_b)
+
+        def get_response(request):
+            captured["tenant"] = request.tenant
+            return HttpResponse("ok")
+
+        middleware = TenantMiddleware(get_response)
+        request = request_factory.get("/", HTTP_AUTHORIZATION=f"Bearer {token}")
+        request.user = user
+
+        response = middleware(request)
+
+        assert response.status_code == 200
+        assert captured["tenant"] == tenant_a
+
     def test_contexto_e_limpo_ao_final_do_request(self, tenant_a):
         request_factory = RequestFactory()
         token = AccessToken()
@@ -168,3 +207,21 @@ class TestTenantMiddleware:
 
         assert response.status_code == 200
         assert _ItemDeTeste.objects.count() == 0
+
+    def test_jwt_invalido_gera_log_de_debug_e_segue_sem_tenant(self, caplog):
+        request_factory = RequestFactory()
+        captured = {}
+
+        def get_response(request):
+            captured["tenant"] = request.tenant
+            return HttpResponse("ok")
+
+        middleware = TenantMiddleware(get_response)
+        request = request_factory.get("/", HTTP_AUTHORIZATION="Bearer token-invalido")
+
+        caplog.set_level("DEBUG", logger="core.tenant_resolution")
+        response = middleware(request)
+
+        assert response.status_code == 200
+        assert captured["tenant"] is None
+        assert "Falha ao resolver tenant via JWT" in caplog.text
