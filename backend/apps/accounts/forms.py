@@ -4,12 +4,12 @@ from django import forms
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.db.models import Q
 
 from apps.tenants.models import Tenant
 
 from .models import User
+from .services_onboarding import AccountOnboardingService
 
 
 def _only_digits(value: str) -> str:
@@ -139,16 +139,13 @@ class SignupForm(forms.Form):
         return cleaned_data
 
     def save(self):
-        return User.objects.create_user(
+        return AccountOnboardingService.create_owner_account(
             first_name=self.cleaned_data["first_name"],
             last_name=self.cleaned_data["last_name"],
             cpf=self.cleaned_data["cpf"],
             phone=self.cleaned_data["phone"],
             email=self.cleaned_data["email"],
             password=self.cleaned_data["password1"],
-            role=User.Role.ADMIN,
-            is_account_owner=True,
-            is_active=True,
         )
 
 
@@ -333,44 +330,34 @@ class CompanyOnboardingForm(forms.Form):
         cleaned_data["website"] = cleaned_data.get("website", "").strip()
         return cleaned_data
 
-    @transaction.atomic
     def save(self, user: User) -> Tenant:
-        if user.tenant_id and (not self.existing_tenant or user.tenant_id != self.existing_tenant.pk):
-            raise ValidationError("Esta conta já possui empresa vinculada.")
-
-        tipo_pessoa = self.cleaned_data["tipo_pessoa"]
-        documento = self.cleaned_data["documento"]
-
-        tenant = self.existing_tenant or Tenant()
-        tenant.tipo_pessoa = tipo_pessoa
-        tenant.documento = documento
-        tenant.cnpj = documento if tipo_pessoa == Tenant.TipoPessoa.PJ else None
-        tenant.razao_social = self.cleaned_data["razao_social"]
-        tenant.nome_fantasia = self.cleaned_data["nome_fantasia"].strip()
-        tenant.email_contato = self.cleaned_data["email_contato"]
-        tenant.telefone_contato = self.cleaned_data["telefone_contato"]
-        tenant.cep = self.cleaned_data["cep"]
-        tenant.logradouro = self.cleaned_data["logradouro"]
-        tenant.numero = self.cleaned_data["numero"]
-        tenant.complemento = self.cleaned_data["complemento"]
-        tenant.bairro = self.cleaned_data["bairro"]
-        tenant.cidade = self.cleaned_data["cidade"]
-        tenant.estado = self.cleaned_data["estado"]
-        tenant.responsavel_nome = self.cleaned_data["responsavel_nome"]
-        tenant.responsavel_cpf = self.cleaned_data["responsavel_cpf"]
-        tenant.responsavel_cargo = self.cleaned_data["responsavel_cargo"]
-        tenant.logo_url = self.cleaned_data["logo_url"]
-        tenant.website = self.cleaned_data["website"]
-        tenant.cno_caepf = self.cleaned_data["cno_caepf"]
-        tenant.inscricao_estadual = self.cleaned_data["inscricao_estadual"]
-        tenant.inscricao_municipal = self.cleaned_data["inscricao_municipal"]
-        tenant.onboarding_step = max(2, int(tenant.onboarding_step or 2))
-        tenant.save()
-
-        user.tenant = tenant
-        user.is_account_owner = True
-        user.save(update_fields=["tenant", "is_account_owner"])
-        return tenant
+        return AccountOnboardingService.upsert_company_for_owner(
+            owner=user,
+            existing_tenant=self.existing_tenant,
+            company_data={
+                "tipo_pessoa": self.cleaned_data["tipo_pessoa"],
+                "documento": self.cleaned_data["documento"],
+                "razao_social": self.cleaned_data["razao_social"],
+                "nome_fantasia": self.cleaned_data["nome_fantasia"].strip(),
+                "email_contato": self.cleaned_data["email_contato"],
+                "telefone_contato": self.cleaned_data["telefone_contato"],
+                "cep": self.cleaned_data["cep"],
+                "logradouro": self.cleaned_data["logradouro"],
+                "numero": self.cleaned_data["numero"],
+                "complemento": self.cleaned_data["complemento"],
+                "bairro": self.cleaned_data["bairro"],
+                "cidade": self.cleaned_data["cidade"],
+                "estado": self.cleaned_data["estado"],
+                "responsavel_nome": self.cleaned_data["responsavel_nome"],
+                "responsavel_cpf": self.cleaned_data["responsavel_cpf"],
+                "responsavel_cargo": self.cleaned_data["responsavel_cargo"],
+                "logo_url": self.cleaned_data["logo_url"],
+                "website": self.cleaned_data["website"],
+                "cno_caepf": self.cleaned_data["cno_caepf"],
+                "inscricao_estadual": self.cleaned_data["inscricao_estadual"],
+                "inscricao_municipal": self.cleaned_data["inscricao_municipal"],
+            },
+        )
 
     @classmethod
     def initial_from_tenant(cls, tenant: Tenant):

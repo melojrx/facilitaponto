@@ -2,6 +2,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 from core.mixins import TenantModelMixin
+from .journey_config import normalize_config_for_tipo
 
 DIGITS_11_VALIDATOR = RegexValidator(
     regex=r"^\d{11}$",
@@ -89,3 +90,7 @@ class WorkSchedule(TenantModelMixin, models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.tipo})"
+
+    def clean(self):
+        super().clean()
+        self.configuracao = normalize_config_for_tipo(self.tipo, self.configuracao)

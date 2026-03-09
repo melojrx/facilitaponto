@@ -1,9 +1,14 @@
+import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.db import close_old_connections
 from django.test import override_settings
 
+from apps.accounts.forms import CompanyOnboardingForm
 from apps.accounts.models import User
 from apps.tenants.models import Tenant
 
@@ -359,6 +364,51 @@ class TestCompanyOnboardingFlow:
         assert response.url == "/painel/empresa/nova/"
 
 
+@pytest.mark.django_db(transaction=True)
+class TestCompanyOnboardingConcurrency:
+    def test_mesmo_owner_concorrente_cria_apenas_uma_empresa(self, user):
+        payloads = [
+            {
+                "tipo_pessoa": "PJ",
+                "documento": "50529647000183",
+                "razao_social": "Empresa A",
+                "nome_fantasia": "A",
+                "email_contato": "contato-a@acme.com",
+                "telefone_contato": "85999998888",
+            },
+            {
+                "tipo_pessoa": "PJ",
+                "documento": "12345678000195",
+                "razao_social": "Empresa B",
+                "nome_fantasia": "B",
+                "email_contato": "contato-b@acme.com",
+                "telefone_contato": "85999997777",
+            },
+        ]
+
+        def try_create_company(payload):
+            close_old_connections()
+            owner = User.objects.get(pk=user.pk)
+            form = CompanyOnboardingForm(payload)
+            assert form.is_valid(), form.errors
+            try:
+                tenant = form.save(owner)
+                return ("ok", str(tenant.id))
+            except ValidationError as exc:
+                return ("blocked", str(exc))
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            outcomes = list(executor.map(try_create_company, payloads))
+
+        user.refresh_from_db()
+        documents = {payload["documento"] for payload in payloads}
+        created_count = Tenant.objects.filter(documento__in=documents).count()
+
+        assert sorted(outcome[0] for outcome in outcomes) == ["blocked", "ok"]
+        assert created_count == 1
+        assert user.tenant_id is not None
+
+
 @pytest.mark.django_db
 class TestPanelMenuRelease:
     def test_menu_bloqueia_colaboradores_sem_empresa(self, client, user):
@@ -465,6 +515,21 @@ class TestJourneyOnboardingFlow:
         user.tenant = tenant
         user.save(update_fields=["tenant"])
 
+    def _semanal_json(self):
+        return json.dumps(
+            [
+                {
+                    "dia_semana": "SEGUNDA",
+                    "dsr": False,
+                    "entrada_1": "08:00",
+                    "saida_1": "12:00",
+                    "entrada_2": "13:00",
+                    "saida_2": "17:00",
+                },
+                {"dia_semana": "DOMINGO", "dsr": True},
+            ]
+        )
+
     # --- guardas ---
 
     def test_exige_autenticacao(self, client):
@@ -508,7 +573,13 @@ class TestJourneyOnboardingFlow:
 
         response = client.post(
             self.URL,
-            data={"nome": "Jornada Padrão 44h", "descricao": "Segunda a sexta", "tipo": "SEMANAL"},
+            data={
+                "nome": "Jornada Padrão 44h",
+                "descricao": "Segunda a sexta",
+                "tipo": "SEMANAL",
+                "semanal_subtipo": "COMERCIAL_40H",
+                "semanal_dias_json": self._semanal_json(),
+            },
             follow=False,
         )
 
@@ -527,13 +598,19 @@ class TestJourneyOnboardingFlow:
 
         client.post(
             self.URL,
-            data={"nome": "Plantão 12x36", "descricao": "", "tipo": "12X36"},
+            data={
+                "nome": "Plantão 12x36",
+                "descricao": "",
+                "tipo": "12X36",
+                "x12x36_data_inicio_escala": "2026-03-09",
+                "x12x36_horario_entrada": "08:00",
+            },
             follow=False,
         )
 
-        assert WorkSchedule.all_objects.filter(
-            tenant=tenant, nome="Plantão 12x36", tipo="12X36"
-        ).exists()
+        schedule = WorkSchedule.all_objects.get(tenant=tenant, nome="Plantão 12x36", tipo="12X36")
+        assert schedule.configuracao["data_inicio_escala"] == "2026-03-09"
+        assert schedule.configuracao["horario_entrada"] == "08:00"
 
     def test_post_avanca_step_apenas_para_3_nunca_regride(self, client, user):
         """Se tenant já está em step 4, não deve regredir para 3."""
@@ -559,7 +636,7 @@ class TestJourneyOnboardingFlow:
 
         response = client.post(
             self.URL,
-            data={"nome": "", "tipo": "SEMANAL"},
+            data={"nome": "", "tipo": "SEMANAL", "semanal_dias_json": self._semanal_json()},
         )
 
         assert response.status_code == 200
@@ -576,7 +653,12 @@ class TestJourneyOnboardingFlow:
 
         response = client.post(
             self.URL,
-            data={"nome": "Jornada Padrão", "descricao": "", "tipo": "SEMANAL"},
+            data={
+                "nome": "Jornada Padrão",
+                "descricao": "",
+                "tipo": "SEMANAL",
+                "semanal_dias_json": self._semanal_json(),
+            },
         )
 
         assert response.status_code == 200
@@ -594,6 +676,52 @@ class TestJourneyOnboardingFlow:
 
         assert response.status_code == 200
 
+    def test_post_fracionada_com_periodos_sobrepostos_rejeita(self, client, user):
+        tenant = self._make_tenant()
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.post(
+            self.URL,
+            data={
+                "nome": "Jornada Fracionada Inválida",
+                "descricao": "",
+                "tipo": "FRACIONADA",
+                "fracionada_dias_json": json.dumps(
+                    [
+                        {
+                            "dia_semana": "SEGUNDA",
+                            "periodos": [
+                                {"inicio": "08:00", "fim": "12:00"},
+                                {"inicio": "11:00", "fim": "15:00"},
+                            ],
+                        }
+                    ]
+                ),
+            },
+        )
+
+        assert response.status_code == 200
+        assert "sobreposição" in response.content.decode()
+
+    def test_post_externa_com_horarios_rejeita(self, client, user):
+        tenant = self._make_tenant()
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.post(
+            self.URL,
+            data={
+                "nome": "Jornada Externa Inválida",
+                "descricao": "",
+                "tipo": "EXTERNA",
+                "semanal_dias_json": self._semanal_json(),
+            },
+        )
+
+        assert response.status_code == 200
+        assert "Não é permitido definir horários para jornada externa." in response.content.decode()
+
     # --- liberação de menu ---
 
     def test_menu_libera_todos_modulos_apos_primeira_jornada(self, client, user):
@@ -606,7 +734,12 @@ class TestJourneyOnboardingFlow:
 
         client.post(
             self.URL,
-            data={"nome": "Jornada Inicial", "descricao": "", "tipo": "SEMANAL"},
+            data={
+                "nome": "Jornada Inicial",
+                "descricao": "",
+                "tipo": "SEMANAL",
+                "semanal_dias_json": self._semanal_json(),
+            },
             follow=False,
         )
 

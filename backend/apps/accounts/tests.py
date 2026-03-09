@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 from django.core.cache import cache
+from django.db import IntegrityError
 from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
@@ -10,6 +11,7 @@ from apps.accounts.models import Device, User
 from apps.accounts.permissions import IsDeviceToken, IsTenantMember
 from apps.accounts.serializers import TenantTokenObtainPairSerializer
 from apps.accounts.services_cep import CepLookupError, CepNotFoundError
+from apps.accounts.services_onboarding import AccountOnboardingService
 from apps.tenants.models import Tenant
 
 
@@ -74,6 +76,81 @@ class TestUserModel:
 
         assert superuser.is_superuser is True
         assert superuser.is_staff is True
+
+    def test_garante_um_owner_por_tenant(self, tenant_a):
+        User.objects.create_user(
+            email="owner1@tenant-a.com",
+            password="12345678",
+            tenant=tenant_a,
+            role=User.Role.ADMIN,
+            is_account_owner=True,
+        )
+
+        with pytest.raises(IntegrityError):
+            User.objects.create_user(
+                email="owner2@tenant-a.com",
+                password="12345678",
+                tenant=tenant_a,
+                role=User.Role.ADMIN,
+                is_account_owner=True,
+            )
+
+
+@pytest.mark.django_db
+class TestAccountOnboardingService:
+    def test_create_owner_account(self):
+        user = AccountOnboardingService.create_owner_account(
+            first_name="Joao",
+            last_name="Silva",
+            email="owner@novo.com",
+            cpf="39053344705",
+            phone="85999998888",
+            password="SenhaForte123!",
+        )
+
+        assert user.email == "owner@novo.com"
+        assert user.cpf == "39053344705"
+        assert user.is_account_owner is True
+
+    def test_upsert_company_for_owner_vincula_owner(self):
+        owner = User.objects.create_user(
+            email="owner@service.com",
+            cpf="70379043036",
+            password="SenhaForte123!",
+            role=User.Role.ADMIN,
+            is_account_owner=True,
+        )
+
+        tenant = AccountOnboardingService.upsert_company_for_owner(
+            owner=owner,
+            company_data={
+                "tipo_pessoa": Tenant.TipoPessoa.PJ,
+                "documento": "50529647000183",
+                "razao_social": "Acme Service LTDA",
+                "nome_fantasia": "Acme",
+                "email_contato": "contato@acme.com",
+                "telefone_contato": "85999998888",
+                "cep": "60711165",
+                "logradouro": "Rua A",
+                "numero": "100",
+                "complemento": "",
+                "bairro": "Centro",
+                "cidade": "Fortaleza",
+                "estado": "CE",
+                "responsavel_nome": "Joao",
+                "responsavel_cpf": "39053344705",
+                "responsavel_cargo": "Diretor",
+                "logo_url": "",
+                "website": "",
+                "cno_caepf": "",
+                "inscricao_estadual": "",
+                "inscricao_municipal": "",
+            },
+        )
+
+        owner.refresh_from_db()
+        assert owner.tenant_id == tenant.id
+        assert owner.is_account_owner is True
 
 
 @pytest.mark.django_db

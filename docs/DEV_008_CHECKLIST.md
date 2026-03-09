@@ -1,36 +1,37 @@
 # DEV-008 Checklist (Versionado)
-**Versão:** 2.5  
-**Data:** 2026-03-08  
+**Versão:** 2.6  
+**Data:** 2026-03-09  
 **Escopo:** onboarding conta proprietária + empresa única + liberação progressiva do painel
 
 **Documentos base:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/DEV_008_TELA_NOVA_JORNADA.md`, `docs/DEV_008_AREA_COLABORADORES.md`, `docs/DEV_008_AREA_RELOGIOS_PONTO.md`, `docs/DEV_008_TRATAMENTO_PONTO.md`, `docs/DEV_008_AREA_RELATORIOS.md`, `docs/DEV_008_AREA_SOLICITACOES.md`
 
-## Snapshot de execução (P0 Web/Auth — 2026-03-08)
+## Snapshot de execução (atualizado em 2026-03-09)
 - [x] Landing pública (`/`) implementada com CTAs para `Entrar` e `Começar Agora`
 - [x] Login web (`/login/`) com UX atualizada no padrão visual da landing
-- [x] Cadastro web (`/cadastro/`) com UX atualizada e campos `nome`, `sobrenome`, `e-mail`, `telefone`, `senha` e `confirmar senha`
+- [x] Cadastro web (`/cadastro/`) com UX atualizada e campos `nome`, `sobrenome`, `e-mail`, `CPF`, `telefone`, `senha` e `confirmar senha`
 - [x] Logout web (`POST /logout/`) com invalidação de sessão
 - [x] Guarda de acesso em `/painel/` para usuário não autenticado
 - [x] Testes de fluxo web inicial (signup/login/logout/guard) atualizados em `apps/accounts/test_web.py`
-- [ ] Cadastro completo com `CPF` do owner (premissa de negócio ainda pendente)
-- [ ] Onboarding da empresa (PJ/PF) e vínculo 1:1 owner/tenant
+- [x] Cadastro completo com `CPF` do owner (premissa de negócio)
+- [x] Onboarding da empresa (PJ/PF) com vínculo owner/tenant e bloqueio de segunda empresa no fluxo web
+- [x] Regra 1:1 endurecida com lock transacional no owner + constraint de banco para 1 owner por tenant
 
 ## 1) Premissas obrigatórias
-- [ ] Regra 1:1 preservada: `1 owner -> 1 empresa -> 1 tenant`
-- [ ] `email` do owner único global
-- [ ] `cpf` do owner único global e obrigatório
-- [ ] Empresa com suporte `PJ/PF` e documento único normalizado
-- [ ] Isolamento por tenant mantido em todo o fluxo
+- [x] Regra 1:1 preservada: `1 owner -> 1 empresa -> 1 tenant`
+- [x] `email` do owner único global
+- [x] `cpf` do owner único global e obrigatório
+- [x] Empresa com suporte `PJ/PF` e documento único normalizado
+- [x] Isolamento por tenant mantido em todo o fluxo
 - [ ] Stack web respeitada: Django Templates + Tailwind + HTMX + Alpine.js
 
 ## 2) Modelagem e backend
-- [ ] Evoluir `accounts.User` com campos de onboarding (`first_name`, `last_name`, `cpf`, `phone`, `is_account_owner`)
-- [ ] Evoluir `tenants.Tenant` para `tipo_pessoa` + `documento` mantendo compatibilidade com legado
-- [ ] Adicionar constraints de unicidade e vínculo 1:1 owner/tenant
-- [ ] Persistir estado de onboarding no tenant (`onboarding_step`, `onboarding_completed_at`)
-- [ ] Implementar `AccountOnboardingService` transacional
-- [ ] Impedir criação de segunda empresa por owner (erro semântico claro)
-- [ ] Garantir contexto de tenant nas operações subsequentes
+- [x] Evoluir `accounts.User` com campos de onboarding (`first_name`, `last_name`, `cpf`, `phone`, `is_account_owner`)
+- [x] Evoluir `tenants.Tenant` para `tipo_pessoa` + `documento` mantendo compatibilidade com legado
+- [x] Adicionar constraints de unicidade e vínculo 1:1 owner/tenant (owner único por tenant)
+- [x] Persistir estado de onboarding no tenant (`onboarding_step`, `onboarding_completed_at`)
+- [x] Implementar `AccountOnboardingService` transacional
+- [x] Impedir criação de segunda empresa por owner (erro semântico claro)
+- [x] Garantir contexto de tenant nas operações subsequentes
 
 ## 3) Integrações externas do onboarding
 - [ ] Consulta de CNPJ (provider primário: CNPJá Open)
@@ -39,15 +40,16 @@
 - [x] Fallback manual ativo em CEP inválido/indisponibilidade
 
 ## 4) Painel e UX de onboarding (`/painel`)
-- [ ] Esqueleto visual implementado:
+- [x] Esqueleto visual implementado:
   - sidebar fixa
   - topbar com seletor de empresa central
   - cabeçalho de boas-vindas com stepper
   - área de conteúdo para cards/listagens
-- [ ] Estado sem empresa: exibir banner/CTA `Criar sua primeira empresa`
-- [ ] Estado após empresa: exibir pendência `Criar horário da equipe`
+- [x] Estado sem empresa: exibir banner/CTA `Criar sua primeira empresa`
+- [x] Estado após empresa: exibir pendência `Criar horário da equipe`
 - [ ] Exibir modal contextual com CTA `Criar jornada`
-- [ ] Navegação para tela `Nova Jornada de Trabalho` ao clicar em `Criar jornada`
+- [x] Navegação para tela `Nova Jornada de Trabalho` ao clicar em `Criar jornada`
+- [x] Tela de nova jornada MVP implementada (nome, descrição, 4 tipos e painel explicativo por tipo)
 - [ ] Tela de nova jornada 1:1 com layout aprovado (breadcrumb, card principal, 4 cards de tipo e ações)
 - [ ] Ao selecionar `Semanal`, exibir blocos expandidos: painel explicativo, `Dúvidas comuns`, atalhos de jornada, toggle de intervalo reduzido e grade semanal
 - [ ] Atalhos `Integral 44h`, `Comercial 40h`, `Parcial 30h` e `Personalizar` aplicados corretamente na grade
@@ -56,7 +58,7 @@
 - [ ] Ao selecionar `Externa`, exibir aviso de não uso de horários fixos e bloquear configuração de grade horária
 - [ ] Estados de interação da tela aplicados (pristine, foco, selecionado, inválido, enviando, sucesso, erro)
 - [ ] Validações e mensagens implementadas conforme catálogo do anexo da tela
-- [ ] Semântica negocial de cada tipo (`Semanal`, `12x36`, `Fracionada`, `Externa`) refletida nas regras de validação/cálculo
+- [x] Semântica negocial de cada tipo (`Semanal`, `12x36`, `Fracionada`, `Externa`) refletida nas regras de validação/cálculo
 
 ## 5) Módulo Colaboradores (`/painel/colaboradores`)
 - [ ] Tela de listagem 1:1 com filtros por nome/CPF/PIS, turno, abas `Ativos`, `Inativos`, `Transferidos` e estado vazio
@@ -72,7 +74,7 @@
 - [ ] Antes do envio por WhatsApp, exibir modal de confirmação com telefone do colaborador e ações `Cancelar`/`Enviar`
 - [ ] Coluna `Ações` da listagem com operações rápidas (reenviar link WhatsApp, editar, alterar status)
 
-## 6) Módulo Relógios de Ponto (`/painel/relogios`)
+## 6) Módulo Relógios de Ponto (`/painel/relogio-digital` no código atual; alvo funcional `/painel/relogios`)
 - [ ] Tela de listagem 1:1 com breadcrumb, banner orientativo, filtros e estado vazio (`Nenhum resultado encontrado`)
 - [ ] Ação `Criar Relógio` abre formulário com `Nome`, `Descrição`, `Tipo do Relógio`, `Status` e autenticação facial fixa
 - [ ] Validações aplicadas: nome obrigatório/único por tenant, tipo obrigatório e método fixo `Reconhecimento Facial`
@@ -145,23 +147,23 @@
   - `POST /api/solicitacoes/acessos/{id}/decidir/`
 
 ## 10) Liberação de menu por estado
-- [ ] Sem empresa: apenas `Início` e `Empresa` ativos
-- [ ] Com empresa e sem jornada: liberar `Jornadas de Trabalho`
-- [ ] Após primeira jornada: liberar `Colaboradores`, `Relógio Digital`, `Tratamento de Ponto`, `Relatórios`, `Solicitações`, `Configurações`
-- [ ] Itens bloqueados exibem mensagem de pré-requisito
+- [x] Sem empresa: apenas `Início` e `Empresa` ativos
+- [x] Com empresa e sem jornada: liberar `Jornadas de Trabalho`
+- [x] Após primeira jornada: liberar `Colaboradores`, `Relógio Digital`, `Tratamento de Ponto`, `Relatórios`, `Solicitações`, `Configurações`
+- [x] Itens bloqueados exibem mensagem de pré-requisito
 
 ## 11) Qualidade e testes
-- [ ] Testes unitários de validação CPF/CNPJ e regras 1:1
+- [x] Testes unitários de validação CPF/CNPJ e regras 1:1
 - [ ] Testes de integração: signup -> login -> painel -> cadastro empresa -> criar jornada -> logout
-- [ ] Testes de autorização e isolamento tenant-aware
+- [x] Testes de autorização e isolamento tenant-aware
 - [ ] Testes de integrações externas (CNPJ e CEP): sucesso, falha e timeout
 
 ## 12) Critério de aceite DEV-008
-- [ ] Owner consegue concluir onboarding inicial sem intervenção manual do time técnico
-- [ ] Sistema bloqueia segunda empresa para a mesma conta
-- [ ] Menu libera funcionalidades progressivamente conforme onboarding
+- [x] Owner consegue concluir onboarding inicial sem intervenção manual do time técnico
+- [x] Sistema bloqueia segunda empresa para a mesma conta
+- [x] Menu libera funcionalidades progressivamente conforme onboarding
 - [ ] Fluxo visual pós-empresa e modal de `Criar jornada` funciona de ponta a ponta
-- [ ] Sem vazamento cross-tenant durante todo o processo
+- [x] Sem vazamento cross-tenant durante todo o processo
 
 ## 13) Comando de validação sugerido
 ```bash

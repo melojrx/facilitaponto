@@ -199,6 +199,187 @@
   }
   .benefit-item-icon svg { width: 14px; height: 14px; }
 
+  /* ===== Configuração por tipo ===== */
+  .config-block {
+    margin-top: 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+    display: none;
+  }
+  .config-block.visible { display: block; }
+  .config-title {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .config-help {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .config-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 700px) { .config-grid-2 { grid-template-columns: 1fr; } }
+
+  .field select,
+  .field input[type="date"],
+  .field input[type="time"] {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 15px;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+    font-family: inherit;
+  }
+  .field select:focus,
+  .field input[type="date"]:focus,
+  .field input[type="time"]:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, .12);
+  }
+
+  .checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .config-textarea {
+    width: 100%;
+    min-height: 150px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+  }
+  .config-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-chip {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: #fff;
+    color: #334155;
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .btn-chip:hover {
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+  .btn-chip.active {
+    border-color: var(--brand);
+    background: #eff6ff;
+    color: var(--brand);
+    font-weight: 600;
+  }
+  .weekly-subtype {
+    margin-bottom: 12px;
+  }
+  .weekly-subtype-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .weekly-subtype-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .weekly-builder {
+    margin-top: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 10px;
+  }
+  .weekly-row {
+    border: 1px solid #dbe3ee;
+    border-radius: 10px;
+    background: #fff;
+    padding: 10px;
+  }
+  .weekly-row + .weekly-row {
+    margin-top: 8px;
+  }
+  .weekly-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .weekly-day-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+  .weekly-row-toggles {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .weekly-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #334155;
+  }
+  .weekly-row-times {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(80px, 1fr));
+    gap: 8px;
+  }
+  .weekly-row-times input[type="time"] {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+  }
+  .weekly-row-times input[type="time"]:disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+  }
+  @media (max-width: 900px) {
+    .weekly-row-times {
+      grid-template-columns: repeat(2, minmax(80px, 1fr));
+    }
+  }
+  .weekly-total {
+    margin-top: 12px;
+  }
+  .weekly-total input[readonly] {
+    background: #f1f5f9;
+    color: #475569;
+  }
+  .external-alert {
+    border: 1px solid #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
   /* ===== Ações ===== */
   .journey-actions {
     width: 100%;
@@ -323,10 +504,6 @@
 
         </div>
 
-        {% for error in form.tipo.errors %}
-          <p class="tipo-field-error" role="alert">{{ error }}</p>
-        {% endfor %}
-
         {# Painel informativo — exibido via JS ao selecionar tipo #}
         <div class="system-benefits {% if form.tipo.value %}visible{% endif %}" id="system-benefits-panel">
           <div class="system-benefits-title">O que o sistema faz com a jornada</div>
@@ -358,6 +535,141 @@
           </div>
         </div>
 
+        <div class="config-block" id="config-semanal">
+          <h3 class="config-title">Configuração Semanal (semântica completa)</h3>
+          <p class="config-help">Selecione um modelo, preencha horários por dia e acompanhe a carga semanal calculada automaticamente.</p>
+
+          <input type="hidden" id="id_semanal_subtipo" name="semanal_subtipo" value="{{ form.semanal_subtipo.value|default:'PERSONALIZAR' }}">
+          <textarea id="id_semanal_dias_json" name="semanal_dias_json" hidden>{{ form.semanal_dias_json.value|default:'' }}</textarea>
+
+          <div class="weekly-subtype">
+            <div class="weekly-subtype-label">Selecione o tipo de jornada</div>
+            <div class="weekly-subtype-chips" id="weekly-subtype-chips">
+              <button type="button" class="btn-chip weekly-subtype-chip" data-subtipo="INTEGRAL_44H">Integral 44h</button>
+              <button type="button" class="btn-chip weekly-subtype-chip" data-subtipo="COMERCIAL_40H">Comercial 40h</button>
+              <button type="button" class="btn-chip weekly-subtype-chip" data-subtipo="PARCIAL_30H">Parcial 30h</button>
+              <button type="button" class="btn-chip weekly-subtype-chip" data-subtipo="PERSONALIZAR">Personalizar</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="checkbox-inline">
+              <input type="checkbox" id="id_semanal_intervalo_reduzido" name="semanal_intervalo_reduzido" value="1" {% if form.semanal_intervalo_reduzido.value %}checked{% endif %}>
+              Intervalo reduzido por convenção coletiva
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="id_semanal_norma_coletiva_ref">Norma coletiva (se intervalo reduzido)</label>
+            <input
+              type="text"
+              id="id_semanal_norma_coletiva_ref"
+              name="semanal_norma_coletiva_ref"
+              value="{{ form.semanal_norma_coletiva_ref.value|default:'' }}"
+              placeholder="Ex: CCT 2026 cláusula 12"
+            >
+          </div>
+
+          <div class="weekly-builder" id="weekly-builder"></div>
+
+          <div class="field weekly-total">
+            <label for="weekly-total-hours">Carga Horária Semanal (horas)</label>
+            <input type="text" id="weekly-total-hours" readonly value="0.00">
+          </div>
+
+          {% for error in form.semanal_subtipo.errors %}
+            <p class="field-error" role="alert">{{ error }}</p>
+          {% endfor %}
+          {% for error in form.semanal_dias_json.errors %}
+            <p class="field-error" role="alert">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="config-block" id="config-12x36">
+          <h3 class="config-title">Configuração 12x36</h3>
+          <p class="config-help">Informe base da escala para geração da alternância 12 horas de trabalho e 36 de descanso.</p>
+          <div class="config-grid-2">
+            <div class="field">
+              <label for="id_x12x36_data_inicio_escala">Data de início da escala</label>
+              <input
+                type="date"
+                id="id_x12x36_data_inicio_escala"
+                name="x12x36_data_inicio_escala"
+                value="{{ form.x12x36_data_inicio_escala.value|default:'' }}"
+                class="{% if form.x12x36_data_inicio_escala.errors %}invalid{% endif %}"
+              >
+              {% for error in form.x12x36_data_inicio_escala.errors %}
+                <p class="field-error" role="alert">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div class="field">
+              <label for="id_x12x36_horario_entrada">Horário de entrada</label>
+              <input
+                type="time"
+                id="id_x12x36_horario_entrada"
+                name="x12x36_horario_entrada"
+                value="{{ form.x12x36_horario_entrada.value|default:'' }}"
+                class="{% if form.x12x36_horario_entrada.errors %}invalid{% endif %}"
+              >
+              {% for error in form.x12x36_horario_entrada.errors %}
+                <p class="field-error" role="alert">{{ error }}</p>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="config-block" id="config-fracionada">
+          <h3 class="config-title">Configuração Fracionada (semântica completa)</h3>
+          <p class="config-help">Defina períodos por dia. O backend valida ordem, sobreposição e duração dos períodos.</p>
+
+          <div class="config-grid-2">
+            <div class="field">
+              <label for="id_fracionada_norma_coletiva_ref">Norma coletiva (se intervalo reduzido)</label>
+              <input
+                type="text"
+                id="id_fracionada_norma_coletiva_ref"
+                name="fracionada_norma_coletiva_ref"
+                value="{{ form.fracionada_norma_coletiva_ref.value|default:'' }}"
+                placeholder="Ex: ACT 2026 cláusula 8"
+              >
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="checkbox-inline">
+              <input type="checkbox" name="fracionada_intervalo_reduzido" value="1" {% if form.fracionada_intervalo_reduzido.value %}checked{% endif %}>
+              Intervalo reduzido por convenção coletiva
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="id_fracionada_dias_json">Configuração dos dias e períodos (JSON)</label>
+            <textarea
+              id="id_fracionada_dias_json"
+              name="fracionada_dias_json"
+              class="config-textarea {% if form.fracionada_dias_json.errors %}invalid{% endif %}"
+              placeholder='[{"dia_semana":"SEGUNDA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]}]'
+            >{{ form.fracionada_dias_json.value|default:'' }}</textarea>
+            {% for error in form.fracionada_dias_json.errors %}
+              <p class="field-error" role="alert">{{ error }}</p>
+            {% endfor %}
+            <div class="config-actions">
+              <button type="button" class="btn-chip" id="btn-fill-fracionada">Preencher exemplo fracionada</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-block" id="config-externa">
+          <h3 class="config-title">Configuração Externa</h3>
+          <div class="external-alert">
+            Jornada externa não deve ter horários definidos. O sistema registrará marcações sem validar grade fixa.
+          </div>
+        </div>
+
+        {% for error in form.tipo.errors %}
+          <p class="field-error" role="alert">{{ error }}</p>
+        {% endfor %}
+
       </div>{# /tipo field #}
     </div>{# /form-card #}
 
@@ -379,6 +691,12 @@
     EXTERNA:    document.getElementById('benefits-externa'),
   };
   var panel = document.getElementById('system-benefits-panel');
+  var configMap = {
+    SEMANAL: document.getElementById('config-semanal'),
+    '12X36': document.getElementById('config-12x36'),
+    FRACIONADA: document.getElementById('config-fracionada'),
+    EXTERNA: document.getElementById('config-externa'),
+  };
 
   function showBenefits(value) {
     Object.keys(benefitMap).forEach(function (k) {
@@ -392,9 +710,22 @@
     }
   }
 
+  function showConfig(value) {
+    Object.keys(configMap).forEach(function (k) {
+      if (!configMap[k]) return;
+      if (k === value) configMap[k].classList.add('visible');
+      else configMap[k].classList.remove('visible');
+    });
+  }
+
+  function applySelection(value) {
+    showBenefits(value);
+    showConfig(value);
+  }
+
   // Inicializar com valor já selecionado (reexibição de erro)
   var checked = document.querySelector('.tipo-card input[type="radio"]:checked');
-  if (checked) showBenefits(checked.value);
+  if (checked) applySelection(checked.value);
 
   // Listener nos radio cards
   document.querySelectorAll('.tipo-card input[type="radio"]').forEach(function (radio) {
@@ -402,7 +733,7 @@
       document.querySelectorAll('.tipo-card').forEach(function (c) { c.classList.remove('selected'); });
       if (radio.checked) {
         radio.closest('.tipo-card').classList.add('selected');
-        showBenefits(radio.value);
+        applySelection(radio.value);
       }
     });
   });
@@ -418,8 +749,286 @@
     });
   });
 
+  function setJson(id, payload) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.value = JSON.stringify(payload);
+  }
+
+  var WEEK_DAYS = [
+    { key: 'SEGUNDA', label: 'Segunda-feira' },
+    { key: 'TERCA', label: 'Terça-feira' },
+    { key: 'QUARTA', label: 'Quarta-feira' },
+    { key: 'QUINTA', label: 'Quinta-feira' },
+    { key: 'SEXTA', label: 'Sexta-feira' },
+    { key: 'SABADO', label: 'Sábado' },
+    { key: 'DOMINGO', label: 'Domingo' }
+  ];
+  var WEEK_DAY_MAP = {};
+  WEEK_DAYS.forEach(function (item) { WEEK_DAY_MAP[item.key] = item; });
+  var TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+  var WEEKLY_PRESETS = {
+    INTEGRAL_44H: [
+      {"dia_semana":"SEGUNDA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:48"},
+      {"dia_semana":"TERCA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:48"},
+      {"dia_semana":"QUARTA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:48"},
+      {"dia_semana":"QUINTA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:48"},
+      {"dia_semana":"SEXTA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:48"},
+      {"dia_semana":"SABADO","dsr":false,"entrada_1":"08:00","saida_1":"12:00"},
+      {"dia_semana":"DOMINGO","dsr":true}
+    ],
+    COMERCIAL_40H: [
+      {"dia_semana":"SEGUNDA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:00"},
+      {"dia_semana":"TERCA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:00"},
+      {"dia_semana":"QUARTA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:00"},
+      {"dia_semana":"QUINTA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:00"},
+      {"dia_semana":"SEXTA","dsr":false,"entrada_1":"08:00","saida_1":"12:00","entrada_2":"13:00","saida_2":"17:00"},
+      {"dia_semana":"SABADO","dsr":true},
+      {"dia_semana":"DOMINGO","dsr":true}
+    ],
+    PARCIAL_30H: [
+      {"dia_semana":"SEGUNDA","dsr":false,"entrada_1":"08:00","saida_1":"11:00","entrada_2":"12:00","saida_2":"15:00"},
+      {"dia_semana":"TERCA","dsr":false,"entrada_1":"08:00","saida_1":"11:00","entrada_2":"12:00","saida_2":"15:00"},
+      {"dia_semana":"QUARTA","dsr":false,"entrada_1":"08:00","saida_1":"11:00","entrada_2":"12:00","saida_2":"15:00"},
+      {"dia_semana":"QUINTA","dsr":false,"entrada_1":"08:00","saida_1":"11:00","entrada_2":"12:00","saida_2":"15:00"},
+      {"dia_semana":"SEXTA","dsr":false,"entrada_1":"08:00","saida_1":"11:00","entrada_2":"12:00","saida_2":"15:00"},
+      {"dia_semana":"SABADO","dsr":true},
+      {"dia_semana":"DOMINGO","dsr":true}
+    ]
+  };
+  var fracionadaExemplo = [
+    {"dia_semana":"SEGUNDA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]},
+    {"dia_semana":"TERCA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]},
+    {"dia_semana":"QUARTA","periodos":[{"inicio":"08:00","fim":"12:00"},{"inicio":"14:00","fim":"18:00"}]}
+  ];
+
+  function clone(data) {
+    return JSON.parse(JSON.stringify(data));
+  }
+
+  function toMinutes(hhmm) {
+    if (!TIME_RE.test(hhmm || '')) return null;
+    var parts = hhmm.split(':');
+    return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10);
+  }
+
+  function normalizeWeeklyDays(rawDays) {
+    var map = {};
+    if (Array.isArray(rawDays)) {
+      rawDays.forEach(function (item) {
+        if (!item || typeof item !== 'object') return;
+        var dayKey = String(item.dia_semana || '').toUpperCase();
+        if (!WEEK_DAY_MAP[dayKey]) return;
+        map[dayKey] = {
+          dia_semana: dayKey,
+          dsr: Boolean(item.dsr),
+          entrada_1: item.entrada_1 || '',
+          saida_1: item.saida_1 || '',
+          entrada_2: item.entrada_2 || '',
+          saida_2: item.saida_2 || ''
+        };
+      });
+    }
+
+    return WEEK_DAYS.map(function (day) {
+      var normalized = map[day.key];
+      if (normalized) return normalized;
+      return {
+        dia_semana: day.key,
+        dsr: day.key === 'DOMINGO',
+        entrada_1: '',
+        saida_1: '',
+        entrada_2: '',
+        saida_2: ''
+      };
+    });
+  }
+
+  function syncWeeklySubtypeUi() {
+    var weeklySubtypeEl = document.getElementById('id_semanal_subtipo');
+    if (!weeklySubtypeEl) return;
+    var current = weeklySubtypeEl.value || 'PERSONALIZAR';
+    document.querySelectorAll('.weekly-subtype-chip').forEach(function (chip) {
+      chip.classList.toggle('active', chip.dataset.subtipo === current);
+    });
+  }
+
+  function updateWeeklyRowState(row) {
+    var dsr = row.querySelector('[data-role="dsr"]');
+    var noBreak = row.querySelector('[data-role="sem_intervalo"]');
+    var inputE1 = row.querySelector('[data-field="entrada_1"]');
+    var inputS1 = row.querySelector('[data-field="saida_1"]');
+    var inputE2 = row.querySelector('[data-field="entrada_2"]');
+    var inputS2 = row.querySelector('[data-field="saida_2"]');
+    var isDsr = Boolean(dsr && dsr.checked);
+    var isNoBreak = Boolean(noBreak && noBreak.checked);
+
+    if (isDsr) {
+      if (noBreak) noBreak.checked = false;
+      [inputE1, inputS1, inputE2, inputS2].forEach(function (field) {
+        if (!field) return;
+        field.value = '';
+        field.disabled = true;
+      });
+      if (noBreak) noBreak.disabled = true;
+      return;
+    }
+
+    if (noBreak) noBreak.disabled = false;
+    if (inputE1) inputE1.disabled = false;
+    if (inputS1) inputS1.disabled = false;
+
+    if (isNoBreak) {
+      if (inputE2) {
+        inputE2.value = '';
+        inputE2.disabled = true;
+      }
+      if (inputS2) {
+        inputS2.value = '';
+        inputS2.disabled = true;
+      }
+    } else {
+      if (inputE2) inputE2.disabled = false;
+      if (inputS2) inputS2.disabled = false;
+    }
+  }
+
+  function buildWeeklyPayloadFromUi() {
+    var payload = [];
+    document.querySelectorAll('#weekly-builder .weekly-row').forEach(function (row) {
+      var dayKey = row.dataset.day;
+      var dsr = row.querySelector('[data-role="dsr"]');
+      if (!dayKey || !WEEK_DAY_MAP[dayKey]) return;
+
+      if (dsr && dsr.checked) {
+        payload.push({ dia_semana: dayKey, dsr: true });
+        return;
+      }
+
+      var entrada1 = row.querySelector('[data-field="entrada_1"]').value || '';
+      var saida1 = row.querySelector('[data-field="saida_1"]').value || '';
+      var entrada2 = row.querySelector('[data-field="entrada_2"]').value || '';
+      var saida2 = row.querySelector('[data-field="saida_2"]').value || '';
+      var dayPayload = { dia_semana: dayKey, dsr: false };
+      if (entrada1) dayPayload.entrada_1 = entrada1;
+      if (saida1) dayPayload.saida_1 = saida1;
+      if (entrada2) dayPayload.entrada_2 = entrada2;
+      if (saida2) dayPayload.saida_2 = saida2;
+      payload.push(dayPayload);
+    });
+    return payload;
+  }
+
+  function recalculateWeeklyHours() {
+    var totalMinutes = 0;
+    buildWeeklyPayloadFromUi().forEach(function (day) {
+      if (day.dsr) return;
+      var e1 = toMinutes(day.entrada_1);
+      var s1 = toMinutes(day.saida_1);
+      if (e1 !== null && s1 !== null && s1 > e1) totalMinutes += (s1 - e1);
+      var e2 = toMinutes(day.entrada_2);
+      var s2 = toMinutes(day.saida_2);
+      if (e2 !== null && s2 !== null && s2 > e2) totalMinutes += (s2 - e2);
+    });
+
+    var weeklyTotalEl = document.getElementById('weekly-total-hours');
+    if (weeklyTotalEl) weeklyTotalEl.value = (totalMinutes / 60).toFixed(2);
+  }
+
+  function syncWeeklyJson() {
+    var target = document.getElementById('id_semanal_dias_json');
+    if (!target) return;
+    target.value = JSON.stringify(buildWeeklyPayloadFromUi());
+    recalculateWeeklyHours();
+  }
+
+  function renderWeeklyBuilder(daysPayload) {
+    var builder = document.getElementById('weekly-builder');
+    if (!builder) return;
+
+    var rows = normalizeWeeklyDays(daysPayload);
+    builder.innerHTML = '';
+
+    rows.forEach(function (day) {
+      var row = document.createElement('div');
+      row.className = 'weekly-row';
+      row.dataset.day = day.dia_semana;
+
+      var noBreak = !day.dsr && !day.entrada_2 && !day.saida_2 && !!day.entrada_1 && !!day.saida_1;
+      row.innerHTML =
+        '<div class="weekly-row-head">' +
+          '<div class="weekly-day-name">' + WEEK_DAY_MAP[day.dia_semana].label + '</div>' +
+          '<div class="weekly-row-toggles">' +
+            '<label class="weekly-toggle"><input type="checkbox" data-role="sem_intervalo"' + (noBreak ? ' checked' : '') + '> Sem intervalo</label>' +
+            '<label class="weekly-toggle"><input type="checkbox" data-role="dsr"' + (day.dsr ? ' checked' : '') + '> DSR</label>' +
+          '</div>' +
+        '</div>' +
+        '<div class="weekly-row-times">' +
+          '<input type="time" data-field="entrada_1" value="' + (day.entrada_1 || '') + '" aria-label="Entrada 1">' +
+          '<input type="time" data-field="saida_1" value="' + (day.saida_1 || '') + '" aria-label="Saída 1">' +
+          '<input type="time" data-field="entrada_2" value="' + (day.entrada_2 || '') + '" aria-label="Entrada 2">' +
+          '<input type="time" data-field="saida_2" value="' + (day.saida_2 || '') + '" aria-label="Saída 2">' +
+        '</div>';
+
+      builder.appendChild(row);
+
+      row.querySelectorAll('input').forEach(function (input) {
+        input.addEventListener('change', function () {
+          updateWeeklyRowState(row);
+          syncWeeklyJson();
+        });
+        input.addEventListener('input', syncWeeklyJson);
+      });
+
+      updateWeeklyRowState(row);
+    });
+
+    syncWeeklyJson();
+  }
+
+  function applyWeeklyPreset(subtipo) {
+    var weeklySubtypeEl = document.getElementById('id_semanal_subtipo');
+    if (weeklySubtypeEl) weeklySubtypeEl.value = subtipo;
+    syncWeeklySubtypeUi();
+
+    if (subtipo === 'PERSONALIZAR') return;
+    if (!WEEKLY_PRESETS[subtipo]) return;
+    renderWeeklyBuilder(clone(WEEKLY_PRESETS[subtipo]));
+  }
+
+  document.querySelectorAll('.weekly-subtype-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      applyWeeklyPreset(chip.dataset.subtipo || 'PERSONALIZAR');
+    });
+  });
+
+  var weeklySubtypeEl = document.getElementById('id_semanal_subtipo');
+  if (weeklySubtypeEl && !weeklySubtypeEl.value) {
+    weeklySubtypeEl.value = 'PERSONALIZAR';
+  }
+  syncWeeklySubtypeUi();
+
+  var initialWeeklyPayload = [];
+  var weeklyJsonEl = document.getElementById('id_semanal_dias_json');
+  if (weeklyJsonEl && (weeklyJsonEl.value || '').trim()) {
+    try {
+      initialWeeklyPayload = JSON.parse(weeklyJsonEl.value);
+    } catch (err) {
+      initialWeeklyPayload = [];
+    }
+  }
+  if (!initialWeeklyPayload.length && weeklySubtypeEl && WEEKLY_PRESETS[weeklySubtypeEl.value]) {
+    initialWeeklyPayload = clone(WEEKLY_PRESETS[weeklySubtypeEl.value]);
+  }
+  renderWeeklyBuilder(initialWeeklyPayload);
+
+  var btnFrac = document.getElementById('btn-fill-fracionada');
+  if (btnFrac) btnFrac.addEventListener('click', function () { setJson('id_fracionada_dias_json', fracionadaExemplo); });
+
   // Anti-duplo-submit
   document.getElementById('journey-form').addEventListener('submit', function () {
+    syncWeeklyJson();
     var btn = document.getElementById('btn-salvar');
     btn.disabled = true;
     btn.textContent = 'Salvando…';

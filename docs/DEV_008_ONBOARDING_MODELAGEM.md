@@ -1,6 +1,6 @@
 # DEV-008 — Onboarding e Modelagem do Painel
-**Versão:** 1.7  
-**Data:** 2026-03-08  
+**Versão:** 1.8  
+**Data:** 2026-03-09  
 **Referências:** PB-006, PB-100, `docs/PRD.md`, `docs/PRODUCT_BACKLOG.md`, `docs/DEV_ROADMAP.md`
 **Anexos de UI:**
 - `docs/DEV_008_TELA_NOVA_JORNADA.md` (especificação 1:1 da tela de cadastro de jornada)
@@ -237,37 +237,43 @@ Observação: manter modelagem simples (sem motor de workflow); transições dis
 - `GET|POST /painel/empresa/nova/`
 - `GET|POST /painel/jornadas/nova/`
 
-### Status de implementação (P0 web/auth concluído em 2026-03-08)
+### Status de implementação (snapshot real em 2026-03-09)
 
-Implementado nesta etapa:
-- Landing pública em `GET /` com CTA de entrada e cadastro.
-- Autenticação web com sessões:
+Implementado até o momento:
+- Landing pública em `GET /` e autenticação web com sessões:
   - `GET|POST /cadastro/`
   - `GET|POST /login/`
   - `POST /logout/`
-- Guarda de acesso em `GET /painel/` (redireciona para login quando não autenticado).
-- Cadastro de conta no fluxo web com campos atualmente persistidos:
-  - `first_name`
-  - `last_name`
-  - `email`
-  - `phone`
-  - `password`.
+- Cadastro de conta com `first_name`, `last_name`, `email`, `cpf`, `phone`, senha e validações.
+- Onboarding de empresa em `GET|POST /painel/empresa/nova/` com:
+  - suporte PJ/PF e documento normalizado
+  - vínculo owner -> tenant
+  - bloqueio de segunda empresa no fluxo web.
+- Endurecimento da regra no backend:
+  - lock pessimista no owner durante criação/edição de empresa (`select_for_update`)
+  - constraint de banco para garantir no máximo 1 owner por tenant.
+- `AccountOnboardingService` implementado para encapsular transação de criação de owner e vínculo/atualização de empresa no onboarding.
+- Painel com liberação progressiva por `onboarding_step` e CTA para jornada.
+- Tela de jornada em `GET|POST /painel/jornadas/nova/` com tipos (`Semanal`, `12x36`, `Fracionada`, `Externa`) e avanço para `onboarding_step >= 3`.
+- Persistência completa de `WorkSchedule.configuracao` com validação forte por tipo (ordem/sobreposição de períodos, regras de `12x36`, bloqueio de horários em `EXTERNA`).
+- Endpoint público de CEP via ViaCEP com fallback manual (`GET /api/public/cep/`).
+- Resolução de tenant unificada entre web/API e rate limit nas rotas públicas de autenticação.
 
 Pendente para fechar escopo completo do DEV-008:
-- Onboarding completo da empresa (PJ/PF) com regra 1:1 owner/tenant.
-- Campos e validações de CPF do owner conforme premissas de negócio.
-- Etapas subsequentes do painel (empresa, jornada, liberações progressivas de menu).
+- Serviço dedicado `OnboardingProgressService` para centralizar cálculo de progresso/stepper.
+- Endpoint de consulta CNPJ (CNPJá Open) com fallback manual.
+- Implementação das áreas operacionais pós-onboarding: `Colaboradores`, `Relógio Digital`, `Tratamento de Ponto`, `Relatórios`, `Solicitações`.
 
 ---
 
 ## 8. Critérios de aceite específicos do onboarding visual
 
 - Após login sem empresa, `/painel` destaca CTA para criar primeira empresa.
-- Após cadastro da empresa, painel exibe estado equivalente ao mock de referência:
+- Após cadastro da empresa, painel exibe estado de pendência para próxima etapa:
   - boas-vindas
   - stepper
   - card de pendências
-  - modal com CTA **Criar jornada**.
+  - CTA para **Criar jornada**.
 - Clique em **Criar jornada** abre tela de nova jornada no padrão definido.
 - Menu lateral respeita matriz de liberação por estado de onboarding.
 - Liberação é tenant-aware; não há vazamento de estado entre empresas.

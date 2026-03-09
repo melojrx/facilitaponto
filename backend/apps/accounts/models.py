@@ -71,6 +71,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         ordering = ["email"]
         verbose_name = "Usuário"
         verbose_name_plural = "Usuários"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant"],
+                condition=models.Q(is_account_owner=True, tenant__isnull=False),
+                name="accounts_user_unique_owner_per_tenant",
+            )
+        ]
 
     def __str__(self):
         return self.email
