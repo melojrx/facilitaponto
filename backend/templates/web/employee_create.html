@@ -96,12 +96,14 @@
     }
 
     .biometric-state {
-      border: 1px dashed #cbd5e1;
-      border-radius: 16px;
-      padding: 18px;
-      background: #f8fafc;
+      border: 1px solid #dbe6f2;
+      border-radius: 20px;
+      padding: 20px;
+      background:
+        radial-gradient(circle at top right, rgba(29, 78, 216, 0.07), transparent 32%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
       display: grid;
-      gap: 8px;
+      gap: 16px;
     }
 
     .biometric-badge {
@@ -118,6 +120,386 @@
       border: 1px solid #bfdbfe;
     }
 
+    .biometric-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .biometric-heading {
+      display: grid;
+      gap: 8px;
+    }
+
+    .biometric-heading strong,
+    .biometric-heading span {
+      display: block;
+    }
+
+    .biometric-heading strong {
+      font-size: 17px;
+      color: var(--text);
+    }
+
+    .biometric-heading span {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .biometric-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .biometric-summary-card {
+      border: 1px solid #e3edf7;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 14px 16px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .biometric-summary-label {
+      color: #6e84a1;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .biometric-summary-value {
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .biometric-summary-detail {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .biometric-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+      border-top: 1px solid #e8eef6;
+    }
+
+    .btn-secondary-soft {
+      background: #fff;
+      border-color: #d3e0ef;
+      color: #274d78;
+    }
+
+    .btn-secondary-soft:hover {
+      background: #f8fbff;
+      border-color: #bfd2ea;
+    }
+
+    .biometric-modal {
+      width: min(640px, calc(100vw - 32px));
+      border: 0;
+      border-radius: 24px;
+      padding: 0;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+    }
+
+    .biometric-modal::backdrop {
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    .biometric-modal-body {
+      position: relative;
+      padding: 26px;
+      display: grid;
+      gap: 20px;
+      background: #fff;
+    }
+
+    .biometric-modal-header {
+      display: grid;
+      gap: 6px;
+    }
+
+    .biometric-modal-header h3,
+    .biometric-modal-header p {
+      margin: 0;
+    }
+
+    .biometric-modal-header h3 {
+      font-size: 24px;
+      line-height: 1.15;
+    }
+
+    .biometric-modal-header p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .biometric-modal-flow {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .biometric-flow-step {
+      border: 1px solid #dbe6f2;
+      border-radius: 14px;
+      background: #f8fbff;
+      padding: 12px 14px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .biometric-flow-step strong {
+      font-size: 13px;
+    }
+
+    .biometric-flow-step span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .biometric-modal-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .biometric-preview-box {
+      border: 1px dashed #bfd0e3;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #f8fbff 0%, #f8fafc 100%);
+      padding: 20px;
+      display: grid;
+      gap: 12px;
+      text-align: center;
+      color: var(--muted);
+      min-height: 280px;
+      align-content: center;
+    }
+
+    .biometric-preview-box img {
+      width: 160px;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 18px;
+      justify-self: center;
+      border: 1px solid #dbe6f2;
+      background: #fff;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    }
+
+    .biometric-preview-box video {
+      width: min(100%, 320px);
+      max-height: 240px;
+      object-fit: cover;
+      border-radius: 18px;
+      justify-self: center;
+      border: 1px solid #dbe6f2;
+      background: #0f172a;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    }
+
+    .biometric-preview-title {
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .biometric-preview-caption {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .biometric-preview-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      justify-self: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--brand);
+      border: 1px solid #bfdbfe;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .biometric-modal-side {
+      display: grid;
+      gap: 14px;
+    }
+
+    .biometric-modal-card {
+      border: 1px solid #e4edf7;
+      border-radius: 18px;
+      background: #fff;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .biometric-modal-card h4,
+    .biometric-modal-card p {
+      margin: 0;
+    }
+
+    .biometric-modal-card h4 {
+      font-size: 16px;
+    }
+
+    .biometric-modal-card p {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .biometric-source-switcher {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .biometric-source-button {
+      min-height: 42px;
+    }
+
+    .biometric-source-button[data-active="true"] {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .biometric-modal-field {
+      display: grid;
+      gap: 10px;
+    }
+
+    .biometric-modal-field label {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .biometric-modal-field input[type="file"] {
+      width: 100%;
+      min-height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 10px 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .biometric-camera-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .biometric-camera-hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .biometric-hidden {
+      display: none !important;
+    }
+
+    .biometric-consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .biometric-consent input {
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .biometric-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+      border-top: 1px solid #e8eef6;
+    }
+
+    .biometric-loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 140ms ease;
+      z-index: 2;
+    }
+
+    .biometric-loading[data-visible="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .biometric-loading-card {
+      width: min(360px, 100%);
+      border: 1px solid #dbe6f2;
+      border-radius: 20px;
+      background: #fff;
+      padding: 22px;
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+    }
+
+    .biometric-loading-card strong {
+      font-size: 18px;
+      color: var(--text);
+    }
+
+    .biometric-loading-card span {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .biometric-spinner {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 3px solid #dbeafe;
+      border-top-color: #1d4ed8;
+      animation: biometric-spin 0.9s linear infinite;
+    }
+
+    @keyframes biometric-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .employee-actions {
       display: flex;
       justify-content: flex-end;
@@ -126,6 +508,12 @@
 
     @media (max-width: 920px) {
       .employee-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .biometric-summary-grid,
+      .biometric-modal-flow,
+      .biometric-modal-main {
         grid-template-columns: 1fr;
       }
     }
@@ -212,28 +600,54 @@
       <h2>Reconhecimento Facial</h2>
       <p>O colaborador pode ser criado agora e concluir a biometria em uma etapa posterior, sem bloquear a operação administrativa.</p>
       <div class="biometric-state">
-        {% if is_edit_mode and employee_biometric %}
-          <span class="biometric-badge">{{ employee_biometric.label }}</span>
-          <strong>Rastreabilidade biométrica</strong>
-          <span>{{ employee_biometric.detail }}</span>
-          <span>
-            Consentimento ativo:
-            {% if employee_biometric.has_active_consent %}Sim{% else %}Não{% endif %}
-            {% if employee_biometric.latest_consent_at %}
-              • Último registro em {{ employee_biometric.latest_consent_at|date:"d/m/Y H:i" }}
+        <div class="biometric-header">
+          <div class="biometric-heading">
+            {% if is_edit_mode and employee_biometric %}
+              <span class="biometric-badge">{{ employee_biometric.label }}</span>
+              <strong>Rastreabilidade biométrica</strong>
+              <span>{{ employee_biometric.detail }}</span>
+            {% else %}
+              <span class="biometric-badge">Sem dados faciais</span>
+              <strong>Biometria pendente</strong>
+              <span>Depois do cadastro, o colaborador ficará apto para consentimento e enroll facial.</span>
             {% endif %}
-          </span>
-          <span>
-            Embedding ativo:
-            {% if employee_biometric.has_active_embedding %}Sim{% else %}Não{% endif %}
-            {% if employee_biometric.latest_embedding_at %}
-              • Último cadastro em {{ employee_biometric.latest_embedding_at|date:"d/m/Y H:i" }}
-            {% endif %}
-          </span>
-        {% else %}
-          <span class="biometric-badge">Sem dados faciais</span>
-          <strong>Biometria pendente</strong>
-          <span>Depois do cadastro, o colaborador ficará apto para consentimento e enroll facial.</span>
+          </div>
+        </div>
+
+        <div class="biometric-summary-grid">
+          <div class="biometric-summary-card">
+            <span class="biometric-summary-label">Consentimento</span>
+            <span class="biometric-summary-value">
+              {% if is_edit_mode and employee_biometric and employee_biometric.has_active_consent %}Ativo{% else %}Pendente{% endif %}
+            </span>
+            <span class="biometric-summary-detail">
+              {% if is_edit_mode and employee_biometric and employee_biometric.latest_consent_at %}
+                Último registro em {{ employee_biometric.latest_consent_at|date:"d/m/Y H:i" }}
+              {% else %}
+                O consentimento explícito é obrigatório para concluir o cadastro facial.
+              {% endif %}
+            </span>
+          </div>
+          <div class="biometric-summary-card">
+            <span class="biometric-summary-label">Cadastro Facial</span>
+            <span class="biometric-summary-value">
+              {% if is_edit_mode and employee_biometric and employee_biometric.has_active_embedding %}Concluído{% else %}Pendente{% endif %}
+            </span>
+            <span class="biometric-summary-detail">
+              {% if is_edit_mode and employee_biometric and employee_biometric.latest_embedding_at %}
+                Último cadastro em {{ employee_biometric.latest_embedding_at|date:"d/m/Y H:i" }}
+              {% else %}
+                A captura facial pode ser feita agora pelo painel administrativo.
+              {% endif %}
+            </span>
+          </div>
+        </div>
+
+        {% if is_edit_mode %}
+          <div class="biometric-actions">
+            <button type="button" class="btn btn-primary" data-open-biometric-modal>Capturar Foto Facial</button>
+            <button type="button" class="btn btn-secondary-soft" disabled aria-disabled="true">Enviar por WhatsApp</button>
+          </div>
         {% endif %}
       </div>
     </section>
@@ -243,4 +657,346 @@
       <button type="submit" class="btn btn-primary">{% if is_edit_mode %}Salvar Alterações{% else %}Criar{% endif %}</button>
     </div>
   </form>
+
+  {% if is_edit_mode and biometric_capture_form and biometric_capture_action_url %}
+    <dialog class="biometric-modal" data-biometric-modal{% if open_biometric_modal %} data-auto-open="true"{% endif %}>
+      <div class="biometric-modal-body">
+        <div class="biometric-loading" data-biometric-loading aria-hidden="true">
+          <div class="biometric-loading-card" role="status" aria-live="polite">
+            <span class="biometric-spinner" aria-hidden="true"></span>
+            <strong>Processando biometria facial</strong>
+            <span>Estamos validando a imagem, registrando o consentimento e concluindo o cadastro facial do colaborador.</span>
+          </div>
+        </div>
+
+        <div class="biometric-modal-header">
+          <h3>Captura de Reconhecimento Facial</h3>
+          <p>Use a webcam do computador para capturar na hora ou envie uma foto frontal válida como fallback operacional.</p>
+        </div>
+
+        <div class="biometric-modal-flow" aria-hidden="true">
+          <div class="biometric-flow-step">
+            <strong>1. Capturar ou enviar</strong>
+            <span>Use a webcam do computador ou envie uma foto frontal nítida.</span>
+          </div>
+          <div class="biometric-flow-step">
+            <strong>2. Revisar captura</strong>
+            <span>Confirme se a foto representa corretamente o rosto.</span>
+          </div>
+          <div class="biometric-flow-step">
+            <strong>3. Autorizar e salvar</strong>
+            <span>O cadastro só é concluído com consentimento explícito.</span>
+          </div>
+        </div>
+
+        <form
+          method="post"
+          action="{{ biometric_capture_action_url }}"
+          enctype="multipart/form-data"
+          data-biometric-capture-form
+        >
+          {% csrf_token %}
+          {{ biometric_capture_form.versao_termo }}
+          {{ biometric_capture_form.imagem_capturada }}
+
+          <div class="biometric-modal-main">
+            <div class="biometric-preview-box">
+              <span class="biometric-preview-chip">Frente</span>
+              <video autoplay playsinline hidden data-biometric-video></video>
+              <img src="" alt="Pré-visualização da foto facial" hidden data-biometric-preview>
+              <span class="biometric-preview-title" data-biometric-preview-title>Nenhuma foto capturada</span>
+              <span class="biometric-preview-caption" data-biometric-preview-empty>
+                Ative a webcam para capturar na hora ou envie uma imagem facial para revisar antes de confirmar.
+              </span>
+            </div>
+
+            <div class="biometric-modal-side">
+              <section class="biometric-modal-card">
+                <h4>Captura assistida</h4>
+                <p>A webcam é o canal principal do painel. O upload continua disponível como fallback operacional.</p>
+                <div class="biometric-source-switcher">
+                  <button type="button" class="btn biometric-source-button" data-source-mode="camera" data-active="true">Usar webcam</button>
+                  <button type="button" class="btn biometric-source-button" data-source-mode="upload">Enviar foto</button>
+                </div>
+                <div class="biometric-modal-field" data-biometric-camera-panel>
+                  <label>Captura pela webcam</label>
+                  <div class="biometric-camera-actions">
+                    <button type="button" class="btn btn-secondary-soft" data-start-camera>Ativar câmera</button>
+                    <button type="button" class="btn btn-primary" data-take-photo disabled>Capturar agora</button>
+                  </div>
+                  <span class="biometric-camera-hint" data-camera-status>
+                    Permita o acesso à câmera do navegador para capturar a foto do colaborador.
+                  </span>
+                </div>
+                <div class="biometric-modal-field biometric-hidden" data-biometric-upload-panel>
+                  <label for="{{ biometric_capture_form.imagem.id_for_label }}">Selecionar imagem</label>
+                  {{ biometric_capture_form.imagem }}
+                  <span class="biometric-camera-hint">Envie uma foto frontal com boa iluminação e sem mais de um rosto no enquadramento.</span>
+                </div>
+              </section>
+
+              <section class="biometric-modal-card">
+                <h4>Autorização biométrica</h4>
+                <label class="biometric-consent" for="{{ biometric_capture_form.consentimento.id_for_label }}">
+                  {{ biometric_capture_form.consentimento }}
+                  <span>Declaro que autorizo a captura de dados biométricos faciais para uso no sistema de ponto eletrônico.</span>
+                </label>
+              </section>
+            </div>
+          </div>
+
+          <div class="biometric-modal-actions">
+            <button type="button" class="btn" data-close-biometric-modal>Cancelar</button>
+            <button type="button" class="btn btn-secondary-soft" data-reset-biometric>Recapturar Foto</button>
+            <button type="submit" class="btn btn-primary" data-confirm-biometric disabled>Confirmar e Salvar</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+  {% endif %}
+{% endblock %}
+
+{% block panel_scripts %}
+  {% if is_edit_mode and biometric_capture_form and biometric_capture_action_url %}
+    <script>
+      (function () {
+        const dialog = document.querySelector("[data-biometric-modal]");
+        const openButton = document.querySelector("[data-open-biometric-modal]");
+        const closeButton = document.querySelector("[data-close-biometric-modal]");
+        const form = document.querySelector("[data-biometric-capture-form]");
+        if (!dialog || !openButton || !closeButton || !form) return;
+
+        const fileInput = form.querySelector('input[type="file"]');
+        const consentInput = form.querySelector('input[type="checkbox"]');
+        const confirmButton = form.querySelector("[data-confirm-biometric]");
+        const resetButton = form.querySelector("[data-reset-biometric]");
+        const capturedInput = form.querySelector('input[name="imagem_capturada"]');
+        const preview = form.querySelector("[data-biometric-preview]");
+        const video = form.querySelector("[data-biometric-video]");
+        const previewTitle = form.querySelector("[data-biometric-preview-title]");
+        const emptyState = form.querySelector("[data-biometric-preview-empty]");
+        const cameraPanel = form.querySelector("[data-biometric-camera-panel]");
+        const uploadPanel = form.querySelector("[data-biometric-upload-panel]");
+        const sourceButtons = form.querySelectorAll("[data-source-mode]");
+        const startCameraButton = form.querySelector("[data-start-camera]");
+        const takePhotoButton = form.querySelector("[data-take-photo]");
+        const cameraStatus = form.querySelector("[data-camera-status]");
+        const shouldAutoOpen = dialog.dataset.autoOpen === "true";
+        const loading = dialog.querySelector("[data-biometric-loading]");
+        let stream = null;
+        let sourceMode = "camera";
+        let isSubmitting = false;
+
+        function syncState() {
+          const hasFile = Boolean(fileInput && fileInput.files && fileInput.files.length);
+          const hasCaptured = Boolean(capturedInput && capturedInput.value);
+          const hasConsent = Boolean(consentInput && consentInput.checked);
+          confirmButton.disabled = isSubmitting || !((hasFile || hasCaptured) && hasConsent);
+          resetButton.disabled = isSubmitting || !(hasFile || hasCaptured);
+          if (startCameraButton) startCameraButton.disabled = isSubmitting;
+          if (takePhotoButton) {
+            takePhotoButton.disabled = isSubmitting || !stream;
+          }
+          if (closeButton) closeButton.disabled = isSubmitting;
+          sourceButtons.forEach(function (button) {
+            button.disabled = isSubmitting;
+          });
+        }
+
+        function setLoadingState(nextState) {
+          isSubmitting = nextState;
+          if (loading) {
+            loading.dataset.visible = String(nextState);
+            loading.setAttribute("aria-hidden", String(!nextState));
+          }
+          if (confirmButton) {
+            confirmButton.textContent = nextState ? "Processando..." : "Confirmar e Salvar";
+          }
+          syncState();
+        }
+
+        function resetPreview() {
+          if (!preview || !emptyState) return;
+          if (video) video.hidden = true;
+          preview.hidden = true;
+          preview.removeAttribute("src");
+          previewTitle.textContent = "Nenhuma foto capturada";
+          emptyState.hidden = false;
+        }
+
+        function stopCamera() {
+          if (!stream) return;
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          stream = null;
+          if (video) {
+            video.srcObject = null;
+            video.hidden = true;
+          }
+          if (takePhotoButton) takePhotoButton.disabled = true;
+        }
+
+        async function startCamera() {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            if (cameraStatus) {
+              cameraStatus.textContent = "Este navegador não suporta captura por webcam. Use o envio de foto.";
+            }
+            return;
+          }
+
+          stopCamera();
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+            video.srcObject = stream;
+            video.hidden = false;
+            emptyState.hidden = true;
+            preview.hidden = true;
+            preview.removeAttribute("src");
+            previewTitle.textContent = "Webcam pronta para captura";
+            if (cameraStatus) {
+              cameraStatus.textContent = "Posicione o colaborador de frente para a câmera e clique em Capturar agora.";
+            }
+            if (takePhotoButton) takePhotoButton.disabled = false;
+          } catch (error) {
+            if (cameraStatus) {
+              cameraStatus.textContent = "Não foi possível acessar a webcam. Use o envio de foto como fallback.";
+            }
+          }
+        }
+
+        function setSourceMode(mode) {
+          sourceMode = mode;
+          sourceButtons.forEach(function (button) {
+            button.dataset.active = String(button.dataset.sourceMode === mode);
+          });
+          const isCamera = mode === "camera";
+          cameraPanel.classList.toggle("biometric-hidden", !isCamera);
+          uploadPanel.classList.toggle("biometric-hidden", isCamera);
+          if (!isCamera) {
+            stopCamera();
+            if (cameraStatus) {
+              cameraStatus.textContent = "O envio de foto permanece disponível como fallback operacional.";
+            }
+          }
+        }
+
+        function showPreview(source) {
+          preview.src = source;
+          preview.hidden = false;
+          if (video) video.hidden = true;
+          previewTitle.textContent = "Foto pronta para revisão";
+          emptyState.hidden = true;
+        }
+
+        openButton.addEventListener("click", function () {
+          dialog.showModal();
+          setSourceMode("camera");
+          startCamera();
+          syncState();
+        });
+
+        closeButton.addEventListener("click", function () {
+          stopCamera();
+          dialog.close();
+        });
+
+        dialog.addEventListener("click", function (event) {
+          if (isSubmitting) return;
+          const rect = dialog.getBoundingClientRect();
+          const inside =
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width;
+          if (!inside) {
+            stopCamera();
+            dialog.close();
+          }
+        });
+
+        fileInput.addEventListener("change", function () {
+          if (capturedInput) capturedInput.value = "";
+          syncState();
+          if (!fileInput.files || !fileInput.files[0]) {
+            resetPreview();
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            showPreview(event.target.result);
+          };
+          reader.readAsDataURL(fileInput.files[0]);
+        });
+
+        sourceButtons.forEach(function (button) {
+          button.addEventListener("click", function () {
+            setSourceMode(button.dataset.sourceMode);
+          });
+        });
+
+        if (startCameraButton) {
+          startCameraButton.addEventListener("click", function () {
+            startCamera();
+          });
+        }
+
+        if (takePhotoButton) {
+          takePhotoButton.addEventListener("click", function () {
+            if (!video || !stream) return;
+            const canvas = document.createElement("canvas");
+            const width = video.videoWidth || 640;
+            const height = video.videoHeight || 480;
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext("2d");
+            context.drawImage(video, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+            if (capturedInput) capturedInput.value = dataUrl;
+            if (fileInput) fileInput.value = "";
+            showPreview(dataUrl);
+            previewTitle.textContent = "Foto capturada pela webcam";
+            if (cameraStatus) {
+              cameraStatus.textContent = "A foto foi capturada. Revise a imagem e confirme o consentimento para salvar.";
+            }
+            syncState();
+          });
+        }
+
+        consentInput.addEventListener("change", syncState);
+        resetButton.addEventListener("click", function () {
+          if (isSubmitting) return;
+          if (capturedInput) capturedInput.value = "";
+          form.reset();
+          setSourceMode(sourceMode);
+          if (sourceMode === "camera") {
+            startCamera();
+          } else {
+            stopCamera();
+          }
+        });
+        form.addEventListener("reset", function () {
+          window.setTimeout(function () {
+            resetPreview();
+            syncState();
+          }, 0);
+        });
+
+        form.addEventListener("submit", function () {
+          setLoadingState(true);
+          stopCamera();
+        });
+
+        syncState();
+        if (shouldAutoOpen) {
+          dialog.showModal();
+          setSourceMode("camera");
+          startCamera();
+        }
+
+        dialog.addEventListener("close", stopCamera);
+      })();
+    </script>
+  {% endif %}
 {% endblock %}

@@ -3,6 +3,7 @@ import json
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 
 from .models import ConsentimentoBiometrico, FacialEmbedding
 
@@ -131,3 +132,58 @@ class BiometriaService:
             return json.loads(raw.decode("utf-8"))
         except Exception as exc:
             raise ValidationError("Falha ao descriptografar embedding facial.") from exc
+
+
+class AssistedBiometricCaptureService:
+    """Orquestra captura biométrica assistida no painel web."""
+
+    DEFAULT_TERM_VERSION = "painel-v1"
+
+    def __init__(self, *, biometria_service=None):
+        self.biometria_service = biometria_service or BiometriaService()
+
+    def capture_for_panel(
+        self,
+        *,
+        employee,
+        imagem_bytes,
+        consentimento_aceito,
+        versao_termo=None,
+        ip_origem=None,
+    ):
+        if not consentimento_aceito:
+            raise ValidationError(
+                "Marque a autorização para confirmar o cadastro facial."
+            )
+
+        if not imagem_bytes:
+            raise ValidationError("Envie uma foto facial válida para continuar.")
+
+        term_version = (versao_termo or self.DEFAULT_TERM_VERSION).strip()
+        if not term_version:
+            term_version = self.DEFAULT_TERM_VERSION
+
+        consent = self._register_consent(
+            employee=employee,
+            versao_termo=term_version,
+            ip_origem=ip_origem,
+        )
+
+        embedding = self.biometria_service.cadastrar_embedding(employee, imagem_bytes)
+        employee.refresh_from_db()
+
+        return {
+            "consent": consent,
+            "embedding": embedding,
+            "snapshot": employee.biometric_snapshot(),
+        }
+
+    @staticmethod
+    @transaction.atomic
+    def _register_consent(*, employee, versao_termo, ip_origem):
+        return ConsentimentoBiometrico.objects.create(
+            employee=employee,
+            aceito=True,
+            versao_termo=versao_termo,
+            ip_origem=ip_origem,
+        )

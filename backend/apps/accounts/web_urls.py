@@ -3,6 +3,7 @@
 from django.urls import path
 
 from .web_views import (
+    capture_collaborator_biometric_view,
     collaborator_list_view,
     company_edit_view,
     company_view,
@@ -46,6 +47,11 @@ urlpatterns = [
     path("painel/jornadas/", journey_list_view, name="jornadas"),
     path("painel/colaboradores/novo/", create_collaborator_view, name="colaborador_create"),
     path("painel/colaboradores/<int:employee_id>/editar/", edit_collaborator_view, name="colaborador_edit"),
+    path(
+        "painel/colaboradores/<int:employee_id>/biometria/capturar/",
+        capture_collaborator_biometric_view,
+        name="colaborador_biometria_capture",
+    ),
     path(
         "painel/colaboradores/<int:employee_id>/status/",
         toggle_collaborator_status_view,

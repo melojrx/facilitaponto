@@ -1,18 +1,36 @@
+import base64
 import json
 import re
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from io import BytesIO
 
 import pytest
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import close_old_connections
 from django.test import override_settings
+from PIL import Image
 
 from apps.accounts.forms import CompanyOnboardingForm
 from apps.accounts.models import User
 from apps.biometrics.models import ConsentimentoBiometrico, FacialEmbedding
 from apps.tenants.models import Tenant
+
+
+def _build_test_image_file(name="face.jpg"):
+    buffer = BytesIO()
+    Image.new("RGB", (16, 16), color="white").save(buffer, format="JPEG")
+    buffer.seek(0)
+    return SimpleUploadedFile(name, buffer.read(), content_type="image/jpeg")
+
+
+def _build_test_image_data_url():
+    buffer = BytesIO()
+    Image.new("RGB", (16, 16), color="white").save(buffer, format="JPEG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
 
 
 @pytest.fixture
@@ -1428,6 +1446,252 @@ class TestCollaboratorWebFlow:
         assert 'value="Maria Clara"' in content
         assert 'value="52998224725"' in content
         assert "Rastreabilidade biométrica" in content
+        assert "Capturar Foto Facial" in content
+
+    def test_get_editar_colaborador_com_flag_reabre_modal_biometrico(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/colaboradores/{employee.id}/editar/?open_biometric_modal=1")
+
+        assert response.status_code == 200
+        assert 'data-auto-open="true"' in response.content.decode()
+        assert "Usar webcam" in response.content.decode()
+        assert "Enviar foto" in response.content.decode()
+
+    def test_listagem_exibe_acao_rapida_para_captura_biometrica(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        assert (
+            f'/painel/colaboradores/{employee.id}/editar/?open_biometric_modal=1'
+            in response.content.decode()
+        )
+
+    def test_post_captura_biometrica_conclui_cadastro_facial(self, client, user, monkeypatch):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        captured = {}
+
+        def fake_capture_for_panel(self, **kwargs):
+            captured.update(kwargs)
+            return {
+                "consent": object(),
+                "embedding": object(),
+                "snapshot": {
+                    "status": Employee.BiometricStatus.CADASTRADA,
+                    "label": "Cadastro Facial Concluido",
+                },
+            }
+
+        monkeypatch.setattr(
+            "apps.accounts.web_views.AssistedBiometricCaptureService.capture_for_panel",
+            fake_capture_for_panel,
+        )
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/biometria/capturar/",
+            data={
+                "imagem": _build_test_image_file(),
+                "consentimento": "on",
+                "versao_termo": "painel-v1",
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == f"/painel/colaboradores/{employee.id}/editar/"
+        assert captured["employee"].id == employee.id
+        assert captured["consentimento_aceito"] is True
+        assert captured["versao_termo"] == "painel-v1"
+        assert captured["imagem_bytes"]
+
+    def test_post_captura_biometrica_por_webcam_conclui_cadastro_facial(self, client, user, monkeypatch):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        captured = {}
+
+        def fake_capture_for_panel(self, **kwargs):
+            captured.update(kwargs)
+            return {
+                "consent": object(),
+                "embedding": object(),
+                "snapshot": {
+                    "status": Employee.BiometricStatus.CADASTRADA,
+                    "label": "Cadastro Facial Concluido",
+                },
+            }
+
+        monkeypatch.setattr(
+            "apps.accounts.web_views.AssistedBiometricCaptureService.capture_for_panel",
+            fake_capture_for_panel,
+        )
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/biometria/capturar/",
+            data={
+                "imagem_capturada": _build_test_image_data_url(),
+                "consentimento": "on",
+                "versao_termo": "painel-v1",
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == f"/painel/colaboradores/{employee.id}/editar/"
+        assert captured["employee"].id == employee.id
+        assert captured["consentimento_aceito"] is True
+        assert captured["versao_termo"] == "painel-v1"
+        assert captured["imagem_bytes"]
+
+    def test_post_captura_biometrica_bloqueia_sem_consentimento(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/biometria/capturar/",
+            data={
+                "imagem": _build_test_image_file(),
+                "versao_termo": "painel-v1",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == 200
+        assert "Marque a autorização para confirmar o cadastro facial." in response.content.decode()
+        assert 'data-auto-open="true"' in response.content.decode()
+
+    def test_post_captura_biometrica_bloqueia_sem_upload_ou_webcam(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/biometria/capturar/",
+            data={
+                "consentimento": "on",
+                "versao_termo": "painel-v1",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == 200
+        assert "Envie uma foto facial válida para continuar." in response.content.decode()
+        assert 'data-auto-open="true"' in response.content.decode()
+
+    def test_post_captura_biometrica_exibe_erro_de_enroll(self, client, user, monkeypatch):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        def fake_capture_for_panel(self, **kwargs):
+            raise ValidationError("Não foi possível concluir o cadastro facial. Tente novamente.")
+
+        monkeypatch.setattr(
+            "apps.accounts.web_views.AssistedBiometricCaptureService.capture_for_panel",
+            fake_capture_for_panel,
+        )
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/biometria/capturar/",
+            data={
+                "imagem": _build_test_image_file(),
+                "consentimento": "on",
+                "versao_termo": "painel-v1",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == 200
+        assert "Não foi possível concluir o cadastro facial. Tente novamente." in response.content.decode()
+        assert 'data-auto-open="true"' in response.content.decode()
 
     def test_post_editar_colaborador_atualiza_registro(self, client, user):
         from apps.employees.models import Employee

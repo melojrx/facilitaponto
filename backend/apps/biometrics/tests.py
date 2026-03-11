@@ -11,8 +11,14 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
+from apps.biometrics.forms import AssistedBiometricCaptureForm
 from apps.biometrics.models import ConsentimentoBiometrico, FacialEmbedding
-from apps.biometrics.services import BiometriaService, assert_active_consent, has_active_consent
+from apps.biometrics.services import (
+    AssistedBiometricCaptureService,
+    BiometriaService,
+    assert_active_consent,
+    has_active_consent,
+)
 from apps.employees.models import Employee
 from apps.tenants.models import Tenant
 
@@ -92,6 +98,13 @@ def _build_test_image_file(name="face.jpg"):
     Image.new("RGB", (16, 16), color="white").save(buffer, format="JPEG")
     buffer.seek(0)
     return SimpleUploadedFile(name, buffer.read(), content_type="image/jpeg")
+
+
+def _build_test_image_data_url():
+    buffer = io.BytesIO()
+    Image.new("RGB", (16, 16), color="white").save(buffer, format="JPEG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
 
 
 def _device_access_token_for(user, tenant_id, device_id="tablet-main"):
@@ -239,6 +252,105 @@ class TestBiometriaService:
         with pytest.raises(ValidationError):
             service.verificar(employee_a, b"img")
 
+
+@pytest.mark.django_db
+class TestAssistedBiometricCaptureService:
+    class AdapterSucesso:
+        @staticmethod
+        def represent(image_bytes):
+            return [{"embedding": [0.11, 0.22, 0.33]}]
+
+    class AdapterSemRosto:
+        @staticmethod
+        def represent(image_bytes):
+            return []
+
+    class AdapterVerifySemRosto:
+        @staticmethod
+        def represent(image_bytes):
+            return []
+
+        @staticmethod
+        def verify(captured_embedding, stored_embedding):
+            return {"verified": False, "distance": 1.0, "threshold": 0.68}
+
+    def test_captura_assistida_registra_consentimento_e_embedding(
+        self,
+        employee_a,
+        biometria_key,
+    ):
+        service = AssistedBiometricCaptureService(
+            biometria_service=BiometriaService(adapter=self.AdapterSucesso)
+        )
+
+        result = service.capture_for_panel(
+            employee=employee_a,
+            imagem_bytes=b"img",
+            consentimento_aceito=True,
+            versao_termo="painel-v1",
+            ip_origem="10.0.0.1",
+        )
+
+        assert result["consent"].aceito is True
+        assert result["consent"].versao_termo == "painel-v1"
+        assert result["consent"].ip_origem == "10.0.0.1"
+        assert result["embedding"].ativo is True
+        assert result["snapshot"]["status"] == Employee.BiometricStatus.CADASTRADA
+        assert ConsentimentoBiometrico.objects.filter(employee=employee_a).count() == 1
+        assert FacialEmbedding.objects.filter(employee=employee_a, ativo=True).count() == 1
+
+    def test_bloqueia_sem_consentimento(self, employee_a, biometria_key):
+        service = AssistedBiometricCaptureService(
+            biometria_service=BiometriaService(adapter=self.AdapterSucesso)
+        )
+
+        with pytest.raises(ValidationError, match="Marque a autoriza"):
+            service.capture_for_panel(
+                employee=employee_a,
+                imagem_bytes=b"img",
+                consentimento_aceito=False,
+            )
+
+        assert ConsentimentoBiometrico.objects.filter(employee=employee_a).count() == 0
+        assert FacialEmbedding.objects.filter(employee=employee_a).count() == 0
+
+    def test_bloqueia_sem_imagem(self, employee_a, biometria_key):
+        service = AssistedBiometricCaptureService(
+            biometria_service=BiometriaService(adapter=self.AdapterSucesso)
+        )
+
+        with pytest.raises(ValidationError, match="foto facial"):
+            service.capture_for_panel(
+                employee=employee_a,
+                imagem_bytes=b"",
+                consentimento_aceito=True,
+            )
+
+        assert ConsentimentoBiometrico.objects.filter(employee=employee_a).count() == 0
+        assert FacialEmbedding.objects.filter(employee=employee_a).count() == 0
+
+    def test_falha_de_enroll_preserva_consentimento_e_estado_pendente(
+        self,
+        employee_a,
+        biometria_key,
+    ):
+        service = AssistedBiometricCaptureService(
+            biometria_service=BiometriaService(adapter=self.AdapterSemRosto)
+        )
+
+        with pytest.raises(ValidationError, match="Nenhum rosto detectado"):
+            service.capture_for_panel(
+                employee=employee_a,
+                imagem_bytes=b"img",
+                consentimento_aceito=True,
+                versao_termo="painel-v1",
+            )
+
+        employee_a.refresh_from_db()
+        assert ConsentimentoBiometrico.objects.filter(employee=employee_a, aceito=True).count() == 1
+        assert FacialEmbedding.objects.filter(employee=employee_a).count() == 0
+        assert employee_a.biometric_status == Employee.BiometricStatus.CONSENTIMENTO
+
     def test_verificar_exige_um_unico_rosto(self, employee_a, biometria_key):
         encrypted = Fernet(biometria_key.encode()).encrypt(
             json.dumps([0.11, 0.22, 0.33]).encode("utf-8")
@@ -252,6 +364,43 @@ class TestBiometriaService:
         service = BiometriaService(adapter=self.AdapterVerifySemRosto)
         with pytest.raises(ValidationError):
             service.verificar(employee_a, b"img")
+
+
+class TestAssistedBiometricCaptureForm:
+    def test_accepts_uploaded_image(self):
+        form = AssistedBiometricCaptureForm(
+            data={
+                "consentimento": "on",
+                "versao_termo": "painel-v1",
+            },
+            files={"imagem": _build_test_image_file()},
+        )
+
+        assert form.is_valid() is True
+        assert form.cleaned_data["imagem_bytes"]
+
+    def test_accepts_captured_image_data_url(self):
+        form = AssistedBiometricCaptureForm(
+            data={
+                "imagem_capturada": _build_test_image_data_url(),
+                "consentimento": "on",
+                "versao_termo": "painel-v1",
+            }
+        )
+
+        assert form.is_valid() is True
+        assert form.cleaned_data["imagem_bytes"]
+
+    def test_rejects_without_any_image_source(self):
+        form = AssistedBiometricCaptureForm(
+            data={
+                "consentimento": "on",
+                "versao_termo": "painel-v1",
+            }
+        )
+
+        assert form.is_valid() is False
+        assert "Envie uma foto facial válida para continuar." in form.errors["__all__"]
 
 
 @pytest.mark.django_db

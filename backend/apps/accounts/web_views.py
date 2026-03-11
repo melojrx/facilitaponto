@@ -18,6 +18,8 @@ from apps.accounts.validators import only_digits
 from apps.attendance.forms import TimeClockForm
 from apps.attendance.models import TimeClock
 from apps.attendance.services import TimeClockService
+from apps.biometrics.forms import AssistedBiometricCaptureForm
+from apps.biometrics.services import AssistedBiometricCaptureService
 from apps.employees.forms import EmployeeRegistrationForm, WorkScheduleForm
 from apps.employees.models import Employee, WorkSchedule
 from apps.employees.services import EmployeeRegistrationService
@@ -116,6 +118,13 @@ def _get_onboarding_step(user):
         return 1
     # Empresa encontrada já representa step mínimo 2.
     return max(2, int(tenant.onboarding_step or 2))
+
+
+def _get_client_ip(request):
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip() or None
+    return request.META.get("REMOTE_ADDR")
 
 
 def _resolve_user_tenant(user):
@@ -452,6 +461,10 @@ def collaborator_list_view(request):
                 "biometric_detail": biometric_snapshot["detail"],
                 "journey_label": employee.work_schedule.nome if employee.work_schedule else "-",
                 "edit_url": reverse("web:colaborador_edit", kwargs={"employee_id": employee.id}),
+                "capture_biometric_url": (
+                    reverse("web:colaborador_edit", kwargs={"employee_id": employee.id})
+                    + "?open_biometric_modal=1"
+                ),
                 "toggle_status_url": reverse(
                     "web:colaborador_status_toggle",
                     kwargs={"employee_id": employee.id},
@@ -981,8 +994,57 @@ def edit_collaborator_view(request, employee_id):
             "is_edit_mode": True,
             "employee": employee,
             "employee_biometric": employee.biometric_snapshot(),
+            "biometric_capture_form": AssistedBiometricCaptureForm(),
+            "biometric_capture_action_url": reverse(
+                "web:colaborador_biometria_capture",
+                kwargs={"employee_id": employee.id},
+            ),
+            "open_biometric_modal": request.GET.get("open_biometric_modal") == "1",
         },
     )
+
+
+@login_required(login_url="/login/")
+@require_POST
+def capture_collaborator_biometric_view(request, employee_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(
+            request,
+            "Cadastre sua empresa antes de realizar a captura biométrica.",
+        )
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    employee = _get_collaborator_or_404(tenant=tenant, employee_id=employee_id)
+    form = AssistedBiometricCaptureForm(request.POST, request.FILES)
+    redirect_url = reverse("web:colaborador_edit", kwargs={"employee_id": employee.id})
+    retry_url = f"{redirect_url}?open_biometric_modal=1"
+
+    if not form.is_valid():
+        for errors in form.errors.values():
+            for error in errors:
+                messages.error(request, error)
+        return redirect(retry_url)
+
+    try:
+        AssistedBiometricCaptureService().capture_for_panel(
+            employee=employee,
+            imagem_bytes=form.cleaned_data["imagem_bytes"],
+            consentimento_aceito=form.cleaned_data["consentimento"],
+            versao_termo=form.cleaned_data["versao_termo"],
+            ip_origem=_get_client_ip(request),
+        )
+    except DjangoValidationError as exc:
+        for error in exc.messages:
+            messages.error(request, error)
+        return redirect(retry_url)
+
+    messages.success(request, "Cadastro facial concluído com sucesso.")
+    return redirect(redirect_url)
 
 
 @login_required(login_url="/login/")
