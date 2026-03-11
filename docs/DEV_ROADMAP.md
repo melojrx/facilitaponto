@@ -22,6 +22,8 @@ O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seg
 - **DEV-008** fechado no núcleo funcional: onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`, painel com liberação progressiva, jornada e testes integrados.
 - Bloco `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica.
 - Captura facial assistida no painel já implementada no núcleo do colaborador, com modal mínimo, consentimento obrigatório e enroll facial.
+- Próxima evolução imediata da biometria no painel: `webcam no modal` como canal principal; `upload` permanece como fallback operacional.
+- `Envio por WhatsApp` permanece como pendência prioritária já confirmada do fluxo biométrico remoto.
 - Pré-requisito operacional da biometria formalizado: `BIOMETRIA_KEY`, dependências de ML/imagem no container e preload dos pesos `ArcFace` + `retinaface` antes do primeiro uso real.
 - Próxima sprint: concluir na ordem `Captura facial no painel (acabamento/fechamento) -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
 - Estratégia de WhatsApp formalizada: arquitetura com `adapter pluggable`, provider inicial `WAHA` por baixo atrito no MVP e opções futuras documentadas (`Evolution API` e `Meta WhatsApp Cloud API`).

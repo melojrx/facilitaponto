@@ -92,6 +92,9 @@
   - `BIOMETRIA_KEY` carregada no ambiente
   - dependências biométricas instaladas no runtime
   - preload de pesos `ArcFace` + `retinaface` antes do primeiro uso real
+- [ ] `Webcam no painel` implementada como canal principal da captura facial assistida
+- [x] `Upload no painel` mantido como fallback operacional da captura biométrica
+- [x] Diretriz registrada: webcam e upload convergem para o mesmo fluxo negocial de consentimento + enroll
 - [ ] Fluxo de envio de link de auto-cadastro facial por WhatsApp implementado com token expirável e uso único
 - [ ] Antes do envio por WhatsApp, exibir modal de confirmação com telefone do colaborador e ações `Cancelar`/`Enviar`
 - [ ] Coluna `Ações` da listagem com operações rápidas (reenviar link WhatsApp, editar, alterar status)

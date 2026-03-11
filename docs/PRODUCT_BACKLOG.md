@@ -12,6 +12,9 @@
 - ✅ Bloco `Colaboradores` entregue no núcleo funcional do painel web.
 - ✅ Bloco `Relógios de Ponto` entregue no núcleo funcional web + API.
 - ✅ Captura facial assistida no painel entregue no núcleo de domínio/web; acabamento final permanece na próxima etapa.
+- 📌 Estratégia confirmada para biometria assistida no painel: `webcam no painel` é a próxima evolução imediata e deve se tornar o canal principal de captura.
+- 📌 `Upload de foto no painel` permanece suportado como fallback operacional e converge para o mesmo fluxo de consentimento + enroll.
+- 📌 `Envio por WhatsApp` segue como pendência prioritária já confirmada do fluxo biométrico remoto.
 - 🚧 Próxima sprint: concluir na ordem `Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
 - 📌 A fonte oficial do acompanhamento detalhado desse bloco é `docs/DEV_008_CHECKLIST.md`.
 - 📌 Direção técnica do WhatsApp no MVP: `adapter pluggable` com provider inicial `WAHA`; alternativas futuras documentadas para escala/compliance.

@@ -247,6 +247,11 @@ Regras de estado do modal:
 - `Recapturar Foto` substitui a imagem atual e mantém consentimento desmarcado.
 - Fechar modal sem confirmar não altera status biométrico do colaborador.
 
+Estratégia oficial de captura no painel:
+- `webcam no painel` é a próxima evolução imediata do modal e deve se tornar o canal principal de captura assistida pelo gestor.
+- `upload de arquivo no painel` permanece suportado como fallback operacional quando a webcam não estiver disponível ou falhar.
+- ambos os caminhos devem convergir para o mesmo fluxo negocial de consentimento + enroll + atualização do estado biométrico.
+
 #### Pré-requisito operacional da captura facial
 
 Para que o fluxo do painel funcione com imagem real no ambiente implantado, o runtime precisa estar pronto para processar biometria de fato:
@@ -269,6 +274,10 @@ Observação importante:
 
 Objetivo:
 - Permitir auto-cadastro facial pelo próprio funcionário fora do painel administrativo.
+
+Prioridade do canal remoto:
+- o `WhatsApp` permanece como pendência prioritária já confirmada do fluxo biométrico.
+- o bloco de biometria não deve ser considerado plenamente encerrado sem este canal remoto complementar.
 
 Diretriz técnica:
 - O envio deve ocorrer por um `adapter pluggable` de WhatsApp.
