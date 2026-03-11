@@ -3,11 +3,14 @@
 from django.urls import path
 
 from .web_views import (
+    collaborator_list_view,
     company_edit_view,
     company_view,
+    create_collaborator_view,
     create_company_view,
     create_journey_view,
     delete_journey_view,
+    edit_collaborator_view,
     edit_journey_view,
     journey_list_view,
     landing_view,
@@ -17,6 +20,7 @@ from .web_views import (
     painel_view,
     profile_view,
     signup_view,
+    toggle_collaborator_status_view,
 )
 
 app_name = "web"
@@ -35,7 +39,14 @@ urlpatterns = [
     path("painel/jornadas/<int:journey_id>/editar/", edit_journey_view, name="journey_edit"),
     path("painel/jornadas/<int:journey_id>/excluir/", delete_journey_view, name="journey_delete"),
     path("painel/jornadas/", journey_list_view, name="jornadas"),
-    path("painel/colaboradores/", module_placeholder_view, {"module_key": "colaboradores"}, name="colaboradores"),
+    path("painel/colaboradores/novo/", create_collaborator_view, name="colaborador_create"),
+    path("painel/colaboradores/<int:employee_id>/editar/", edit_collaborator_view, name="colaborador_edit"),
+    path(
+        "painel/colaboradores/<int:employee_id>/status/",
+        toggle_collaborator_status_view,
+        name="colaborador_status_toggle",
+    ),
+    path("painel/colaboradores/", collaborator_list_view, name="colaboradores"),
     path("painel/relogio-digital/", module_placeholder_view, {"module_key": "relogio_digital"}, name="relogio_digital"),
     path(
         "painel/tratamento-ponto/",

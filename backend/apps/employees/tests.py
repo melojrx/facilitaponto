@@ -8,8 +8,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.accounts.serializers import TenantTokenObtainPairSerializer
+from apps.biometrics.models import ConsentimentoBiometrico, FacialEmbedding
 from apps.employees.models import Employee, NSRSequence, WorkSchedule
-from apps.employees.services import get_next_nsr
+from apps.employees.services import EmployeeRegistrationService, get_next_nsr
 from apps.tenants.models import Tenant
 from core.tenant_context import tenant_context
 
@@ -86,17 +87,205 @@ class TestEmployeeModel:
         assert employee.tenant == tenant_b
 
     def test_pis_deve_ter_11_digitos(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Jornada Base",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
         employee = Employee(
             tenant=tenant_a,
-            nome="João",
-            cpf="99999999999",
+            nome="Joao Silva",
+            cpf="52998224725",
             pis="123",  # inválido
             email="joao@empresa.com",
+            work_schedule=schedule,
             ativo=True,
         )
 
         with pytest.raises(ValidationError):
             employee.full_clean()
+
+    def test_colaborador_ativo_exige_jornada(self, tenant_a):
+        employee = Employee(
+            tenant=tenant_a,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            ativo=True,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            employee.full_clean()
+
+        assert "work_schedule" in exc_info.value.message_dict
+
+    def test_jornada_de_outro_tenant_e_invalida(self, tenant_a, tenant_b):
+        schedule_other = WorkSchedule.all_objects.create(
+            tenant=tenant_b,
+            nome="Escala Outro Tenant",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        employee = Employee(
+            tenant=tenant_a,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule_other,
+            ativo=True,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            employee.full_clean()
+
+        assert "work_schedule" in exc_info.value.message_dict
+
+    def test_normaliza_campos_operacionais_no_full_clean(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Comercial 44h",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        employee = Employee(
+            tenant=tenant_a,
+            nome="  Maria   Clara   ",
+            cpf="529.982.247-25",
+            pis="123.45678.90-0",
+            email="  MARIA@EMPRESA.COM ",
+            telefone="(85) 99999-0000",
+            funcao="  Analista   de RH ",
+            departamento="  Gente   e Gestao ",
+            matricula_interna="  MAT-001  ",
+            work_schedule=schedule,
+            ativo=True,
+        )
+
+        employee.full_clean()
+
+        assert employee.nome == "Maria Clara"
+        assert employee.cpf == "52998224725"
+        assert employee.pis == "12345678900"
+        assert employee.email == "maria@empresa.com"
+        assert employee.telefone == "85999990000"
+        assert employee.funcao == "Analista de RH"
+        assert employee.departamento == "Gente e Gestao"
+        assert employee.matricula_interna == "MAT-001"
+
+    def test_status_biometrico_reflete_consentimento_e_embedding(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Comercial 44h",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        employee = Employee.all_objects.create(
+            tenant=tenant_a,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+
+        assert employee.biometric_status == Employee.BiometricStatus.PENDENTE
+
+        ConsentimentoBiometrico.objects.create(
+            employee=employee,
+            aceito=True,
+            ip_origem="127.0.0.1",
+            versao_termo="v1",
+        )
+        assert employee.biometric_status == Employee.BiometricStatus.CONSENTIMENTO
+
+        FacialEmbedding.objects.create(
+            employee=employee,
+            embedding_data=b"fake",
+            ativo=True,
+        )
+        assert employee.biometric_status == Employee.BiometricStatus.CADASTRADA
+
+
+@pytest.mark.django_db
+class TestEmployeeRegistrationService:
+    def test_cria_colaborador_com_jornada_do_mesmo_tenant(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Comercial 44h",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+
+        employee = EmployeeRegistrationService.create_employee(
+            tenant=tenant_a,
+            nome="Maria Clara",
+            cpf="529.982.247-25",
+            pis="123.45678.90-0",
+            work_schedule_id=schedule.id,
+            email="maria@empresa.com",
+            telefone="(85) 99999-0000",
+            funcao="Analista",
+            departamento="Operacoes",
+            matricula_interna="COL-001",
+        )
+
+        assert employee.pk is not None
+        assert employee.tenant == tenant_a
+        assert employee.work_schedule == schedule
+        assert employee.biometric_status == Employee.BiometricStatus.PENDENTE
+
+    def test_bloqueia_jornada_de_outro_tenant(self, tenant_a, tenant_b):
+        schedule_other = WorkSchedule.all_objects.create(
+            tenant=tenant_b,
+            nome="Escala Outro Tenant",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            EmployeeRegistrationService.create_employee(
+                tenant=tenant_a,
+                nome="Maria Clara",
+                cpf="52998224725",
+                pis="12345678900",
+                work_schedule_id=schedule_other.id,
+            )
+
+        assert "work_schedule" in exc_info.value.message_dict
+
+    def test_bloqueia_colaborador_ativo_sem_jornada(self, tenant_a):
+        with pytest.raises(ValidationError) as exc_info:
+            EmployeeRegistrationService.create_employee(
+                tenant=tenant_a,
+                nome="Maria Clara",
+                cpf="52998224725",
+                pis="12345678900",
+                work_schedule_id=None,
+            )
+
+        assert "work_schedule" in exc_info.value.message_dict
+
+    def test_matricula_unica_por_tenant_quando_informada(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Comercial 44h",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        EmployeeRegistrationService.create_employee(
+            tenant=tenant_a,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule_id=schedule.id,
+            matricula_interna="COL-001",
+        )
+
+        with pytest.raises(ValidationError):
+            duplicate = Employee(
+                tenant=tenant_a,
+                nome="Joao Neto",
+                cpf="16899535009",
+                pis="98765432103",
+                work_schedule=schedule,
+                matricula_interna="COL-001",
+                ativo=True,
+            )
+            duplicate.full_clean()
 
 
 @pytest.mark.django_db

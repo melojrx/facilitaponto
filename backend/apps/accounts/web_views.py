@@ -4,13 +4,17 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
-from apps.employees.forms import WorkScheduleForm
-from apps.employees.models import WorkSchedule
+from apps.accounts.validators import only_digits
+from apps.employees.forms import EmployeeRegistrationForm, WorkScheduleForm
+from apps.employees.models import Employee, WorkSchedule
+from apps.employees.services import EmployeeRegistrationService
 from core.tenant_resolution import resolve_tenant_from_user
 
 from .forms import CompanyOnboardingForm, LoginForm, ProfileForm, SignupForm
@@ -377,6 +381,214 @@ def module_placeholder_view(request, module_key):
         current_menu=item["key"],
         extra_context={"module_title": item["label"]},
     )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET"])
+def collaborator_list_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Colaboradores.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    collaborator_query = (request.GET.get("q") or "").strip()
+    collaborator_schedule_filter = (request.GET.get("work_schedule") or "").strip()
+    collaborator_tab = (request.GET.get("status") or "ativos").strip().lower()
+    if collaborator_tab not in {"ativos", "inativos", "transferidos"}:
+        collaborator_tab = "ativos"
+
+    filtered_qs = (
+        Employee.all_objects.filter(tenant=tenant)
+        .select_related("work_schedule")
+        .prefetch_related("consentimentos_biometricos", "facial_embeddings")
+    )
+    if collaborator_query:
+        query_digits = only_digits(collaborator_query)
+        query_filter = Q(nome__icontains=collaborator_query)
+        if query_digits:
+            query_filter |= Q(cpf__icontains=query_digits) | Q(pis__icontains=query_digits)
+        filtered_qs = filtered_qs.filter(query_filter)
+
+    active_schedules = list(
+        WorkSchedule.all_objects.filter(tenant=tenant, ativo=True).order_by("nome")
+    )
+    if collaborator_schedule_filter:
+        filtered_qs = filtered_qs.filter(work_schedule_id=collaborator_schedule_filter)
+
+    active_count = filtered_qs.filter(ativo=True).count()
+    inactive_count = filtered_qs.filter(ativo=False).count()
+    transferred_count = 0
+
+    if collaborator_tab == "ativos":
+        filtered_qs = filtered_qs.filter(ativo=True)
+    elif collaborator_tab == "inativos":
+        filtered_qs = filtered_qs.filter(ativo=False)
+    else:
+        filtered_qs = filtered_qs.none()
+
+    collaborators = []
+    for employee in filtered_qs.order_by("nome"):
+        biometric_snapshot = employee.biometric_snapshot()
+        collaborators.append(
+            {
+                "id": employee.id,
+                "nome": employee.nome,
+                "departamento": employee.departamento or "-",
+                "funcao": employee.funcao or "-",
+                "status_label": "Ativo" if employee.ativo else "Inativo",
+                "status_class": "active" if employee.ativo else "inactive",
+                "biometric_label": biometric_snapshot["label"],
+                "biometric_class": biometric_snapshot["status"].lower(),
+                "biometric_detail": biometric_snapshot["detail"],
+                "journey_label": employee.work_schedule.nome if employee.work_schedule else "-",
+                "edit_url": reverse("web:colaborador_edit", kwargs={"employee_id": employee.id}),
+                "toggle_status_url": reverse(
+                    "web:colaborador_status_toggle",
+                    kwargs={"employee_id": employee.id},
+                ),
+                "toggle_status_label": "Inativar" if employee.ativo else "Reativar",
+                "toggle_status_icon": "inactive" if employee.ativo else "active",
+            }
+        )
+
+    return _render_panel(
+        request,
+        "web/employee_list.html",
+        current_menu="colaboradores",
+        extra_context={
+            "collaborators": collaborators,
+            "collaborator_total": len(collaborators),
+            "collaborator_query": collaborator_query,
+            "collaborator_schedule_filter": collaborator_schedule_filter,
+            "collaborator_tab": collaborator_tab,
+            "collaborator_tabs": [
+                {"key": "ativos", "label": f"Ativos ({active_count})", "count": active_count},
+                {"key": "inativos", "label": f"Inativos ({inactive_count})", "count": inactive_count},
+                {
+                    "key": "transferidos",
+                    "label": f"Transferidos ({transferred_count})",
+                    "count": transferred_count,
+                },
+            ],
+            "collaborator_schedule_options": active_schedules,
+            "collaborator_is_filtered": bool(collaborator_query or collaborator_schedule_filter or collaborator_tab != "ativos"),
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def create_collaborator_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de criar um colaborador.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    has_active_schedule = WorkSchedule.all_objects.filter(tenant=tenant, ativo=True).exists()
+    if not has_active_schedule:
+        messages.warning(request, "Cadastre uma jornada ativa antes de criar colaboradores.")
+        return redirect("web:jornadas")
+
+    if request.method == "POST":
+        form = EmployeeRegistrationForm(request.POST, tenant=tenant)
+        if form.is_valid():
+            employee = form.save()
+            if employee:
+                messages.success(request, "Colaborador criado com sucesso. Biometria pendente de conclusão.")
+                return redirect("web:colaboradores")
+    else:
+        form = EmployeeRegistrationForm(tenant=tenant)
+
+    return _render_panel(
+        request,
+        "web/employee_create.html",
+        current_menu="colaboradores",
+        extra_context={
+            "form": form,
+            "form_action_url": reverse("web:colaborador_create"),
+            "is_edit_mode": False,
+        },
+    )
+
+
+def _get_collaborator_or_404(*, tenant, employee_id):
+    try:
+        return (
+            Employee.all_objects.filter(tenant=tenant)
+            .select_related("work_schedule")
+            .prefetch_related("consentimentos_biometricos", "facial_embeddings")
+            .get(id=employee_id)
+        )
+    except Employee.DoesNotExist as exc:
+        raise Http404 from exc
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def edit_collaborator_view(request, employee_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de editar um colaborador.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    employee = _get_collaborator_or_404(tenant=tenant, employee_id=employee_id)
+
+    if request.method == "POST":
+        form = EmployeeRegistrationForm(request.POST, tenant=tenant, instance=employee)
+        if form.is_valid():
+            updated_employee = form.save()
+            if updated_employee:
+                messages.success(request, "Colaborador atualizado com sucesso.")
+                return redirect("web:colaboradores")
+    else:
+        form = EmployeeRegistrationForm(tenant=tenant, instance=employee)
+
+    return _render_panel(
+        request,
+        "web/employee_create.html",
+        current_menu="colaboradores",
+        extra_context={
+            "form": form,
+            "form_action_url": reverse("web:colaborador_edit", kwargs={"employee_id": employee.id}),
+            "is_edit_mode": True,
+            "employee": employee,
+            "employee_biometric": employee.biometric_snapshot(),
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_POST
+def toggle_collaborator_status_view(request, employee_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de alterar o status de um colaborador.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    employee = _get_collaborator_or_404(tenant=tenant, employee_id=employee_id)
+    was_active = employee.ativo
+    EmployeeRegistrationService.update_employee_status(employee=employee, ativo=not was_active)
+    if was_active:
+        messages.success(request, "Colaborador inativado com sucesso.")
+    else:
+        messages.success(request, "Colaborador reativado com sucesso.")
+    return redirect("web:colaboradores")
 
 
 @login_required(login_url="/login/")

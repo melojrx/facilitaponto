@@ -12,7 +12,8 @@ from .journey_config import (
     normalize_semanal_config,
     parse_json_payload,
 )
-from .models import WorkSchedule
+from .models import Employee, WorkSchedule
+from .services import EmployeeRegistrationService
 
 
 class WorkScheduleForm(forms.Form):
@@ -215,3 +216,134 @@ class WorkScheduleForm(forms.Form):
             tipo=self.cleaned_data["tipo"],
             configuracao=self.cleaned_data.get("configuracao", {}),
         )
+
+
+class EmployeeRegistrationForm(forms.Form):
+    nome = forms.CharField(
+        label="Nome Completo",
+        max_length=255,
+        widget=forms.TextInput(attrs={"placeholder": "Ex: Maria Clara Santos"}),
+    )
+    cpf = forms.CharField(
+        label="CPF",
+        max_length=14,
+        widget=forms.TextInput(attrs={"placeholder": "000.000.000-00"}),
+    )
+    pis = forms.CharField(
+        label="PIS/PASEP",
+        max_length=14,
+        widget=forms.TextInput(attrs={"placeholder": "000.00000.00-0"}),
+    )
+    data_nascimento = forms.DateField(
+        label="Data de Nascimento",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    email = forms.EmailField(
+        label="E-mail",
+        required=False,
+        widget=forms.EmailInput(attrs={"placeholder": "colaborador@empresa.com"}),
+    )
+    telefone = forms.CharField(
+        label="Telefone",
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "(00) 00000-0000"}),
+    )
+    funcao = forms.CharField(
+        label="Funcao/Cargo",
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Ex: Analista de RH"}),
+    )
+    departamento = forms.CharField(
+        label="Departamento/Setor",
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Ex: Operacoes"}),
+    )
+    data_admissao = forms.DateField(
+        label="Data de Admissao",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    matricula_interna = forms.CharField(
+        label="Matricula Interna",
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Ex: COL-001"}),
+    )
+    work_schedule = forms.ModelChoiceField(
+        label="Selecionar Jornada",
+        queryset=WorkSchedule.all_objects.none(),
+        empty_label="Selecione uma jornada",
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.tenant = kwargs.pop("tenant")
+        self.instance = kwargs.pop("instance", None)
+        if self.instance and not args and "initial" not in kwargs:
+            kwargs["initial"] = self.initial_from_employee(self.instance)
+        super().__init__(*args, **kwargs)
+        self.fields["work_schedule"].queryset = WorkSchedule.all_objects.filter(
+            tenant=self.tenant,
+            ativo=True,
+        ).order_by("nome")
+
+    @staticmethod
+    def initial_from_employee(employee: Employee) -> dict:
+        return {
+            "nome": employee.nome,
+            "cpf": employee.cpf,
+            "pis": employee.pis,
+            "data_nascimento": employee.data_nascimento,
+            "email": employee.email,
+            "telefone": employee.telefone,
+            "funcao": employee.funcao,
+            "departamento": employee.departamento,
+            "data_admissao": employee.data_admissao,
+            "matricula_interna": employee.matricula_interna,
+            "work_schedule": employee.work_schedule_id,
+        }
+
+    def save(self) -> Employee | None:
+        try:
+            payload = {
+                "nome": self.cleaned_data["nome"],
+                "cpf": self.cleaned_data["cpf"],
+                "pis": self.cleaned_data["pis"],
+                "work_schedule_id": self.cleaned_data["work_schedule"].id,
+                "email": self.cleaned_data.get("email", ""),
+                "telefone": self.cleaned_data.get("telefone", ""),
+                "data_nascimento": self.cleaned_data.get("data_nascimento"),
+                "funcao": self.cleaned_data.get("funcao", ""),
+                "departamento": self.cleaned_data.get("departamento", ""),
+                "data_admissao": self.cleaned_data.get("data_admissao"),
+                "matricula_interna": self.cleaned_data.get("matricula_interna", ""),
+                "ativo": self.instance.ativo if self.instance else True,
+            }
+            if self.instance:
+                return EmployeeRegistrationService.update_employee(
+                    employee=self.instance,
+                    **payload,
+                )
+            return EmployeeRegistrationService.create_employee(
+                tenant=self.tenant,
+                **payload,
+            )
+        except ValidationError as exc:
+            self._apply_service_errors(exc)
+            return None
+
+    def _apply_service_errors(self, exc: ValidationError):
+        if hasattr(exc, "message_dict"):
+            for field, messages in exc.message_dict.items():
+                target_field = field if field in self.fields else None
+                for message in messages:
+                    self.add_error(target_field, message)
+            return
+
+        for message in exc.messages:
+            self.add_error(None, message)

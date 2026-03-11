@@ -1,6 +1,6 @@
 # DEV-008 — Especificação da Área de Colaboradores
-**Versão:** 1.4  
-**Data:** 2026-03-08  
+**Versão:** 1.5  
+**Data:** 2026-03-11  
 **Contexto:** módulo liberado após conclusão da primeira jornada (`onboarding_step >= 3`)  
 **Referências:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/DEV_008_TELA_NOVA_JORNADA.md`, mocks visuais aprovados
 
@@ -17,6 +17,36 @@ Documentar a área `Colaboradores` no painel web com:
 Rotas alvo (MVP):
 - `GET /painel/colaboradores/`
 - `GET|POST /painel/colaboradores/novo/`
+
+## Papel deste documento
+
+- Este arquivo é a especificação funcional da área `Colaboradores`.
+- O status oficial de execução, aceite e corte de escopo fica em `docs/DEV_008_CHECKLIST.md`.
+- A ordem do próximo bloco (`Relógios -> Captura facial -> WhatsApp`) é mantida no checklist e no roadmap; aqui ficam apenas regras e comportamento esperado da área.
+
+## Status atual (2026-03-11)
+
+Entregue no núcleo funcional:
+- modelagem operacional de colaborador com vínculo explícito à jornada
+- regras centrais de domínio para `CPF`, `PIS`, `matrícula`, datas e isolamento tenant-aware
+- listagem web com busca por `nome/CPF/PIS`, filtro por jornada, abas `Ativos/Inativos/Transferidos` e estado vazio
+- formulário web de `Novo Colaborador` com seções `Dados Básicos`, `Informações de Trabalho`, `Jornada de Trabalho` e `Reconhecimento Facial`
+- edição web de colaborador
+- ação real de ativar/inativar colaborador na listagem
+- rastreabilidade biométrica no painel com leitura de consentimento e embedding ativos
+- testes web, de model/service e validação cruzada com `biometrics`/`attendance`
+
+Fora do bloco entregue nesta sprint:
+- captura facial imediata no painel via modal
+- envio de link de auto-cadastro facial por WhatsApp
+- template manual/personalizado de jornada dentro do cadastro do colaborador
+- semântica operacional real da aba `Transferidos`
+- ações rápidas completas da coluna `Ações` além de `Editar` e `Ativar/Inativar`
+
+Dependências e sequência:
+- `Relógios de Ponto` é o próximo bloco operacional prioritário após o fechamento do núcleo de `Colaboradores`.
+- `Captura facial no painel` vem na sequência para completar a ativação biométrica assistida.
+- `Envio por WhatsApp` fica depois como canal remoto complementar de ativação biométrica.
 
 ---
 
@@ -356,3 +386,20 @@ Mensagens de operação:
 - Modal de captura facial exige consentimento antes de confirmar.
 - Fluxo de envio de link por WhatsApp funciona com segurança (token expirável e uso único).
 - Colaborador criado aparece na listagem da empresa correta, sem vazamento cross-tenant.
+
+## 10. Encerramento do bloco (2026-03-11)
+
+- [x] Bloco `Colaboradores` encerrado para aceite funcional do cadastro operacional, vínculo com jornada e rastreabilidade biométrica básica.
+- [x] Smoke do fluxo coberto por testes:
+  - acesso autenticado ao módulo após `onboarding_step >= 3`
+  - criação de colaborador
+  - listagem com filtros/abas
+  - edição
+  - ativação/inativação
+  - leitura do estado biométrico no painel
+- [x] Itens formalmente removidos deste bloco e transferidos para próxima sprint:
+  - modal `Capturar Foto Facial`
+  - fluxo `Enviar link por WhatsApp`
+  - ações rápidas completas da coluna `Ações`
+  - jornada individual `Personalizado (entrada manual)`
+  - semântica completa de `Transferidos`

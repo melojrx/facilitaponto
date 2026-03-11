@@ -1,0 +1,244 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}{% if is_edit_mode %}Editar Colaborador{% else %}Novo Colaborador{% endif %} | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}{% if is_edit_mode %}Editar Colaborador{% else %}Novo Colaborador{% endif %}{% endblock %}
+{% block panel_heading_subtitle %}{% if is_edit_mode %}Atualize o cadastro operacional, a jornada e o contexto biométrico do colaborador.{% else %}Cadastre um colaborador operacional e vincule-o a uma jornada da empresa.{% endif %}{% endblock %}
+
+{% block panel_styles %}
+  <style>
+    .employee-breadcrumb {
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .employee-breadcrumb a {
+      color: var(--brand);
+      text-decoration: none;
+    }
+
+    .employee-form {
+      display: grid;
+      gap: 18px;
+    }
+
+    .employee-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .employee-card h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .employee-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .employee-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .employee-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .employee-field.full {
+      grid-column: 1 / -1;
+    }
+
+    .employee-field label {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .employee-field input,
+    .employee-field select,
+    .employee-field textarea {
+      width: 100%;
+      min-height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 0 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .employee-field input:focus,
+    .employee-field select:focus,
+    .employee-field textarea:focus {
+      outline: 0;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+    }
+
+    .employee-field .helptext {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .employee-errors {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--danger);
+      font-size: 13px;
+    }
+
+    .biometric-state {
+      border: 1px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 18px;
+      background: #f8fafc;
+      display: grid;
+      gap: 8px;
+    }
+
+    .biometric-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid #bfdbfe;
+    }
+
+    .employee-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    @media (max-width: 920px) {
+      .employee-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block panel_content %}
+  <div class="employee-breadcrumb">
+    <a href="{% url 'web:painel' %}">Início</a> &gt;
+    <a href="{% url 'web:colaboradores' %}">Colaboradores</a> &gt;
+    <span>{% if is_edit_mode %}Editar Colaborador{% else %}Novo Colaborador{% endif %}</span>
+  </div>
+
+  <form method="post" action="{{ form_action_url }}" class="employee-form" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <section class="employee-card">
+        <ul class="employee-errors">
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <section class="employee-card">
+      <h2>Dados Básicos</h2>
+      <p>Preencha os dados essenciais do colaborador para habilitar o cadastro operacional.</p>
+      <div class="employee-grid">
+        {% for field in form %}
+          {% if field.name == "funcao" or field.name == "departamento" or field.name == "data_admissao" or field.name == "matricula_interna" or field.name == "work_schedule" %}
+          {% elif field.name == "nome" %}
+            <div class="employee-field full">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}
+              {% if field.errors %}<ul class="employee-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+          {% else %}
+            <div class="employee-field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}
+              {% if field.errors %}<ul class="employee-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="employee-card">
+      <h2>Informações de Trabalho</h2>
+      <p>Esses dados estruturam o vínculo interno do colaborador e ajudam nas próximas etapas do painel.</p>
+      <div class="employee-grid">
+        {% for field in form %}
+          {% if field.name == "funcao" or field.name == "departamento" or field.name == "data_admissao" or field.name == "matricula_interna" %}
+            <div class="employee-field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<ul class="employee-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="employee-card">
+      <h2>Jornada de Trabalho</h2>
+      <p>Selecione a jornada ativa que servirá de base operacional para atrasos, extras e futuras rotinas de ponto.</p>
+      <div class="employee-grid">
+        <div class="employee-field full">
+          <label for="{{ form.work_schedule.id_for_label }}">{{ form.work_schedule.label }}</label>
+          {{ form.work_schedule }}
+          <div class="helptext">O cadastro usa apenas jornadas ativas da empresa atual.</div>
+          {% if form.work_schedule.errors %}<ul class="employee-errors">{% for error in form.work_schedule.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="employee-card">
+      <h2>Reconhecimento Facial</h2>
+      <p>O colaborador pode ser criado agora e concluir a biometria em uma etapa posterior, sem bloquear a operação administrativa.</p>
+      <div class="biometric-state">
+        {% if is_edit_mode and employee_biometric %}
+          <span class="biometric-badge">{{ employee_biometric.label }}</span>
+          <strong>Rastreabilidade biométrica</strong>
+          <span>{{ employee_biometric.detail }}</span>
+          <span>
+            Consentimento ativo:
+            {% if employee_biometric.has_active_consent %}Sim{% else %}Não{% endif %}
+            {% if employee_biometric.latest_consent_at %}
+              • Último registro em {{ employee_biometric.latest_consent_at|date:"d/m/Y H:i" }}
+            {% endif %}
+          </span>
+          <span>
+            Embedding ativo:
+            {% if employee_biometric.has_active_embedding %}Sim{% else %}Não{% endif %}
+            {% if employee_biometric.latest_embedding_at %}
+              • Último cadastro em {{ employee_biometric.latest_embedding_at|date:"d/m/Y H:i" }}
+            {% endif %}
+          </span>
+        {% else %}
+          <span class="biometric-badge">Sem dados faciais</span>
+          <strong>Biometria pendente</strong>
+          <span>Depois do cadastro, o colaborador ficará apto para consentimento e enroll facial.</span>
+        {% endif %}
+      </div>
+    </section>
+
+    <div class="employee-actions">
+      <a class="btn" href="{% url 'web:colaboradores' %}">Cancelar</a>
+      <button type="submit" class="btn btn-primary">{% if is_edit_mode %}Salvar Alterações{% else %}Criar{% endif %}</button>
+    </div>
+  </form>
+{% endblock %}

@@ -10,6 +10,7 @@ from django.test import override_settings
 
 from apps.accounts.forms import CompanyOnboardingForm
 from apps.accounts.models import User
+from apps.biometrics.models import ConsentimentoBiometrico, FacialEmbedding
 from apps.tenants.models import Tenant
 
 
@@ -578,7 +579,7 @@ class TestPanelMenuRelease:
         response = client.get("/painel/colaboradores/", follow=False)
 
         assert response.status_code == 302
-        assert response.url == "/painel/"
+        assert response.url == "/painel/empresa/nova/"
 
     def test_painel_resolve_tenant_por_email_contato_sem_persistir_vinculo(self, client, user):
         Tenant.objects.create(
@@ -1177,3 +1178,391 @@ class TestJourneyOnboardingFlow:
 
         assert re.search(r'data-menu-key="colaboradores"[\s\S]*?data-menu-state="enabled"', content)
         assert re.search(r'data-menu-key="relogio_digital"[\s\S]*?data-menu-state="enabled"', content)
+
+
+@pytest.mark.django_db
+class TestCollaboratorWebFlow:
+    CREATE_URL = "/painel/colaboradores/novo/"
+    LIST_URL = "/painel/colaboradores/"
+
+    def _make_tenant(self, step=3):
+        return Tenant.objects.create(
+            tipo_pessoa="PJ",
+            documento="31721174000107",
+            cnpj="31721174000107",
+            razao_social="Acme Colaboradores LTDA",
+            onboarding_step=step,
+        )
+
+    def _attach_tenant(self, user, tenant):
+        user.tenant = tenant
+        user.save(update_fields=["tenant"])
+
+    def _create_schedule(self, tenant, nome="Jornada Comercial"):
+        from apps.employees.models import WorkSchedule
+
+        return WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome=nome,
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+
+    def test_get_exige_autenticacao(self, client):
+        response = client.get(self.CREATE_URL)
+        assert response.status_code == 302
+        assert response.url == f"/login/?next={self.CREATE_URL}"
+
+    def test_get_sem_empresa_redireciona_para_criar_empresa(self, client, user):
+        client.force_login(user)
+        response = client.get(self.CREATE_URL, follow=False)
+        assert response.status_code == 302
+        assert response.url == "/painel/empresa/nova/"
+
+    def test_get_bloqueia_antes_da_primeira_jornada(self, client, user):
+        tenant = self._make_tenant(step=2)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.get(self.CREATE_URL, follow=False)
+
+        assert response.status_code == 302
+        assert response.url == "/painel/"
+
+    def test_get_renderiza_formulario_colaborador(self, client, user):
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        self._create_schedule(tenant)
+        client.force_login(user)
+
+        response = client.get(self.CREATE_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Novo Colaborador" in content
+        assert 'name="nome"' in content
+        assert 'name="cpf"' in content
+        assert 'name="pis"' in content
+        assert 'name="work_schedule"' in content
+        assert "Sem dados faciais" in content
+
+    def test_listagem_vazia_exibe_estado_inicial(self, client, user):
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        self._create_schedule(tenant)
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Nenhum colaborador encontrado" in content
+        assert "Criar primeiro colaborador" in content
+        assert "Ativos (0)" in content
+        assert "Inativos (0)" in content
+        assert "Transferidos (0)" in content
+
+    def test_post_valido_cria_colaborador_e_redireciona_para_lista(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        client.force_login(user)
+
+        response = client.post(
+            self.CREATE_URL,
+            data={
+                "nome": "Maria Clara Santos",
+                "cpf": "529.982.247-25",
+                "pis": "123.45678.90-0",
+                "email": "maria@acme.com",
+                "telefone": "(85) 99999-0000",
+                "funcao": "Analista",
+                "departamento": "Operacoes",
+                "data_admissao": "2026-03-01",
+                "matricula_interna": "COL-001",
+                "work_schedule": str(schedule.id),
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == self.LIST_URL
+
+        employee = Employee.all_objects.get(tenant=tenant, cpf="52998224725")
+        assert employee.nome == "Maria Clara Santos"
+        assert employee.work_schedule == schedule
+
+        list_response = client.get(self.LIST_URL)
+        content = list_response.content.decode()
+        assert "Maria Clara Santos" in content
+        assert "Pendente" in content
+        assert "Jornada Comercial" in content
+
+    def test_listagem_exibe_rastreabilidade_biometrica(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        ConsentimentoBiometrico.objects.create(
+            employee=employee,
+            aceito=True,
+            versao_termo="v1",
+        )
+        FacialEmbedding.objects.create(
+            employee=employee,
+            embedding_data=b"fake",
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Cadastro Facial Concluido" in content
+        assert "Cadastro facial concluido em" in content
+
+    def test_listagem_filtra_por_busca_e_jornada(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule_a = self._create_schedule(tenant, nome="Comercial")
+        schedule_b = self._create_schedule(tenant, nome="Plantao")
+        Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule_a,
+            ativo=True,
+        )
+        Employee.all_objects.create(
+            tenant=tenant,
+            nome="Joao Pedro",
+            cpf="16899535009",
+            pis="98765432103",
+            work_schedule=schedule_b,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.get(
+            self.LIST_URL,
+            data={"q": "529.982.247-25", "work_schedule": str(schedule_a.id), "status": "ativos"},
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Maria Clara" in content
+        assert "Joao Pedro" not in content
+        assert "Ativos (1)" in content
+
+    def test_listagem_aba_inativos_exibe_apenas_inativos(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        Employee.all_objects.create(
+            tenant=tenant,
+            nome="Ativo Base",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        Employee.all_objects.create(
+            tenant=tenant,
+            nome="Inativo Base",
+            cpf="16899535009",
+            pis="98765432103",
+            work_schedule=schedule,
+            ativo=False,
+        )
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL, data={"status": "inativos"})
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Inativo Base" in content
+        assert "Ativo Base" not in content
+        assert "Inativos (1)" in content
+
+    def test_get_editar_colaborador_renderiza_formulario_preenchido(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            email="maria@acme.com",
+            funcao="Analista",
+            departamento="Operacoes",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/colaboradores/{employee.id}/editar/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Editar Colaborador" in content
+        assert 'value="Maria Clara"' in content
+        assert 'value="52998224725"' in content
+        assert "Rastreabilidade biométrica" in content
+
+    def test_post_editar_colaborador_atualiza_registro(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule_a = self._create_schedule(tenant, nome="Comercial")
+        schedule_b = self._create_schedule(tenant, nome="Plantao")
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            email="maria@acme.com",
+            work_schedule=schedule_a,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/editar/",
+            data={
+                "nome": "Maria Clara Souza",
+                "cpf": "529.982.247-25",
+                "pis": "123.45678.90-0",
+                "email": "maria.souza@acme.com",
+                "telefone": "(85) 99999-0000",
+                "funcao": "Coordenadora",
+                "departamento": "RH",
+                "data_admissao": "2026-03-02",
+                "matricula_interna": "COL-090",
+                "work_schedule": str(schedule_b.id),
+            },
+            follow=False,
+        )
+
+        employee.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == self.LIST_URL
+        assert employee.nome == "Maria Clara Souza"
+        assert employee.email == "maria.souza@acme.com"
+        assert employee.work_schedule == schedule_b
+        assert employee.funcao == "Coordenadora"
+
+    def test_post_toggle_status_altera_ativo(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.post(f"/painel/colaboradores/{employee.id}/status/", follow=False)
+
+        employee.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == self.LIST_URL
+        assert employee.ativo is False
+
+    def test_post_usa_service_como_ponto_unico_de_cadastro(self, client, user, monkeypatch):
+        from apps.employees.models import Employee
+        from apps.employees.services import EmployeeRegistrationService
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        client.force_login(user)
+
+        captured = {}
+        employee = Employee(
+            tenant=tenant,
+            nome="Servico Unico",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        employee.id = 999
+
+        def fake_create_employee(**kwargs):
+            captured.update(kwargs)
+            return employee
+
+        monkeypatch.setattr(EmployeeRegistrationService, "create_employee", fake_create_employee)
+
+        response = client.post(
+            self.CREATE_URL,
+            data={
+                "nome": "Servico Unico",
+                "cpf": "529.982.247-25",
+                "pis": "123.45678.90-0",
+                "work_schedule": str(schedule.id),
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == self.LIST_URL
+        assert captured["tenant"] == tenant
+        assert captured["nome"] == "Servico Unico"
+        assert captured["work_schedule_id"] == schedule.id
+
+    def test_post_cpf_duplicado_exibe_erro_amigavel(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        Employee.all_objects.create(
+            tenant=tenant,
+            nome="Existente",
+            cpf="52998224725",
+            pis="12345678900",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            self.CREATE_URL,
+            data={
+                "nome": "Duplicado",
+                "cpf": "529.982.247-25",
+                "pis": "987.65432.10-3",
+                "work_schedule": str(schedule.id),
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 200
+        assert "Ja existe colaborador com este CPF nesta empresa." in response.content.decode()
