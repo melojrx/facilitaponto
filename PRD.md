@@ -1,5 +1,5 @@
 # PRD — Sistema de Ponto Eletrônico com Reconhecimento Facial
-**Versão:** 1.0  
+**Versão:** 1.1  
 **Data:** 2026-02-28  
 **Status:** Em desenvolvimento  
 
@@ -41,6 +41,18 @@ Empresas precisam de um sistema de ponto eletrônico legalmente válido, simples
 | **UX simples** | O operador não tem treino técnico — a portaria é uma costureira. UI deve ser autoexplicativa |
 | **Custo de infra baixo** | Um VPS de R$100-200/mês deve ser suficiente para suportar dezenas de tenants |
 | **1 desenvolvedor** | Todas as decisões devem considerar mantenabilidade por equipe pequena (solo dev ou duo) |
+
+### Diretriz técnica para integrações de WhatsApp
+
+- O envio de mensagens por WhatsApp deve seguir a mesma lógica do produto: simplicidade, baixo atrito operacional e baixo custo de infraestrutura.
+- A implementação deve usar um `adapter pluggable`, sem acoplamento do domínio a um vendor específico.
+- Decisão inicial para o MVP web/admin:
+  - usar um provider self-hosted de baixo atrito como padrão inicial
+  - `WAHA` é a escolha preferencial do primeiro adapter
+- Evoluções futuras devem permanecer documentadas e opcionais:
+  - `Evolution API`
+  - `Meta WhatsApp Cloud API` ou BSP oficial
+- A troca de provider não deve exigir reescrita do fluxo de negócio; apenas novo adapter/integrador.
 
 ## 3. Público-Alvo
 

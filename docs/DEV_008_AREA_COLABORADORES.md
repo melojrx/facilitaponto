@@ -1,5 +1,5 @@
 # DEV-008 — Especificação da Área de Colaboradores
-**Versão:** 1.5  
+**Versão:** 1.6  
 **Data:** 2026-03-11  
 **Contexto:** módulo liberado após conclusão da primeira jornada (`onboarding_step >= 3`)  
 **Referências:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/DEV_008_TELA_NOVA_JORNADA.md`, mocks visuais aprovados
@@ -251,6 +251,13 @@ Regras de estado do modal:
 
 Objetivo:
 - Permitir auto-cadastro facial pelo próprio funcionário fora do painel administrativo.
+
+Diretriz técnica:
+- O envio deve ocorrer por um `adapter pluggable` de WhatsApp.
+- O provider inicial do MVP é `WAHA`, pela prioridade de rapidez com baixo atrito operacional.
+- Evoluções futuras permitidas sem reescrita do fluxo:
+  - `Evolution API`
+  - `Meta WhatsApp Cloud API` ou BSP oficial
 
 Comportamento esperado:
 - A partir do cadastro do colaborador, o sistema disponibiliza ação para envio de link seguro ao WhatsApp informado.

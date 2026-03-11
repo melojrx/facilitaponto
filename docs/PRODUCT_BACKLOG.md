@@ -1,5 +1,5 @@
 # Product Backlog — Sistema de Ponto Eletrônico
-**Versão:** 1.4  
+**Versão:** 1.5  
 **Data:** 2026-03-11  
 
 ---
@@ -12,6 +12,7 @@
 - ✅ Bloco `Colaboradores` entregue no núcleo funcional do painel web.
 - 🚧 Próxima sprint: executar na ordem `Relógios de Ponto -> Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
 - 📌 A fonte oficial do acompanhamento detalhado desse bloco é `docs/DEV_008_CHECKLIST.md`.
+- 📌 Direção técnica do WhatsApp no MVP: `adapter pluggable` com provider inicial `WAHA`; alternativas futuras documentadas para escala/compliance.
 - ⏭️ Bloco seguinte após estabilização web/admin: PB-020 a PB-028 (app mobile).
 
 ---
@@ -154,3 +155,11 @@
 | PB-120 | Como produto, devo ter documentação técnica completa para depósito no INPI | CRÍTICO |
 | PB-121 | Como produto, devo ter declaração de conformidade técnica com a Portaria 671/2021 | CRÍTICO |
 | PB-122 | Como produto, devo ter manual do usuário nos moldes exigidos pelo INPI | ALTA |
+
+### Épico 4.4 — Evoluções de Integração WhatsApp
+
+| ID | User Story | Prioridade |
+|---|---|---|
+| PB-130 | Como sistema, quero usar um adapter pluggable de WhatsApp para trocar o provider sem alterar o fluxo negocial | ALTA |
+| PB-131 | Como produto, quero manter suporte futuro a `Evolution API` como alternativa ao provider inicial | MÉDIA |
+| PB-132 | Como produto, quero evoluir para `Meta WhatsApp Cloud API` ou BSP oficial caso haja ganho de escala, compliance ou estabilidade operacional | MÉDIA |

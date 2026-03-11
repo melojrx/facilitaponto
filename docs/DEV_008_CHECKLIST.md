@@ -1,5 +1,5 @@
 # DEV-008 Checklist (Versionado)
-**Versão:** 2.9  
+**Versão:** 3.0  
 **Data:** 2026-03-11  
 **Escopo:** onboarding conta proprietária + empresa única + liberação progressiva do painel
 
@@ -229,3 +229,15 @@ pytest apps/ -k "onboarding or accounts or tenants or journeys"
   - `Captura facial no painel` entra depois de colaborador + jornada + contexto operacional já consolidados.
   - `Envio por WhatsApp` fica como canal remoto complementar, não como base do fluxo biométrico.
   - `Tratamento`, `Relatórios` e `Solicitações` dependem de dados operacionais já produzidos pelos blocos anteriores.
+
+## 17) Decisão técnica formal para WhatsApp
+- [x] O fluxo de envio por WhatsApp deve ser implementado com arquitetura `adapter pluggable`.
+- [x] O domínio do produto não deve depender diretamente de `WAHA`, `Evolution API` ou `Meta Cloud API`.
+- [x] Provider inicial do MVP definido:
+  - `WAHA`, por rapidez de implementação, baixo atrito operacional e aderência ao contexto do produto (`PMEs`, infra enxuta, solo dev).
+- [x] Opções documentadas para evolução futura:
+  - `Evolution API`
+  - `Meta WhatsApp Cloud API` ou BSP oficial
+- [x] Critério de implementação:
+  - persistir `provider`, identificador da mensagem, status, timestamps e erro de envio;
+  - permitir troca de provider sem reescrever o fluxo negocial de convite biométrico.
