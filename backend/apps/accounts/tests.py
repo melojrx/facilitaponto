@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -11,6 +12,12 @@ from apps.accounts.models import Device, User
 from apps.accounts.permissions import IsDeviceToken, IsTenantMember
 from apps.accounts.serializers import TenantTokenObtainPairSerializer
 from apps.accounts.services_cep import CepLookupError, CepNotFoundError
+from apps.accounts.services_cnpj import (
+    CnpjLookupError,
+    CnpjLookupTimeoutError,
+    CnpjNotFoundError,
+    lookup_cnpj_via_cnpja_open,
+)
 from apps.accounts.services_onboarding import AccountOnboardingService
 from apps.tenants.models import Tenant
 
@@ -342,3 +349,164 @@ class TestPublicCepLookupEndpoint:
         assert response.status_code == 503
         assert response.data["ok"] is False
         assert response.data["code"] == "provider_unavailable"
+
+
+class DummyHTTPResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+@pytest.mark.django_db
+class TestCnpjLookupService:
+    def test_normaliza_payload_e_sinaliza_preenchimento_parcial(self, monkeypatch):
+        monkeypatch.setattr(
+            "apps.accounts.services_cnpj.urlopen",
+            lambda request, timeout=4.0: DummyHTTPResponse(
+                {
+                    "company": {"name": "Acme LTDA", "alias": "Acme"},
+                    "address": {
+                        "street": "Rua das Flores",
+                        "district": "Centro",
+                        "city": {"name": "Fortaleza"},
+                        "state": {"code": "CE"},
+                        "zip": "60711-165",
+                    },
+                    "emails": [{"address": "contato@acme.com"}],
+                }
+            ),
+        )
+
+        result = lookup_cnpj_via_cnpja_open("50.529.647/0001-83")
+
+        assert result["data"]["documento"] == "50529647000183"
+        assert result["data"]["razao_social"] == "Acme LTDA"
+        assert result["data"]["email_contato"] == "contato@acme.com"
+        assert result["data"]["cep"] == "60711165"
+        assert result["meta"]["partial"] is True
+        assert "telefone_contato" in result["meta"]["missing_fields"]
+        assert "telefone" in result["meta"]["missing_labels"]
+
+    def test_timeout_do_provider_gera_erro_especifico(self, monkeypatch):
+        def _raise_timeout(*args, **kwargs):
+            raise TimeoutError("timeout")
+
+        monkeypatch.setattr("apps.accounts.services_cnpj.urlopen", _raise_timeout)
+
+        with pytest.raises(CnpjLookupTimeoutError):
+            lookup_cnpj_via_cnpja_open("50529647000183")
+
+    def test_http_404_vira_cnpj_nao_encontrado(self, monkeypatch):
+        from urllib.error import HTTPError
+
+        def _raise_not_found(*args, **kwargs):
+            raise HTTPError(
+                url="https://open.cnpja.com/office/50529647000183",
+                code=404,
+                msg="not found",
+                hdrs=None,
+                fp=None,
+            )
+
+        monkeypatch.setattr("apps.accounts.services_cnpj.urlopen", _raise_not_found)
+
+        with pytest.raises(CnpjNotFoundError):
+            lookup_cnpj_via_cnpja_open("50529647000183")
+
+
+@pytest.mark.django_db
+class TestPublicCnpjLookupEndpoint:
+    endpoint = "/api/public/cnpj/"
+
+    def test_consulta_cnpj_com_sucesso(self, monkeypatch):
+        monkeypatch.setattr(
+            "apps.accounts.views.lookup_cnpj_via_cnpja_open",
+            lambda cnpj: {
+                "data": {
+                    "documento": cnpj,
+                    "razao_social": "Acme LTDA",
+                    "nome_fantasia": "Acme",
+                    "email_contato": "contato@acme.com",
+                    "telefone_contato": "85999998888",
+                    "cep": "60711165",
+                    "logradouro": "Rua das Flores",
+                    "numero": "100",
+                    "complemento": "",
+                    "bairro": "Centro",
+                    "cidade": "Fortaleza",
+                    "estado": "CE",
+                },
+                "meta": {
+                    "provider": "cnpja_open",
+                    "partial": False,
+                    "missing_fields": [],
+                    "missing_labels": [],
+                },
+            },
+        )
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cnpj": "50.529.647/0001-83"})
+
+        assert response.status_code == 200
+        assert response.data["ok"] is True
+        assert response.data["data"]["documento"] == "50529647000183"
+        assert response.data["meta"]["partial"] is False
+
+    def test_consulta_cnpj_invalido(self):
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cnpj": "123"})
+
+        assert response.status_code == 400
+        assert "cnpj" in response.data
+
+    def test_consulta_cnpj_nao_encontrado(self, monkeypatch):
+        def _raise_not_found(*args, **kwargs):
+            raise CnpjNotFoundError("not found")
+
+        monkeypatch.setattr("apps.accounts.views.lookup_cnpj_via_cnpja_open", _raise_not_found)
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cnpj": "50.529.647/0001-83"})
+
+        assert response.status_code == 404
+        assert response.data["ok"] is False
+        assert response.data["code"] == "cnpj_not_found"
+        assert response.data["manual_fallback"] is True
+
+    def test_consulta_cnpj_timeout(self, monkeypatch):
+        def _raise_timeout(*args, **kwargs):
+            raise CnpjLookupTimeoutError("timeout")
+
+        monkeypatch.setattr("apps.accounts.views.lookup_cnpj_via_cnpja_open", _raise_timeout)
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cnpj": "50.529.647/0001-83"})
+
+        assert response.status_code == 504
+        assert response.data["ok"] is False
+        assert response.data["code"] == "provider_timeout"
+        assert response.data["manual_fallback"] is True
+
+    def test_consulta_cnpj_servico_indisponivel(self, monkeypatch):
+        def _raise_unavailable(*args, **kwargs):
+            raise CnpjLookupError("unavailable")
+
+        monkeypatch.setattr("apps.accounts.views.lookup_cnpj_via_cnpja_open", _raise_unavailable)
+        client = APIClient()
+
+        response = client.get(self.endpoint, {"cnpj": "50.529.647/0001-83"})
+
+        assert response.status_code == 503
+        assert response.data["ok"] is False
+        assert response.data["code"] == "provider_unavailable"
+        assert response.data["manual_fallback"] is True

@@ -3,6 +3,8 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from .validators import is_valid_cnpj, only_digits
+
 
 class TenantTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Inclui claims de tenant e role no JWT de usuário."""
@@ -38,4 +40,14 @@ class PublicCepLookupSerializer(serializers.Serializer):
         digits = "".join(ch for ch in (value or "") if ch.isdigit())
         if len(digits) != 8:
             raise serializers.ValidationError("Informe um CEP válido com 8 dígitos.")
+        return digits
+
+
+class PublicCnpjLookupSerializer(serializers.Serializer):
+    cnpj = serializers.CharField(max_length=18)
+
+    def validate_cnpj(self, value):
+        digits = only_digits(value)
+        if len(digits) != 14 or not is_valid_cnpj(digits):
+            raise serializers.ValidationError("Informe um CNPJ válido com 14 dígitos.")
         return digits

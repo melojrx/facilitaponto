@@ -183,6 +183,7 @@
           {{ form.documento.label_tag }}
           {{ form.documento }}
           {{ form.documento.errors }}
+          <span id="documento-feedback" class="field-feedback"></span>
         </div>
       </div>
 
@@ -370,7 +371,12 @@
       const cidadeInput       = document.getElementById('id_cidade');
       const estadoInput       = document.getElementById('id_estado');
       const cpfRespInput      = document.getElementById('id_responsavel_cpf');
+      const razaoSocialInput  = document.getElementById('id_razao_social');
+      const nomeFantasiaInput = document.getElementById('id_nome_fantasia');
+      const emailContatoInput = document.getElementById('id_email_contato');
+      const inscricaoEstadualInput = document.getElementById('id_inscricao_estadual');
       const cepFeedback       = document.getElementById('cep-feedback');
+      const documentoFeedback = document.getElementById('documento-feedback');
 
       function onlyDigits(v) { return (v || '').replace(/\D/g, ''); }
 
@@ -404,7 +410,14 @@
       if (documentoInput && tipoInput) {
         const applyDoc = () => { documentoInput.value = tipoInput.value === 'PF' ? maskCpf(documentoInput.value) : maskCnpj(documentoInput.value); };
         documentoInput.addEventListener('input', applyDoc);
-        tipoInput.addEventListener('change', applyDoc);
+        tipoInput.addEventListener('change', () => {
+          applyDoc();
+          if (tipoInput.value !== 'PJ' && documentoFeedback) {
+            documentoFeedback.textContent = '';
+            documentoFeedback.className = 'field-feedback';
+          }
+        });
+        documentoInput.addEventListener('blur', () => lookupCnpj(documentoInput.value));
       }
       if (telefoneInput) { telefoneInput.addEventListener('input', () => { telefoneInput.value = maskTel(telefoneInput.value); }); }
       if (cepInput) {
@@ -439,6 +452,68 @@
         } catch {
           cepFeedback.textContent = 'Serviço de CEP indisponível. Preencha manualmente.';
           cepFeedback.className = 'field-feedback error';
+        }
+      }
+
+      function setFieldIfValue(input, value) {
+        if (!input || !value) return;
+        input.value = value;
+      }
+
+      async function lookupCnpj(rawDocumento) {
+        if (!documentoFeedback || !tipoInput || tipoInput.value !== 'PJ') return;
+
+        const cnpj = onlyDigits(rawDocumento);
+        if (cnpj.length !== 14) {
+          if (cnpj) {
+            documentoFeedback.textContent = 'CNPJ incompleto.';
+            documentoFeedback.className = 'field-feedback error';
+          } else {
+            documentoFeedback.textContent = '';
+            documentoFeedback.className = 'field-feedback';
+          }
+          return;
+        }
+
+        documentoFeedback.textContent = 'Buscando dados da empresa…';
+        documentoFeedback.className = 'field-feedback';
+
+        try {
+          const res = await fetch(`/api/public/cnpj/?cnpj=${cnpj}`);
+          const payload = await res.json();
+          if (!res.ok || !payload.ok) {
+            documentoFeedback.textContent = payload.error || 'Nao foi possivel buscar o CNPJ. Preencha manualmente.';
+            documentoFeedback.className = 'field-feedback error';
+            return;
+          }
+
+          const companyData = payload.data || {};
+          const meta = payload.meta || {};
+          setFieldIfValue(razaoSocialInput, companyData.razao_social || '');
+          setFieldIfValue(nomeFantasiaInput, companyData.nome_fantasia || '');
+          setFieldIfValue(emailContatoInput, companyData.email_contato || '');
+          setFieldIfValue(telefoneInput, companyData.telefone_contato || '');
+          setFieldIfValue(cepInput, companyData.cep || '');
+          setFieldIfValue(logradouroInput, companyData.logradouro || '');
+          setFieldIfValue(bairroInput, companyData.bairro || '');
+          setFieldIfValue(cidadeInput, companyData.cidade || '');
+          setFieldIfValue(estadoInput, companyData.estado || '');
+          setFieldIfValue(inscricaoEstadualInput, companyData.inscricao_estadual || '');
+
+          if (telefoneInput && telefoneInput.value) telefoneInput.value = maskTel(telefoneInput.value);
+          if (cepInput && cepInput.value) cepInput.value = maskCep(cepInput.value);
+
+          if (meta.partial) {
+            const labels = Array.isArray(meta.missing_labels) ? meta.missing_labels : [];
+            const suffix = labels.length ? ` Complete manualmente: ${labels.join(', ')}.` : '';
+            documentoFeedback.textContent = `Alguns dados foram encontrados automaticamente.${suffix}`;
+          } else {
+            documentoFeedback.textContent = 'Dados da empresa preenchidos automaticamente.';
+          }
+          documentoFeedback.className = 'field-feedback success';
+        } catch {
+          documentoFeedback.textContent = 'Servico de CNPJ indisponivel. Preencha manualmente.';
+          documentoFeedback.className = 'field-feedback error';
         }
       }
 

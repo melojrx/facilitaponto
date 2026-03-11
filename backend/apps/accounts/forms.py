@@ -10,46 +10,7 @@ from apps.tenants.models import Tenant
 
 from .models import User
 from .services_onboarding import AccountOnboardingService
-
-
-def _only_digits(value: str) -> str:
-    return "".join(ch for ch in (value or "") if ch.isdigit())
-
-
-def _is_valid_cpf(cpf: str) -> bool:
-    if len(cpf) != 11:
-        return False
-    if cpf == cpf[0] * 11:
-        return False
-
-    first_sum = sum(int(cpf[idx]) * (10 - idx) for idx in range(9))
-    first_digit = ((first_sum * 10) % 11) % 10
-    if first_digit != int(cpf[9]):
-        return False
-
-    second_sum = sum(int(cpf[idx]) * (11 - idx) for idx in range(10))
-    second_digit = ((second_sum * 10) % 11) % 10
-    return second_digit == int(cpf[10])
-
-
-def _is_valid_cnpj(cnpj: str) -> bool:
-    if len(cnpj) != 14:
-        return False
-    if cnpj == cnpj[0] * 14:
-        return False
-
-    first_weights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    first_total = sum(int(cnpj[idx]) * first_weights[idx] for idx in range(12))
-    first_remainder = first_total % 11
-    first_digit = 0 if first_remainder < 2 else 11 - first_remainder
-    if first_digit != int(cnpj[12]):
-        return False
-
-    second_weights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    second_total = sum(int(cnpj[idx]) * second_weights[idx] for idx in range(13))
-    second_remainder = second_total % 11
-    second_digit = 0 if second_remainder < 2 else 11 - second_remainder
-    return second_digit == int(cnpj[13])
+from .validators import is_valid_cnpj, is_valid_cpf, only_digits
 
 
 class SignupForm(forms.Form):
@@ -95,8 +56,8 @@ class SignupForm(forms.Form):
         return email
 
     def clean_cpf(self):
-        digits = _only_digits(self.cleaned_data["cpf"])
-        if not _is_valid_cpf(digits):
+        digits = only_digits(self.cleaned_data["cpf"])
+        if not is_valid_cpf(digits):
             raise forms.ValidationError("Informe um CPF válido.")
         if User.objects.filter(cpf=digits).exists():
             raise forms.ValidationError("Já existe uma conta com este CPF.")
@@ -116,7 +77,7 @@ class SignupForm(forms.Form):
 
     def clean_phone(self):
         raw_value = self.cleaned_data["phone"]
-        digits = "".join(ch for ch in raw_value if ch.isdigit())
+        digits = only_digits(raw_value)
         if len(digits) not in (10, 11):
             raise forms.ValidationError("Informe um telefone válido com DDD.")
         return digits
@@ -270,13 +231,13 @@ class CompanyOnboardingForm(forms.Form):
         return value
 
     def clean_telefone_contato(self):
-        digits = _only_digits(self.cleaned_data["telefone_contato"])
+        digits = only_digits(self.cleaned_data["telefone_contato"])
         if len(digits) not in (10, 11):
             raise forms.ValidationError("Informe um telefone válido com DDD.")
         return digits
 
     def clean_cep(self):
-        digits = _only_digits(self.cleaned_data.get("cep"))
+        digits = only_digits(self.cleaned_data.get("cep"))
         if digits and len(digits) != 8:
             raise forms.ValidationError("Informe um CEP válido.")
         return digits
@@ -288,25 +249,25 @@ class CompanyOnboardingForm(forms.Form):
         return value
 
     def clean_responsavel_cpf(self):
-        digits = _only_digits(self.cleaned_data.get("responsavel_cpf"))
-        if digits and not _is_valid_cpf(digits):
+        digits = only_digits(self.cleaned_data.get("responsavel_cpf"))
+        if digits and not is_valid_cpf(digits):
             raise forms.ValidationError("Informe um CPF válido para o responsável.")
         return digits
 
     def clean(self):
         cleaned_data = super().clean()
         tipo_pessoa = cleaned_data.get("tipo_pessoa")
-        documento = _only_digits(cleaned_data.get("documento"))
+        documento = only_digits(cleaned_data.get("documento"))
 
         if not documento:
             self.add_error("documento", "Informe o documento da empresa.")
             return cleaned_data
 
         if tipo_pessoa == Tenant.TipoPessoa.PJ:
-            if not _is_valid_cnpj(documento):
+            if not is_valid_cnpj(documento):
                 self.add_error("documento", "Informe um CNPJ válido.")
         elif tipo_pessoa == Tenant.TipoPessoa.PF:
-            if not _is_valid_cpf(documento):
+            if not is_valid_cpf(documento):
                 self.add_error("documento", "Informe um CPF válido.")
 
         existing_tenant_qs = Tenant.objects.filter(Q(documento=documento) | Q(cnpj=documento))
@@ -400,8 +361,8 @@ class ProfileForm(forms.Form):
         super().__init__(*args, **kwargs)
 
     def clean_cpf(self):
-        digits = _only_digits(self.cleaned_data["cpf"])
-        if not _is_valid_cpf(digits):
+        digits = only_digits(self.cleaned_data["cpf"])
+        if not is_valid_cpf(digits):
             raise forms.ValidationError("Informe um CPF válido.")
 
         exists = User.objects.exclude(pk=self.user.pk).filter(cpf=digits).exists()
@@ -411,7 +372,7 @@ class ProfileForm(forms.Form):
 
     def clean_phone(self):
         raw_value = self.cleaned_data.get("phone", "")
-        digits = _only_digits(raw_value)
+        digits = only_digits(raw_value)
         if digits and len(digits) not in (10, 11):
             raise forms.ValidationError("Informe um telefone válido com DDD.")
         return digits

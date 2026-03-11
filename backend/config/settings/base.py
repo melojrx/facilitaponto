@@ -140,6 +140,10 @@ AUTH_RATE_LIMITS = {
     "api_token": {"limit": 60, "window_seconds": 300},
 }
 
+# Integrações públicas do onboarding
+CNPJA_OPEN_BASE_URL = config("CNPJA_OPEN_BASE_URL", default="https://open.cnpja.com")
+CNPJA_OPEN_TIMEOUT = config("CNPJA_OPEN_TIMEOUT", default=4.0, cast=float)
+
 # -----------------------------------------------------------------------------
 # DRF
 # -----------------------------------------------------------------------------

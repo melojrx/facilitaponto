@@ -14,9 +14,16 @@ from .rate_limit import is_api_token_limited
 from .serializers import (
     DeviceRegisterSerializer,
     PublicCepLookupSerializer,
+    PublicCnpjLookupSerializer,
     TenantTokenObtainPairSerializer,
 )
 from .services_cep import CepLookupError, CepNotFoundError, lookup_cep_via_viacep
+from .services_cnpj import (
+    CnpjLookupError,
+    CnpjLookupTimeoutError,
+    CnpjNotFoundError,
+    lookup_cnpj_via_cnpja_open,
+)
 
 
 class TenantTokenObtainPairView(TokenObtainPairView):
@@ -110,3 +117,50 @@ class PublicCepLookupView(APIView):
             )
 
         return Response({"ok": True, "data": result}, status=status.HTTP_200_OK)
+
+
+class PublicCnpjLookupView(APIView):
+    """Consulta pública de CNPJ com fallback manual no onboarding."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        serializer = PublicCnpjLookupSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        cnpj = serializer.validated_data["cnpj"]
+
+        try:
+            result = lookup_cnpj_via_cnpja_open(cnpj=cnpj)
+        except CnpjNotFoundError:
+            return Response(
+                {
+                    "ok": False,
+                    "error": "CNPJ não encontrado. Preencha os dados manualmente.",
+                    "code": "cnpj_not_found",
+                    "manual_fallback": True,
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except CnpjLookupTimeoutError:
+            return Response(
+                {
+                    "ok": False,
+                    "error": "Consulta de CNPJ demorou além do esperado. Preencha os dados manualmente.",
+                    "code": "provider_timeout",
+                    "manual_fallback": True,
+                },
+                status=status.HTTP_504_GATEWAY_TIMEOUT,
+            )
+        except CnpjLookupError:
+            return Response(
+                {
+                    "ok": False,
+                    "error": "Serviço de CNPJ indisponível no momento. Preencha os dados manualmente.",
+                    "code": "provider_unavailable",
+                    "manual_fallback": True,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response({"ok": True, **result}, status=status.HTTP_200_OK)

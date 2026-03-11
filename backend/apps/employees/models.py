@@ -2,6 +2,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 from core.mixins import TenantModelMixin
+
 from .journey_config import normalize_config_for_tipo
 
 DIGITS_11_VALIDATOR = RegexValidator(

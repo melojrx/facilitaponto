@@ -3,8 +3,8 @@
 from django.urls import path
 
 from .web_views import (
-    company_view,
     company_edit_view,
+    company_view,
     create_company_view,
     create_journey_view,
     delete_journey_view,
