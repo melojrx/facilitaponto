@@ -1,10 +1,24 @@
 # DEV-008 — Especificação da Tela `Nova Jornada de Trabalho`
-**Versão:** 1.1  
-**Data:** 2026-03-08  
+**Versão:** 1.2  
+**Data:** 2026-03-11  
 **Contexto:** onboarding pós-cadastro de empresa (etapa `Criar jornada`)  
 **Referências:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/DEV_ROADMAP.md`, mock visual aprovado
 
 ---
+
+## Papel deste documento
+
+- Este arquivo descreve a especificação funcional/visual da tela `Nova Jornada de Trabalho`.
+- O acompanhamento de implementação e pendências fica em `docs/DEV_008_CHECKLIST.md`.
+- O status macro do bloco e suas dependências ficam em `docs/DEV_008_ONBOARDING_MODELAGEM.md`.
+
+## Status de implementação (2026-03-11)
+
+- A tela está entregue no núcleo funcional do onboarding.
+- Permanecem fora do aceite fechado do `DEV-008`:
+  - aderência visual final `1:1` com o layout aprovado
+  - catálogo completo de estados de interação e mensagens
+- Este documento deve ser mantido como especificação-alvo, não como controle de sprint.
 
 ## 1. Objetivo da tela
 

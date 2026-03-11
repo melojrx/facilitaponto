@@ -1,6 +1,6 @@
 # DEV-008 — Especificação da Área Tratamento de Ponto
-**Versão:** 1.0  
-**Data:** 2026-03-08  
+**Versão:** 1.1  
+**Data:** 2026-03-11  
 **Contexto:** módulo `Tratamento de Ponto` no painel web (após jornada e colaboradores ativos)  
 **Referências:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/PRD.md`, mocks visuais aprovados
 
@@ -18,6 +18,23 @@ Documentar a área `Tratamento de Ponto` e a tela `Espelho de Ponto` com base na
 Rotas alvo (MVP):
 - `GET /painel/tratamento-ponto/`
 - `GET /painel/tratamento-ponto/espelho/{colaborador_id}/`
+
+---
+
+## Papel deste documento
+
+- Este arquivo é a especificação funcional da área `Tratamento de Ponto`.
+- O status oficial de execução e a ordem da sprint ficam em `docs/DEV_008_CHECKLIST.md`.
+- O enquadramento do módulo na arquitetura do `DEV-008` fica em `docs/DEV_008_ONBOARDING_MODELAGEM.md`.
+
+## Status de implementação (2026-03-11)
+
+- O módulo ainda não foi implementado.
+- Ele entra depois de `Relógios de Ponto`, `Captura facial no painel` e `Envio por WhatsApp`.
+- Dependências funcionais para início:
+  - colaboradores com jornada vinculada
+  - relógios operacionais e colaboradores atribuídos
+  - batidas reais disponíveis para auditoria
 
 ---
 

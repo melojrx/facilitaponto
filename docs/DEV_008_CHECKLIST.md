@@ -1,9 +1,16 @@
 # DEV-008 Checklist (Versionado)
-**Versão:** 2.8  
+**Versão:** 2.9  
 **Data:** 2026-03-11  
 **Escopo:** onboarding conta proprietária + empresa única + liberação progressiva do painel
 
 **Documentos base:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/DEV_008_TELA_NOVA_JORNADA.md`, `docs/DEV_008_AREA_COLABORADORES.md`, `docs/DEV_008_AREA_RELOGIOS_PONTO.md`, `docs/DEV_008_TRATAMENTO_PONTO.md`, `docs/DEV_008_AREA_RELATORIOS.md`, `docs/DEV_008_AREA_SOLICITACOES.md`
+
+## Como manter esta documentação
+- `docs/DEV_008_CHECKLIST.md` é a fonte oficial de acompanhamento de execução, aceite, cortes de escopo e ordem da próxima sprint.
+- `docs/DEV_008_ONBOARDING_MODELAGEM.md` funciona como índice técnico/funcional do bloco `DEV-008`, com arquitetura, etapas e dependências entre módulos.
+- `docs/DEV_008_TELA_NOVA_JORNADA.md` e os arquivos `docs/DEV_008_AREA_*.md` são especificações funcionais de tela/módulo; eles não devem virar checklist paralelo de sprint.
+- `docs/DEV_ROADMAP.md` e `docs/PRODUCT_BACKLOG.md` mantêm apenas o recorte macro de prioridade; o detalhamento operacional permanece neste checklist.
+- Ao concluir ou mover escopo, atualizar primeiro este arquivo e depois refletir o ajuste nos demais documentos.
 
 ## Snapshot de execução (atualizado em 2026-03-11)
 - [x] Landing pública (`/`) implementada com CTAs para `Entrar` e `Começar Agora`
@@ -20,6 +27,8 @@
 - [x] Consulta pública de CNPJ implementada com provider `CNPJá Open`, fallback manual e testes de erro/timeout
 - [x] Painel pós-empresa com modal contextual de `Criar jornada` funcionando de ponta a ponta
 - [x] Teste integrado do fluxo `signup -> login -> painel -> empresa -> jornada -> logout`
+- [x] Módulo `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica
+- [x] Sequência oficial do próximo bloco registrada: `Relógios de Ponto -> Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`
 
 ## 1) Premissas obrigatórias
 - [x] Regra 1:1 preservada: `1 owner -> 1 empresa -> 1 tenant`
@@ -69,13 +78,13 @@
 
 ## 5) Módulo Colaboradores (`/painel/colaboradores`)
 - [ ] Tela de listagem 1:1 com filtros por nome/CPF/PIS, turno, abas `Ativos`, `Inativos`, `Transferidos` e estado vazio
-- [ ] Após cadastro, colaborador aparece na listagem com `Ativos (N)` atualizado, `Status = Ativo`, `Face = Pendente` (quando aplicável) e paginação coerente
-- [ ] CTA `Novo Colaborador` abre formulário completo em seções (`Dados Básicos`, `Informações de Trabalho`, `Jornada de Trabalho`, `Reconhecimento Facial`)
-- [ ] Regras obrigatórias de domínio aplicadas: `CPF` único por tenant, `PIS` válido para operação legal, nome obrigatório
-- [ ] Vínculo de jornada no colaborador respeita semântica dos tipos de jornada
+- [x] Após cadastro, colaborador aparece na listagem com `Ativos (N)` atualizado, `Status = Ativo`, `Face = Pendente` (quando aplicável) e paginação coerente
+- [x] CTA `Novo Colaborador` abre formulário completo em seções (`Dados Básicos`, `Informações de Trabalho`, `Jornada de Trabalho`, `Reconhecimento Facial`)
+- [x] Regras obrigatórias de domínio aplicadas: `CPF` único por tenant, `PIS` válido para operação legal, nome obrigatório
+- [x] Vínculo de jornada no colaborador respeita semântica dos tipos de jornada
 - [ ] Ao selecionar template de jornada (ex.: `Jornada Integral`), o card de tipo correspondente (ex.: `Semanal`) fica ativo e a seção expande com bloco explicativo
 - [ ] Em `Personalizado (entrada manual)`, exibir estado inicial de seleção de tipo e expandir conforme card escolhido
-- [ ] Fluxo de biometria permite captura imediata e fluxo posterior com rastreabilidade de consentimento/enroll
+- [x] Fluxo de biometria permite captura imediata e fluxo posterior com rastreabilidade de consentimento/enroll
 - [ ] Modal `Captura de Reconhecimento Facial` implementado com prévia, recaptura e consentimento obrigatório para confirmar
 - [ ] Fluxo de envio de link de auto-cadastro facial por WhatsApp implementado com token expirável e uso único
 - [ ] Antes do envio por WhatsApp, exibir modal de confirmação com telefone do colaborador e ações `Cancelar`/`Enviar`
@@ -189,8 +198,34 @@ pytest apps/ -k "onboarding or accounts or tenants or journeys"
   - testes integrados e testes de integrações externas
 - [x] Itens removidos do bloco de aceite do `DEV-008` e transferidos para a próxima sprint:
   - refinamento visual final da stack/tela de jornada ainda não fechado nos itens pendentes das seções `1` e `4`
-  - módulo `Colaboradores` (seção `5`)
   - módulo `Relógios de Ponto` (seção `6`)
   - módulo `Tratamento de Ponto` (seção `7`)
   - módulo `Relatórios` (seção `8`)
   - módulo `Solicitações` (seção `9`)
+
+## 15) Encerramento do bloco Colaboradores (2026-03-11)
+- [x] Cadastro operacional real do colaborador implementado com vínculo explícito à jornada
+- [x] Listagem web com busca por `nome/CPF/PIS`, filtro por jornada, abas de status e paginação simples
+- [x] Edição e ativação/inativação de colaborador funcionando no painel
+- [x] Estado biométrico do colaborador com rastreabilidade básica de consentimento e enroll
+- [x] Smoke da área validado com testes web + model/service + `biometrics` + `attendance`
+- [x] Itens fora desta sprint e movidos para o próximo bloco funcional:
+  - modal `Capturar Foto Facial`
+  - envio de link de auto-cadastro facial por WhatsApp
+  - jornada individual `Personalizado (entrada manual)` no cadastro
+  - semântica completa da aba `Transferidos`
+  - ação rápida de WhatsApp na coluna `Ações`
+
+## 16) Sequência oficial do próximo bloco funcional
+- [x] Ordem oficial de execução definida para evitar sobreposição e regressão:
+  - `1. Relógios de Ponto`
+  - `2. Captura facial no painel`
+  - `3. Envio por WhatsApp`
+  - `4. Tratamento de Ponto`
+  - `5. Relatórios`
+  - `6. Solicitações`
+- [x] Justificativa operacional registrada:
+  - `Relógios de Ponto` fecha o uso real do colaborador no contexto da batida.
+  - `Captura facial no painel` entra depois de colaborador + jornada + contexto operacional já consolidados.
+  - `Envio por WhatsApp` fica como canal remoto complementar, não como base do fluxo biométrico.
+  - `Tratamento`, `Relatórios` e `Solicitações` dependem de dados operacionais já produzidos pelos blocos anteriores.

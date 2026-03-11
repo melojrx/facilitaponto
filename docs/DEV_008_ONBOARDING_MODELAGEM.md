@@ -1,6 +1,6 @@
 # DEV-008 — Onboarding e Modelagem do Painel
-**Versão:** 1.8  
-**Data:** 2026-03-09  
+**Versão:** 1.9  
+**Data:** 2026-03-11  
 **Referências:** PB-006, PB-100, `docs/PRD.md`, `docs/PRODUCT_BACKLOG.md`, `docs/DEV_ROADMAP.md`
 **Anexos de UI:**
 - `docs/DEV_008_TELA_NOVA_JORNADA.md` (especificação 1:1 da tela de cadastro de jornada)
@@ -11,6 +11,26 @@
 - `docs/DEV_008_AREA_SOLICITACOES.md` (especificação da área de solicitações e decisões)
 
 ---
+
+## Papel deste documento
+
+- Este arquivo é o índice técnico/funcional do `DEV-008`.
+- Ele descreve a arquitetura do onboarding, a liberação progressiva do painel e a dependência entre módulos.
+- O acompanhamento de execução, aceite e corte de escopo fica em `docs/DEV_008_CHECKLIST.md`.
+- As regras detalhadas de interface/módulo vivem nos anexos específicos (`jornada`, `colaboradores`, `relógios`, `tratamento`, `relatórios`, `solicitações`).
+
+## Snapshot de implementação (2026-03-11)
+
+- `DEV-008` está encerrado para aceite funcional no onboarding.
+- `Colaboradores` está entregue no núcleo funcional do painel web.
+- O próximo bloco operacional segue a ordem oficial:
+  - `1. Relógios de Ponto`
+  - `2. Captura facial no painel`
+  - `3. Envio por WhatsApp`
+  - `4. Tratamento de Ponto`
+  - `5. Relatórios`
+  - `6. Solicitações`
+- A fonte oficial desta ordem e do status detalhado permanece em `docs/DEV_008_CHECKLIST.md`.
 
 ## 1. Objetivo do DEV-008
 
@@ -240,9 +260,9 @@ Observação: manter modelagem simples (sem motor de workflow); transições dis
 - `GET|POST /painel/jornadas/{id}/editar/`
 - `POST /painel/jornadas/{id}/excluir/`
 
-### Status de implementação (snapshot real em 2026-03-09)
+### Status de implementação (snapshot real em 2026-03-11)
 
-Implementado até o momento:
+Entregue no núcleo funcional:
 - Landing pública em `GET /` e autenticação web com sessões:
   - `GET|POST /cadastro/`
   - `GET|POST /login/`
@@ -264,12 +284,33 @@ Implementado até o momento:
 - Fluxo de exclusão com modal explicativo de consequências, confirmação explícita e desabilitação preventiva da ação quando há vínculos detectados na listagem.
 - Persistência completa de `WorkSchedule.configuracao` com validação forte por tipo (ordem/sobreposição de períodos, regras de `12x36`, bloqueio de horários em `EXTERNA`).
 - Endpoint público de CEP via ViaCEP com fallback manual (`GET /api/public/cep/`).
+- Endpoint público de CNPJ com provider `CNPJá Open` e fallback manual (`GET /api/public/cnpj/`).
 - Resolução de tenant unificada entre web/API e rate limit nas rotas públicas de autenticação.
+- Fluxo visual pós-empresa com modal contextual para `Criar jornada`.
+- Teste integrado `signup -> login -> painel -> empresa -> jornada -> logout`.
+- Módulo `Colaboradores` entregue no núcleo funcional:
+  - modelagem operacional com vínculo explícito à jornada
+  - listagem com filtros/abas
+  - cadastro e edição
+  - ativação/inativação
+  - rastreabilidade biométrica básica
 
-Pendente para fechar escopo completo do DEV-008:
-- Serviço dedicado `OnboardingProgressService` para centralizar cálculo de progresso/stepper.
-- Endpoint de consulta CNPJ (CNPJá Open) com fallback manual.
-- Implementação das áreas operacionais pós-onboarding: `Colaboradores`, `Relógio Digital`, `Tratamento de Ponto`, `Relatórios`, `Solicitações`.
+Itens pendentes após o encerramento do `DEV-008`:
+- refinamento visual final da tela de jornada e catálogo completo de estados/mensagens
+- acabamentos remanescentes de `Colaboradores`:
+  - captura facial no painel
+  - envio por WhatsApp
+  - jornada individual `Personalizado (entrada manual)`
+  - semântica completa de `Transferidos`
+- módulos pós-onboarding ainda não implementados:
+  - `Relógios de Ponto`
+  - `Tratamento de Ponto`
+  - `Relatórios`
+  - `Solicitações`
+
+Observação de governança:
+- o detalhamento de aceite e a movimentação desse escopo são mantidos em `docs/DEV_008_CHECKLIST.md`;
+- este documento deve permanecer estável como mapa técnico do bloco, sem duplicar controle fino de sprint.
 
 ---
 

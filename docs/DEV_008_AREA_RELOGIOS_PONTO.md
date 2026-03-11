@@ -1,6 +1,6 @@
 # DEV-008 — Especificação da Área Relógios de Ponto
-**Versão:** 1.5  
-**Data:** 2026-03-08  
+**Versão:** 1.6  
+**Data:** 2026-03-11  
 **Contexto:** módulo `Relógio Digital` no painel web (após liberação do onboarding)  
 **Referências:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/PRD.md`, mocks visuais aprovados
 
@@ -21,6 +21,21 @@ Rotas alvo (MVP):
 - `GET /painel/relogios/{id}/`
 
 ---
+
+## Papel deste documento
+
+- Este arquivo é a especificação funcional da área `Relógios de Ponto`.
+- O status oficial de execução e a ordem da sprint ficam em `docs/DEV_008_CHECKLIST.md`.
+- O enquadramento do módulo na arquitetura do `DEV-008` fica em `docs/DEV_008_ONBOARDING_MODELAGEM.md`.
+
+## Status de implementação (2026-03-11)
+
+- O módulo ainda não foi implementado no painel web/admin.
+- Este é o `primeiro item oficial` do próximo bloco funcional após `Colaboradores`.
+- Dependências já atendidas para iniciar:
+  - onboarding concluído
+  - jornada inicial existente
+  - cadastro operacional de colaboradores disponível
 
 ## 2. Semântica negocial
 

@@ -1,6 +1,6 @@
 # DEV-008 — Especificação da Área Relatórios
-**Versão:** 1.0  
-**Data:** 2026-03-08  
+**Versão:** 1.1  
+**Data:** 2026-03-11  
 **Contexto:** módulo `Relatórios` no painel web  
 **Referências:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/PRD.md`, mocks visuais aprovados
 
@@ -20,6 +20,20 @@ Rotas alvo (MVP):
 - `GET /painel/relatorios/espelho-ponto/`
 - `GET /painel/relatorios/cartao-ponto/`
 - `GET /painel/relatorios/detalhes-calculos/`
+
+---
+
+## Papel deste documento
+
+- Este arquivo é a especificação funcional da área `Relatórios`.
+- O status oficial de execução e a ordem da sprint ficam em `docs/DEV_008_CHECKLIST.md`.
+- O enquadramento do módulo na arquitetura do `DEV-008` fica em `docs/DEV_008_ONBOARDING_MODELAGEM.md`.
+
+## Status de implementação (2026-03-11)
+
+- O módulo ainda não foi implementado.
+- Ele entra após `Tratamento de Ponto`, porque depende de dados operacionais e de cálculo já consolidados.
+- Este documento deve permanecer como especificação de comportamento e saída, não como checklist de sprint.
 
 ---
 

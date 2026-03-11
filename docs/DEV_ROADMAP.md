@@ -1,5 +1,5 @@
 # Roadmap de Desenvolvimento — Sistema de Ponto Eletrônico
-**Versão:** 2.2  
+**Versão:** 2.3  
 **Data:** 2026-03-11  
 **Prazo MVP:** 8 semanas  
 **Stack:** Django 5 + DRF + React Native (Expo) + PostgreSQL + Redis + Celery  
@@ -20,7 +20,9 @@ O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seg
 - Backend concluído até **DEV-007** (biometria, registro de ponto, sync offline backend, comprovante eletrônico).
 - Upload de foto de batida já em **storage S3/MinIO** com `foto_hash` para auditoria.
 - **DEV-008** fechado no núcleo funcional: onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`, painel com liberação progressiva, jornada e testes integrados.
-- Próxima sprint: módulos web/admin `Colaboradores`, `Relógios de Ponto`, `Tratamento de Ponto`, `Relatórios` e `Solicitações`.
+- Bloco `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica.
+- Próxima sprint: execução na ordem `Relógios de Ponto -> Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
+- `docs/DEV_008_CHECKLIST.md` passa a ser a fonte oficial do acompanhamento detalhado e do corte de escopo do bloco.
 - Frente mobile (**DEV-010 a DEV-013**) permanece no roadmap, mas entra após estabilização do painel web/admin.
 
 ---
