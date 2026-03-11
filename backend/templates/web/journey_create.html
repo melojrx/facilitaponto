@@ -75,6 +75,44 @@
   .field input.invalid,
   .field textarea.invalid { border-color: var(--danger); }
   .field-error { margin-top: 5px; font-size: 12px; color: var(--danger); }
+  .field-hint { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .error-summary {
+    margin: 0 0 16px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .error-summary strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .error-summary ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .pristine-helper {
+    margin-top: 16px;
+    border: 1px dashed #bfdbfe;
+    border-radius: 12px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, #f8fbff 0%, #eff6ff 100%);
+    color: #334155;
+  }
+  .pristine-helper.hidden { display: none; }
+  .pristine-helper-title {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+  .pristine-helper p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
 
   /* ===== Tipo de Jornada ===== */
   .tipo-section-label {
@@ -220,6 +258,62 @@
     font-size: 12px;
     color: var(--muted);
   }
+  .journey-detail-card {
+    margin-bottom: 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #f8fbff;
+    padding: 14px 16px;
+  }
+  .journey-detail-card h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #1e3a8a;
+  }
+  .journey-detail-card p {
+    margin: 0;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+  }
+  .faq-card {
+    margin-bottom: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .faq-card summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .faq-card summary::-webkit-details-marker { display: none; }
+  .faq-card summary::after {
+    content: '+';
+    color: var(--brand);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .faq-card[open] summary::after { content: '-'; }
+  .faq-card-body {
+    padding: 0 16px 16px;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .faq-card-body ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .faq-card-body li + li { margin-top: 6px; }
   .config-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -366,6 +460,31 @@
   }
   .weekly-total {
     margin-top: 12px;
+  }
+  .weekly-overview {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .weekly-overview-copy {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+    max-width: 560px;
+  }
+  .weekly-toggle-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 12px;
+    font-weight: 600;
   }
   .weekly-total input[readonly] {
     background: #f1f5f9;
@@ -585,6 +704,11 @@
     gap: 10px;
     margin-top: 6px;
   }
+  .journey-actions .btn[disabled],
+  .journey-actions .btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+  }
   .btn-lg { padding: 11px 22px; font-size: 15px; }
 {% endblock %}
 
@@ -602,6 +726,21 @@
   <form method="post" action="{{ form_action_url }}" id="journey-form" novalidate class="journey-form">
     {% csrf_token %}
 
+    {% if form.non_field_errors or form.nome.errors or form.descricao.errors or form.tipo.errors or form.semanal_subtipo.errors or form.semanal_dias_json.errors or form.fracionada_dias_json.errors %}
+      <div class="error-summary" role="alert">
+        <strong>Revise os campos obrigatórios antes de salvar.</strong>
+        <ul>
+          {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+          {% for error in form.nome.errors %}<li>{{ error }}</li>{% endfor %}
+          {% for error in form.descricao.errors %}<li>{{ error }}</li>{% endfor %}
+          {% for error in form.tipo.errors %}<li>{{ error }}</li>{% endfor %}
+          {% for error in form.semanal_subtipo.errors %}<li>{{ error }}</li>{% endfor %}
+          {% for error in form.semanal_dias_json.errors %}<li>{{ error }}</li>{% endfor %}
+          {% for error in form.fracionada_dias_json.errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
     <div class="form-card">
       <div class="form-card-heading">
         <h2>{% if is_edit_mode %}Editar Jornada de Trabalho{% else %}Nova Jornada de Trabalho{% endif %}</h2>
@@ -616,11 +755,12 @@
           id="id_nome"
           name="nome"
           maxlength="80"
-          placeholder="Jornada Integral"
+          placeholder="Ex: Jornada Padrão 44h"
           value="{{ form.nome.value|default:'' }}"
           class="{% if form.nome.errors %}invalid{% endif %}"
           autocomplete="off"
         >
+        <p class="field-hint">Use um nome claro para identificar o template no cadastro de colaboradores.</p>
         {% for error in form.nome.errors %}
           <p class="field-error" role="alert">{{ error }}</p>
         {% endfor %}
@@ -733,8 +873,21 @@
         </div>
 
         <div class="config-block" id="config-semanal">
-          <h3 class="config-title">Configuração Semanal (semântica completa)</h3>
-          <p class="config-help">Selecione um modelo, preencha horários por dia e acompanhe a carga semanal calculada automaticamente.</p>
+          <div class="journey-detail-card">
+            <h4>Jornada de Trabalho</h4>
+            <p>Escolha um atalho para começar rápido ou personalize a grade semanal. O sistema usa essa configuração para validar a rotina esperada do colaborador.</p>
+          </div>
+
+          <details class="faq-card">
+            <summary>Dúvidas comuns</summary>
+            <div class="faq-card-body">
+              <ul>
+                <li>Use <strong>Integral 44h</strong> quando houver expediente de segunda a sábado com intervalo padrão.</li>
+                <li>Use <strong>Comercial 40h</strong> para operações de segunda a sexta com 8 horas diárias.</li>
+                <li>Se a escala variar por dia, escolha <strong>Personalizar</strong> e ajuste manualmente.</li>
+              </ul>
+            </div>
+          </details>
 
           <input type="hidden" id="id_semanal_subtipo" name="semanal_subtipo" value="{{ form.semanal_subtipo.value|default:'PERSONALIZAR' }}">
           <textarea id="id_semanal_dias_json" name="semanal_dias_json" hidden>{{ form.semanal_dias_json.value|default:'' }}</textarea>
@@ -749,8 +902,9 @@
             </div>
           </div>
 
-          <div class="field">
-            <label class="checkbox-inline">
+          <div class="weekly-overview">
+            <div class="weekly-overview-copy">Preencha os horários esperados por dia da semana. Marque DSR quando não houver expediente e use “Sem intervalo” quando a jornada for corrida.</div>
+            <label class="weekly-toggle-pill">
               <input type="checkbox" id="id_semanal_intervalo_reduzido" name="semanal_intervalo_reduzido" value="1" {% if form.semanal_intervalo_reduzido.value %}checked{% endif %}>
               Intervalo reduzido por convenção coletiva
             </label>
@@ -787,8 +941,20 @@
         </div>
 
         <div class="config-block" id="config-12x36">
-          <h3 class="config-title">Configuração 12x36</h3>
-          <p class="config-help">Informe base da escala para geração da alternância 12 horas de trabalho e 36 de descanso.</p>
+          <div class="journey-detail-card">
+            <h4>Jornada de Trabalho</h4>
+            <p>Informe a data inicial e o horário base. A escala será gerada alternando automaticamente dias de trabalho e folga.</p>
+          </div>
+
+          <details class="faq-card">
+            <summary>Dúvidas comuns</summary>
+            <div class="faq-card-body">
+              <ul>
+                <li>O dia base informado vira o primeiro <strong>dia de trabalho</strong> do ciclo.</li>
+                <li>O sistema projeta uma janela contínua de 12 horas e intercala 36 horas de descanso.</li>
+              </ul>
+            </div>
+          </details>
           <div class="config-grid-2">
             <div class="field">
               <label for="id_x12x36_data_inicio_escala">Data de início da escala</label>
@@ -841,8 +1007,20 @@
         </div>
 
         <div class="config-block" id="config-fracionada">
-          <h3 class="config-title">Configuração Fracionada (semântica completa)</h3>
-          <p class="config-help">Configure múltiplos períodos por dia. Exemplo: 06:30-07:30, 11:30-12:30, 16:30-17:30.</p>
+          <div class="journey-detail-card">
+            <h4>Jornada de Trabalho</h4>
+            <p>Configure múltiplos períodos por dia quando a operação exigir pausas longas ou turnos distribuídos ao longo do expediente.</p>
+          </div>
+
+          <details class="faq-card">
+            <summary>Dúvidas comuns</summary>
+            <div class="faq-card-body">
+              <ul>
+                <li>Use este modelo quando o colaborador trabalhar em mais de um bloco no mesmo dia.</li>
+                <li>A ação <strong>Copiar horários para os demais dias</strong> replica a grade do dia selecionado.</li>
+              </ul>
+            </div>
+          </details>
 
           <div class="config-grid-2">
             <div class="field">
@@ -912,12 +1090,17 @@
           <p class="field-error" role="alert">{{ error }}</p>
         {% endfor %}
 
+        <div class="pristine-helper {% if form.tipo.value %}hidden{% endif %}" id="pristine-helper">
+          <div class="pristine-helper-title">Selecione o tipo de jornada para continuar</div>
+          <p>A jornada define os horários esperados do colaborador e permite que o sistema calcule atrasos, horas extras, banco de horas e pendências operacionais.</p>
+        </div>
+
       </div>{# /tipo field #}
     </div>{# /form-card #}
 
     <div class="journey-actions">
-      <a class="btn btn-lg" href="{% url 'web:jornadas' %}">Cancelar</a>
-      <button type="submit" class="btn btn-primary btn-lg" id="btn-salvar">{% if is_edit_mode %}Salvar Alterações{% else %}Salvar Jornada{% endif %}</button>
+      <a class="btn btn-lg" href="{% url 'web:jornadas' %}" id="btn-cancelar">Cancelar</a>
+      <button type="submit" class="btn btn-primary btn-lg" id="btn-salvar" {% if not is_edit_mode and not form.nome.value and not form.tipo.value %}disabled{% endif %}>{% if is_edit_mode %}Salvar Alterações{% else %}Salvar Jornada{% endif %}</button>
     </div>
 
   </form>
@@ -933,6 +1116,7 @@
     EXTERNA:    null,
   };
   var panel = document.getElementById('system-benefits-panel');
+  var pristineHelper = document.getElementById('pristine-helper');
   var configMap = {
     SEMANAL: document.getElementById('config-semanal'),
     '12X36': document.getElementById('config-12x36'),
@@ -950,6 +1134,9 @@
     } else {
       panel.classList.remove('visible');
     }
+    if (pristineHelper) {
+      pristineHelper.classList.toggle('hidden', Boolean(value));
+    }
   }
 
   function showConfig(value) {
@@ -963,11 +1150,23 @@
   function applySelection(value) {
     showBenefits(value);
     showConfig(value);
+    syncSubmitState();
+  }
+
+  function syncSubmitState() {
+    var nameInput = document.getElementById('id_nome');
+    var checkedType = document.querySelector('.tipo-card input[type="radio"]:checked');
+    var submitBtn = document.getElementById('btn-salvar');
+    if (!submitBtn) return;
+    var hasName = Boolean(nameInput && (nameInput.value || '').trim().length >= 3);
+    var hasType = Boolean(checkedType && checkedType.value);
+    submitBtn.disabled = !(hasName && hasType);
   }
 
   // Inicializar com valor já selecionado (reexibição de erro)
   var checked = document.querySelector('.tipo-card input[type="radio"]:checked');
   if (checked) applySelection(checked.value);
+  else syncSubmitState();
 
   // Listener nos radio cards
   document.querySelectorAll('.tipo-card input[type="radio"]').forEach(function (radio) {
@@ -990,6 +1189,12 @@
       }
     });
   });
+
+  var journeyNameInput = document.getElementById('id_nome');
+  if (journeyNameInput) {
+    journeyNameInput.addEventListener('input', syncSubmitState);
+    journeyNameInput.addEventListener('blur', syncSubmitState);
+  }
 
   var WEEK_DAYS = [
     { key: 'SEGUNDA', label: 'Segunda-feira' },
@@ -1644,8 +1849,15 @@
     syncWeeklyJson();
     syncFracionadaJson();
     var btn = document.getElementById('btn-salvar');
+    var cancelBtn = document.getElementById('btn-cancelar');
     btn.disabled = true;
     btn.textContent = 'Salvando…';
+    if (cancelBtn) {
+      cancelBtn.classList.add('disabled');
+      cancelBtn.setAttribute('aria-disabled', 'true');
+      cancelBtn.style.pointerEvents = 'none';
+      cancelBtn.style.opacity = '0.6';
+    }
   });
 })();
 </script>

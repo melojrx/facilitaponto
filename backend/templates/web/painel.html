@@ -51,6 +51,114 @@
   .helper-card {
     max-width: 520px;
   }
+  .helper-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .helper-note {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .journey-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.44);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+    padding: 20px;
+  }
+  .journey-modal-backdrop.open {
+    display: flex;
+  }
+  .journey-modal {
+    width: min(560px, 100%);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+  }
+  .journey-modal-hero {
+    padding: 22px 24px 18px;
+    background:
+      radial-gradient(circle at top right, rgba(29, 78, 216, 0.16), transparent 42%),
+      linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+    border-bottom: 1px solid #dbeafe;
+  }
+  .journey-modal-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.8);
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+  }
+  .journey-modal h3 {
+    margin: 14px 0 8px;
+    font-size: 26px;
+    line-height: 1.1;
+    color: #0f172a;
+  }
+  .journey-modal p {
+    margin: 0;
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .journey-modal-body {
+    padding: 20px 24px 24px;
+  }
+  .journey-modal-checklist {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+  }
+  .journey-modal-checklist li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 14px;
+    color: #334155;
+  }
+  .journey-modal-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: var(--brand);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .journey-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 640px) {
+    .journey-modal-actions {
+      flex-direction: column-reverse;
+    }
+    .journey-modal-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 {% endblock %}
 
 {% block panel_content %}
@@ -71,10 +179,35 @@
         Empresa cadastrada: <strong>{{ company_name }}</strong>.<br>
         Agora crie a primeira jornada de trabalho para liberar os demais módulos.
       </p>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="helper-actions">
+        <button type="button" class="btn" id="open-journey-modal">Ver próximo passo</button>
         <a class="btn btn-primary" href="{% url 'web:journey_create' %}">Criar jornada</a>
       </div>
+      <p class="helper-note">
+        Assim que a primeira jornada for criada, o menu libera Colaboradores, Relógio Digital, Tratamento de Ponto, Relatórios e Solicitações.
+      </p>
     </section>
+
+    <div class="journey-modal-backdrop open" id="journey-modal-backdrop" aria-hidden="false">
+      <div class="journey-modal" role="dialog" aria-modal="true" aria-labelledby="journey-modal-title">
+        <div class="journey-modal-hero">
+          <div class="journey-modal-kicker">Onboarding em andamento</div>
+          <h3 id="journey-modal-title">Crie a primeira jornada para liberar o painel</h3>
+          <p>A empresa <strong>{{ company_name }}</strong> já foi cadastrada. Agora o sistema precisa de uma jornada inicial para ativar os módulos operacionais.</p>
+        </div>
+        <div class="journey-modal-body">
+          <ul class="journey-modal-checklist">
+            <li><span class="journey-modal-check">1</span><span><strong>Defina o tipo da jornada</strong> para refletir a operação real da empresa.</span></li>
+            <li><span class="journey-modal-check">2</span><span><strong>Configure os horários esperados</strong> e deixe a base pronta para colaboradores e tratamento de ponto.</span></li>
+            <li><span class="journey-modal-check">3</span><span><strong>Conclua o onboarding</strong> liberando o restante do menu do painel.</span></li>
+          </ul>
+          <div class="journey-modal-actions">
+            <button type="button" class="btn" id="close-journey-modal">Agora não</button>
+            <a class="btn btn-primary" href="{% url 'web:journey_create' %}">Criar jornada</a>
+          </div>
+        </div>
+      </div>
+    </div>
   {% endif %}
 
   <section class="card pending-card">
@@ -90,4 +223,38 @@
       <p>Nenhuma pendência</p>
     </div>
   </section>
+{% endblock %}
+
+{% block panel_scripts %}
+<script>
+(function () {
+  var backdrop = document.getElementById('journey-modal-backdrop');
+  if (!backdrop) return;
+
+  function closeModal() {
+    backdrop.classList.remove('open');
+    backdrop.setAttribute('aria-hidden', 'true');
+  }
+
+  function openModal() {
+    backdrop.classList.add('open');
+    backdrop.setAttribute('aria-hidden', 'false');
+  }
+
+  var openButton = document.getElementById('open-journey-modal');
+  var closeButton = document.getElementById('close-journey-modal');
+  if (openButton) openButton.addEventListener('click', openModal);
+  if (closeButton) closeButton.addEventListener('click', closeModal);
+
+  backdrop.addEventListener('click', function (event) {
+    if (event.target === backdrop) closeModal();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && backdrop.classList.contains('open')) {
+      closeModal();
+    }
+  });
+})();
+</script>
 {% endblock %}

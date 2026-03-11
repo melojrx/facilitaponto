@@ -194,6 +194,136 @@ class TestLoginLogoutFlow:
 
 
 @pytest.mark.django_db
+class TestDev008EndToEndFlow:
+    def test_fluxo_completo_signup_login_painel_empresa_jornada_logout(self, client):
+        signup_response = client.post(
+            "/cadastro/",
+            data={
+                "first_name": "Joao",
+                "last_name": "Silva",
+                "email": "owner-e2e@acme.com",
+                "cpf": "39053344705",
+                "phone": "85999998888",
+                "password1": "SenhaForte123!",
+                "password2": "SenhaForte123!",
+            },
+            follow=False,
+        )
+
+        assert signup_response.status_code == 302
+        assert signup_response.url == "/painel/"
+
+        painel_inicial = client.get("/painel/")
+        painel_inicial_content = painel_inicial.content.decode()
+        assert painel_inicial.status_code == 200
+        assert "Crie sua primeira empresa" in painel_inicial_content
+        assert re.search(r'data-menu-key="empresa"[\s\S]*?data-menu-state="enabled"', painel_inicial_content)
+        assert re.search(r'data-menu-key="jornadas"[\s\S]*?data-menu-state="locked"', painel_inicial_content)
+
+        logout_signup = client.post("/logout/", follow=False)
+        assert logout_signup.status_code == 302
+        assert logout_signup.url == "/"
+
+        login_response = client.post(
+            "/login/",
+            data={"email": "owner-e2e@acme.com", "password": "SenhaForte123!"},
+            follow=False,
+        )
+        assert login_response.status_code == 302
+        assert login_response.url == "/painel/"
+
+        company_response = client.post(
+            "/painel/empresa/nova/",
+            data={
+                "tipo_pessoa": "PJ",
+                "documento": "50529647000183",
+                "razao_social": "Acme LTDA",
+                "nome_fantasia": "Acme",
+                "email_contato": "contato@acme.com",
+                "telefone_contato": "85999998888",
+                "cep": "60711-165",
+                "logradouro": "Rua das Flores",
+                "numero": "100",
+                "complemento": "Sala 1",
+                "bairro": "Centro",
+                "cidade": "Fortaleza",
+                "estado": "CE",
+                "responsavel_nome": "Joao Silva",
+                "responsavel_cpf": "39053344705",
+                "responsavel_cargo": "Diretor",
+                "cno_caepf": "",
+                "inscricao_estadual": "12345",
+                "inscricao_municipal": "54321",
+            },
+            follow=False,
+        )
+
+        assert company_response.status_code == 302
+        assert company_response.url == "/painel/"
+
+        owner = User.objects.get(email="owner-e2e@acme.com")
+        owner.refresh_from_db()
+        assert owner.tenant_id is not None
+        assert owner.tenant.documento == "50529647000183"
+        assert owner.tenant.onboarding_step == 2
+
+        painel_empresa = client.get("/painel/")
+        painel_empresa_content = painel_empresa.content.decode()
+        assert painel_empresa.status_code == 200
+        assert "Criar horário da equipe" in painel_empresa_content
+        assert "Crie a primeira jornada para liberar o painel" in painel_empresa_content
+        assert 'id="journey-modal-backdrop"' in painel_empresa_content
+        assert re.search(r'data-menu-key="jornadas"[\s\S]*?data-menu-state="enabled"', painel_empresa_content)
+        assert re.search(r'data-menu-key="colaboradores"[\s\S]*?data-menu-state="locked"', painel_empresa_content)
+
+        jornada_response = client.post(
+            "/painel/jornadas/nova/",
+            data={
+                "nome": "Jornada Inicial",
+                "descricao": "Fluxo E2E",
+                "tipo": "SEMANAL",
+                "semanal_subtipo": "COMERCIAL_40H",
+                "semanal_dias_json": json.dumps(
+                    [
+                        {
+                            "dia_semana": "SEGUNDA",
+                            "dsr": False,
+                            "entrada_1": "08:00",
+                            "saida_1": "12:00",
+                            "entrada_2": "13:00",
+                            "saida_2": "17:00",
+                        },
+                        {"dia_semana": "DOMINGO", "dsr": True},
+                    ]
+                ),
+            },
+            follow=False,
+        )
+
+        assert jornada_response.status_code == 302
+        assert jornada_response.url == "/painel/jornadas/"
+
+        owner.refresh_from_db()
+        assert owner.tenant.onboarding_step == 3
+
+        painel_final = client.get("/painel/")
+        painel_final_content = painel_final.content.decode()
+        assert painel_final.status_code == 200
+        assert "Criar horário da equipe" not in painel_final_content
+        assert re.search(r'data-menu-key="colaboradores"[\s\S]*?data-menu-state="enabled"', painel_final_content)
+        assert re.search(r'data-menu-key="relogio_digital"[\s\S]*?data-menu-state="enabled"', painel_final_content)
+        assert re.search(r'data-menu-key="relatorios"[\s\S]*?data-menu-state="enabled"', painel_final_content)
+
+        logout_response = client.post("/logout/", follow=False)
+        assert logout_response.status_code == 302
+        assert logout_response.url == "/"
+
+        painel_pos_logout = client.get("/painel/", follow=False)
+        assert painel_pos_logout.status_code == 302
+        assert painel_pos_logout.url == "/login/?next=/painel/"
+
+
+@pytest.mark.django_db
 class TestCompanyOnboardingFlow:
     def test_company_create_exige_autenticacao(self, client):
         response = client.get("/painel/empresa/nova/")
@@ -471,6 +601,8 @@ class TestPanelMenuRelease:
         assert user.is_account_owner is True
         assert "FacilitaPonto LTDA" in content
         assert "Crie sua primeira empresa" not in content
+        assert "Crie a primeira jornada para liberar o painel" in content
+        assert 'id="journey-modal-backdrop"' in content
 
 
 @pytest.mark.django_db
@@ -562,6 +694,9 @@ class TestJourneyOnboardingFlow:
         assert "12x36" in content
         assert "Fracionada" in content
         assert "Externa" in content
+        assert "Selecione o tipo de jornada para continuar" in content
+        assert "Dúvidas comuns" in content
+        assert 'id="btn-salvar"' in content
 
     def test_lista_jornadas_exibe_jornada_cadastrada(self, client, user):
         from apps.employees.models import WorkSchedule
