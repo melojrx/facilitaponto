@@ -10,7 +10,8 @@
 - 🟡 Parcial: PB-035 com carimbo MVP (`timestamp_carimbo` + `hash_carimbo`); integração TSA RFC 3161 externa permanece como evolução.
 - 🆕 Regra de negócio formalizada: conta proprietária com vínculo **1:1** com empresa (CNPJ/CPF) e isolamento total por tenant.
 - ✅ Bloco `Colaboradores` entregue no núcleo funcional do painel web.
-- 🚧 Próxima sprint: executar na ordem `Relógios de Ponto -> Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
+- ✅ Bloco `Relógios de Ponto` entregue no núcleo funcional web + API.
+- 🚧 Próxima sprint: executar na ordem `Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
 - 📌 A fonte oficial do acompanhamento detalhado desse bloco é `docs/DEV_008_CHECKLIST.md`.
 - 📌 Direção técnica do WhatsApp no MVP: `adapter pluggable` com provider inicial `WAHA`; alternativas futuras documentadas para escala/compliance.
 - ⏭️ Bloco seguinte após estabilização web/admin: PB-020 a PB-028 (app mobile).

@@ -136,15 +136,15 @@
 {% endblock %}
 
 {% block panel_content %}
-  <nav class="breadcrumb" aria-label="Navegação estrutural">
-    <a href="{% url 'web:painel' %}">Início</a>
-    <span class="breadcrumb-sep">›</span>
+  <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
     {% if is_edit_mode %}
-      <a href="{% url 'web:company' %}">Empresa</a>
-      <span class="breadcrumb-sep">›</span>
-      <span aria-current="page">Editar</span>
+      <a class="panel-breadcrumb-link" href="{% url 'web:company' %}">Empresa</a>
+      <span class="panel-breadcrumb-sep">›</span>
+      <span class="panel-breadcrumb-current" aria-current="page">Editar</span>
     {% else %}
-      <span aria-current="page">Criar Empresa</span>
+      <span class="panel-breadcrumb-current" aria-current="page">Criar Empresa</span>
     {% endif %}
   </nav>
 

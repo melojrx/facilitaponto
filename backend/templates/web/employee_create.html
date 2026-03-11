@@ -133,11 +133,13 @@
 {% endblock %}
 
 {% block panel_content %}
-  <div class="employee-breadcrumb">
-    <a href="{% url 'web:painel' %}">Início</a> &gt;
-    <a href="{% url 'web:colaboradores' %}">Colaboradores</a> &gt;
-    <span>{% if is_edit_mode %}Editar Colaborador{% else %}Novo Colaborador{% endif %}</span>
-  </div>
+  <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <a class="panel-breadcrumb-link" href="{% url 'web:colaboradores' %}">Colaboradores</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <span class="panel-breadcrumb-current" aria-current="page">{% if is_edit_mode %}Editar Colaborador{% else %}Novo Colaborador{% endif %}</span>
+  </nav>
 
   <form method="post" action="{{ form_action_url }}" class="employee-form" novalidate>
     {% csrf_token %}

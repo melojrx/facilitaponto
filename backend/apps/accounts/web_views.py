@@ -1,10 +1,13 @@
 """Views web (HTML) para landing e autenticação inicial."""
 
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -12,6 +15,9 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.accounts.validators import only_digits
+from apps.attendance.forms import TimeClockForm
+from apps.attendance.models import TimeClock
+from apps.attendance.services import TimeClockService
 from apps.employees.forms import EmployeeRegistrationForm, WorkScheduleForm
 from apps.employees.models import Employee, WorkSchedule
 from apps.employees.services import EmployeeRegistrationService
@@ -476,6 +482,416 @@ def collaborator_list_view(request):
             ],
             "collaborator_schedule_options": active_schedules,
             "collaborator_is_filtered": bool(collaborator_query or collaborator_schedule_filter or collaborator_tab != "ativos"),
+        },
+    )
+
+
+def _get_time_clock_or_404(*, tenant, time_clock_id):
+    try:
+        return (
+            TimeClock.all_objects.filter(tenant=tenant)
+            .select_related("created_by", "geofence")
+            .annotate(assignments_total=Count("employee_assignments", distinct=True))
+            .get(id=time_clock_id)
+        )
+    except TimeClock.DoesNotExist as exc:
+        raise Http404 from exc
+
+
+def _time_clock_status_class(status):
+    return {
+        TimeClock.Status.ATIVO: "active",
+        TimeClock.Status.INATIVO: "inactive",
+        TimeClock.Status.EM_MANUTENCAO: "maintenance",
+    }[status]
+
+
+def _time_clock_next_redirect(request, *, default_url):
+    return _resolve_next_url(request, default_url)
+
+
+def _clock_employee_initials(employee):
+    parts = [part for part in (employee.nome or "").split() if part]
+    if not parts:
+        return "CL"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return f"{parts[0][:1]}{parts[-1][:1]}".upper()
+
+
+def _serialize_clock_employee(employee):
+    return {
+        "id": employee.id,
+        "nome": employee.nome,
+        "matricula": employee.matricula_interna or "-",
+        "cpf": employee.cpf,
+        "initials": _clock_employee_initials(employee),
+    }
+
+
+def _build_time_clock_assignment_context(*, time_clock, available_search="", assigned_search=""):
+    service = TimeClockService()
+    available_employees = list(
+        service.available_employees_queryset(
+            time_clock=time_clock,
+            search=available_search,
+        )
+    )
+    assigned_employees = list(
+        service.assigned_employees_queryset(
+            time_clock=time_clock,
+            search=assigned_search,
+        )
+    )
+    return {
+        "time_clock_available_search": available_search,
+        "time_clock_assigned_search": assigned_search,
+        "time_clock_available_total": len(available_employees),
+        "time_clock_assigned_total": len(assigned_employees),
+        "time_clock_available_employees": [
+            _serialize_clock_employee(employee) for employee in available_employees
+        ],
+        "time_clock_assigned_employees": [
+            _serialize_clock_employee(employee) for employee in assigned_employees
+        ],
+    }
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET"])
+def time_clock_list_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Relógios de Ponto.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    time_clock_query = (request.GET.get("q") or "").strip()
+    time_clock_status_filter = (request.GET.get("status") or "").strip()
+    time_clock_rep_filter = (request.GET.get("tipo_rep") or "").strip()
+
+    time_clocks_qs = (
+        TimeClock.all_objects.filter(tenant=tenant)
+        .select_related("created_by")
+        .annotate(assignments_total=Count("employee_assignments", distinct=True))
+        .order_by("nome", "created_at")
+    )
+
+    if time_clock_query:
+        time_clocks_qs = time_clocks_qs.filter(
+            Q(nome__icontains=time_clock_query) | Q(descricao__icontains=time_clock_query)
+        )
+
+    if time_clock_status_filter:
+        time_clocks_qs = time_clocks_qs.filter(status=time_clock_status_filter)
+
+    if time_clock_rep_filter:
+        time_clocks_qs = time_clocks_qs.filter(tipo_relogio=time_clock_rep_filter)
+
+    time_clocks = []
+    for time_clock in time_clocks_qs:
+        created_by_name = "-"
+        if time_clock.created_by:
+            created_by_name = (
+                f"{time_clock.created_by.first_name} {time_clock.created_by.last_name}".strip()
+                or time_clock.created_by.email
+            )
+        time_clocks.append(
+            {
+                "id": time_clock.id,
+                "nome": time_clock.nome,
+                "descricao": time_clock.descricao,
+                "status": time_clock.status,
+                "status_label": time_clock.get_status_display(),
+                "status_class": {
+                    TimeClock.Status.ATIVO: "active",
+                    TimeClock.Status.INATIVO: "inactive",
+                    TimeClock.Status.EM_MANUTENCAO: "maintenance",
+                }[time_clock.status],
+                "rep_badge_label": time_clock.rep_badge_label,
+                "created_by_label": created_by_name,
+                "assignments_total": getattr(time_clock, "assignments_total", 0),
+                "activation_code": time_clock.activation_code,
+                "detail_url": reverse(
+                    "web:relogio_detail",
+                    kwargs={"time_clock_id": time_clock.id},
+                ),
+                "toggle_status_url": reverse(
+                    "web:relogio_status_toggle",
+                    kwargs={"time_clock_id": time_clock.id},
+                ),
+                "toggle_status_label": (
+                    "Inativar Relógio"
+                    if time_clock.status != TimeClock.Status.INATIVO
+                    else "Reativar Relógio"
+                ),
+            }
+        )
+
+    return _render_panel(
+        request,
+        "web/time_clock_list.html",
+        current_menu="relogio_digital",
+        extra_context={
+            "time_clocks": time_clocks,
+            "time_clock_total": len(time_clocks),
+            "time_clock_query": time_clock_query,
+            "time_clock_status_filter": time_clock_status_filter,
+            "time_clock_rep_filter": time_clock_rep_filter,
+            "time_clock_status_options": TimeClock.Status.choices,
+            "time_clock_rep_options": (
+                (TimeClock.TipoRelogio.APLICATIVO, "REP-P (Programa/Software)"),
+            ),
+            "time_clock_is_filtered": bool(
+                time_clock_query or time_clock_status_filter or time_clock_rep_filter
+            ),
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def create_time_clock_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de criar um relógio.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    if request.method == "POST":
+        form = TimeClockForm(request.POST, tenant=tenant, user=request.user)
+        if form.is_valid():
+            time_clock = form.save()
+            if time_clock:
+                messages.success(request, "Relógio criado com sucesso.")
+                return redirect("web:relogio_digital")
+    else:
+        form = TimeClockForm(tenant=tenant, user=request.user)
+
+    return _render_panel(
+        request,
+        "web/time_clock_create.html",
+        current_menu="relogio_digital",
+        extra_context={
+            "form": form,
+            "form_action_url": reverse("web:relogio_create"),
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_POST
+def toggle_time_clock_status_view(request, time_clock_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de alterar o status de um relógio.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    time_clock = _get_time_clock_or_404(tenant=tenant, time_clock_id=time_clock_id)
+    next_status = (
+        TimeClock.Status.INATIVO
+        if time_clock.status != TimeClock.Status.INATIVO
+        else TimeClock.Status.ATIVO
+    )
+    TimeClockService().update_time_clock_status(time_clock=time_clock, status=next_status)
+    if next_status == TimeClock.Status.INATIVO:
+        messages.success(request, "Relógio inativado com sucesso.")
+    else:
+        messages.success(request, "Relógio reativado com sucesso.")
+    return redirect(
+        _time_clock_next_redirect(
+            request,
+            default_url=reverse("web:relogio_digital"),
+        )
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def time_clock_detail_view(request, time_clock_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Relógios de Ponto.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    time_clock = _get_time_clock_or_404(tenant=tenant, time_clock_id=time_clock_id)
+    active_tab = (request.GET.get("aba") or request.POST.get("aba") or "informacoes").strip().lower()
+    if active_tab not in {"informacoes", "colaboradores"}:
+        active_tab = "informacoes"
+
+    available_search = (request.GET.get("available_q") or request.POST.get("available_q") or "").strip()
+    assigned_search = (request.GET.get("assigned_q") or request.POST.get("assigned_q") or "").strip()
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        service = TimeClockService()
+        try:
+            if action == "assign_selected":
+                moved_total = service.assign_employees(
+                    time_clock=time_clock,
+                    employee_ids=request.POST.getlist("available_employee_ids"),
+                )
+                messages.success(request, f"{moved_total} colaborador(es) atribuídos ao relógio.")
+            elif action == "assign_all":
+                moved_total = service.assign_all_employees(
+                    time_clock=time_clock,
+                    search=available_search,
+                )
+                messages.success(request, f"{moved_total} colaborador(es) atribuídos ao relógio.")
+            elif action == "remove_selected":
+                removed_total = service.remove_employees(
+                    time_clock=time_clock,
+                    employee_ids=request.POST.getlist("assigned_employee_ids"),
+                )
+                messages.success(request, f"{removed_total} colaborador(es) removidos do relógio.")
+            elif action == "remove_all":
+                removed_total = service.remove_all_employees(
+                    time_clock=time_clock,
+                    search=assigned_search,
+                )
+                messages.success(request, f"{removed_total} colaborador(es) removidos do relógio.")
+            else:
+                messages.warning(request, "Ação de colaboradores inválida para este relógio.")
+        except DjangoValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+
+        query_suffix = urlencode(
+            {
+                "aba": "colaboradores",
+                "available_q": available_search,
+                "assigned_q": assigned_search,
+            }
+        )
+        return redirect(
+            f"{reverse('web:relogio_detail', kwargs={'time_clock_id': time_clock.id})}?{query_suffix}"
+        )
+
+    detail_url = reverse("web:relogio_detail", kwargs={"time_clock_id": time_clock.id})
+    geofence = getattr(time_clock, "geofence", None)
+    created_by_name = "-"
+    if time_clock.created_by:
+        created_by_name = (
+            f"{time_clock.created_by.first_name} {time_clock.created_by.last_name}".strip()
+            or time_clock.created_by.email
+        )
+
+    return _render_panel(
+        request,
+        "web/time_clock_detail.html",
+        current_menu="relogio_digital",
+        extra_context={
+            "time_clock": time_clock,
+            "time_clock_active_tab": active_tab,
+            "time_clock_detail_url": detail_url,
+            "time_clock_edit_url": reverse(
+                "web:relogio_edit",
+                kwargs={"time_clock_id": time_clock.id},
+            ),
+            "time_clock_status_class": _time_clock_status_class(time_clock.status),
+            "time_clock_created_by_label": created_by_name,
+            "time_clock_last_synced_label": (
+                time_clock.last_synced_at.strftime("%d/%m/%Y %H:%M")
+                if time_clock.last_synced_at
+                else "Nunca sincronizado"
+            ),
+            "time_clock_created_at_label": time_clock.created_at.strftime("%d/%m/%Y %H:%M"),
+            "time_clock_geofence": geofence,
+            "time_clock_geofence_label": (
+                f"{geofence.raio_metros}m • {geofence.latitude}, {geofence.longitude}"
+                if geofence and geofence.ativo
+                else "Nenhuma cerca virtual configurada."
+            ),
+            "time_clock_toggle_status_url": reverse(
+                "web:relogio_status_toggle",
+                kwargs={"time_clock_id": time_clock.id},
+            ),
+            "time_clock_tabs": [
+                {
+                    "key": "informacoes",
+                    "label": "Informações",
+                    "url": detail_url,
+                },
+                {
+                    "key": "colaboradores",
+                    "label": "Colaboradores",
+                    "url": f"{detail_url}?aba=colaboradores",
+                },
+            ],
+            **_build_time_clock_assignment_context(
+                time_clock=time_clock,
+                available_search=available_search,
+                assigned_search=assigned_search,
+            ),
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def edit_time_clock_view(request, time_clock_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de editar um relógio.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    time_clock = _get_time_clock_or_404(tenant=tenant, time_clock_id=time_clock_id)
+
+    if request.method == "POST":
+        form = TimeClockForm(
+            request.POST,
+            tenant=tenant,
+            user=request.user,
+            instance=time_clock,
+        )
+        if form.is_valid():
+            updated_time_clock = form.save()
+            if updated_time_clock:
+                messages.success(request, "Relógio atualizado com sucesso.")
+                return redirect(
+                    "web:relogio_detail",
+                    time_clock_id=updated_time_clock.id,
+                )
+    else:
+        form = TimeClockForm(
+            tenant=tenant,
+            user=request.user,
+            instance=time_clock,
+        )
+
+    return _render_panel(
+        request,
+        "web/time_clock_create.html",
+        current_menu="relogio_digital",
+        extra_context={
+            "form": form,
+            "time_clock": time_clock,
+            "is_edit_mode": True,
+            "form_action_url": reverse(
+                "web:relogio_edit",
+                kwargs={"time_clock_id": time_clock.id},
+            ),
+            "time_clock_detail_url": reverse(
+                "web:relogio_detail",
+                kwargs={"time_clock_id": time_clock.id},
+            ),
         },
     )
 

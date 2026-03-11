@@ -1,5 +1,5 @@
 # DEV-008 — Especificação da Área Relógios de Ponto
-**Versão:** 1.6  
+**Versão:** 1.9  
 **Data:** 2026-03-11  
 **Contexto:** módulo `Relógio Digital` no painel web (após liberação do onboarding)  
 **Referências:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/PRD.md`, mocks visuais aprovados
@@ -30,12 +30,36 @@ Rotas alvo (MVP):
 
 ## Status de implementação (2026-03-11)
 
-- O módulo ainda não foi implementado no painel web/admin.
-- Este é o `primeiro item oficial` do próximo bloco funcional após `Colaboradores`.
-- Dependências já atendidas para iniciar:
-  - onboarding concluído
-  - jornada inicial existente
-  - cadastro operacional de colaboradores disponível
+- Bloco funcional entregue no backend e no painel web:
+  - listagem, criação, detalhe, edição e inativação de relógios
+  - model `Relógio de Ponto` separado de `Device`
+  - modelagem de `Cerca Virtual`
+  - vínculo de colaboradores ao relógio no painel e via API
+  - service transacional para criação, edição, status, regeneração de código, geofence e atribuição de colaboradores
+  - ativação por código via `/api/relogios/ativar/`
+  - validação operacional da batida por dispositivo ativado, colaborador atribuído, relógio ativo e geofence
+- O módulo está concluído no escopo fechado desta sprint.
+- Próxima frente natural após este bloco:
+  - captura facial no painel
+  - envio de link por WhatsApp
+  - tratamento de ponto
+
+## Mapeamento das imagens recebidas (2026-03-11)
+
+- `Imagem 1`:
+  - listagem de `Relógios de Ponto` em estado pós-criação
+  - inclui breadcrumb, cabeçalho, banner orientativo, filtros e card do relógio com ações
+- `Imagem 2`:
+  - tela de detalhe do relógio com aba `Informações` ativa
+  - inclui card principal de metadados e card `Cerca Virtual`
+- `Imagem 3`:
+  - tela `Editar Relógio`
+  - inclui card `Informações básicas` e o início do bloco `Adicionar colaboradores`
+- `Imagem 4`:
+  - detalhe da área `Adicionar colaboradores`
+  - representa a gestão operacional entre `Disponíveis` e `No Relógio`
+- Observação:
+  - a tela de `Criar Relógio` continua mapeada neste documento, mas não está entre as quatro imagens anexadas nesta rodada.
 
 ## 2. Semântica negocial
 
@@ -64,7 +88,7 @@ Rotas alvo (MVP):
 
 ### 2.5 Regra de negócio do banner (fluxo operacional fim-a-fim)
 Sequência oficial do produto:
-1. Empresa acessa `app.useponto.com.br` e instala/abre o app do relógio digital em celular, tablet ou computador.
+1. Empresa recebe e instala o `APK oficial do app do relógio` no tablet Android da portaria.
 2. No painel web, cria o relógio e ativa o dispositivo usando o `código de ativação`.
 3. No painel web, adiciona os colaboradores ao relógio na aba `Colaboradores`.
 4. Colaborador já atribuído e elegível realiza a batida de ponto no dispositivo ativado.
@@ -73,6 +97,10 @@ Premissas obrigatórias:
 - Dispositivo só opera se relógio estiver `ATIVO`.
 - Colaborador só bate ponto no relógio se estiver atribuído ao relógio e `ATIVO`.
 - Autenticação no relógio é exclusivamente facial (`FACIAL`).
+- Canal oficial do app no MVP:
+  - `APK Android próprio`
+  - distribuição interna/assistida para instalação direta no tablet da portaria
+  - sem dependência inicial de `Play Store` ou `App Store`
 
 ---
 
@@ -104,7 +132,7 @@ Texto orientativo com passos:
 
 ---
 
-## 4. Tela `Criar Relógio` — referência da imagem 2
+## 4. Tela `Criar Relógio` — referência funcional do formulário
 
 ### 4.1 Estrutura
 - Breadcrumb: `Início > Relógios de Ponto > Criar Relógio`
@@ -132,7 +160,7 @@ Texto orientativo com passos:
 
 ---
 
-## 5. Tela `Relógios de Ponto` após criação — referência da imagem 3
+## 5. Tela `Relógios de Ponto` após criação — referência da imagem 1
 
 ### 5.1 Card do relógio na listagem
 Cada card deve mostrar:
@@ -156,7 +184,7 @@ Semântica:
 
 ---
 
-## 6. Tela de detalhe do relógio (Gerenciar) — referência da imagem de detalhe
+## 6. Tela de detalhe do relógio (Gerenciar) — referências das imagens 2, 3 e 4
 
 ### 6.1 Estrutura geral da página
 - Breadcrumb: `Início > Relógios de Ponto > {Nome do Relógio}`
@@ -169,8 +197,9 @@ Semântica:
   - `Colaboradores`
 
 Observação de mapeamento:
-- A captura anterior do usuário estava com a aba `Informações` ativa.
-- A captura mais recente corresponde à aba `Colaboradores`.
+- `Imagem 2`: detalhe com aba `Informações` ativa.
+- `Imagem 3`: fluxo de `Editar Relógio` com o bloco de colaboradores visível na mesma página.
+- `Imagem 4`: detalhe da área/aba `Colaboradores`.
 
 ### 6.2 Aba `Informações` (estado ativo por padrão ao abrir Gerenciar)
 Card `Informações` com os campos:
@@ -228,6 +257,27 @@ Comportamento:
 Semântica negocial:
 - `No Relógio` define quais colaboradores estão autorizados a utilizar aquele relógio para registro.
 - Remover colaborador do relógio atual retira autorização naquele ponto específico sem excluir cadastro do colaborador.
+
+### 6.4 Tela `Editar Relógio` — referência da imagem 3
+
+Estrutura esperada:
+- Breadcrumb: `Início > Relógios de Ponto > {Nome do Relógio} > Editar Relógio`
+- Título: `Editar Relógio`
+- Card `Informações básicas` com:
+  - `Nome do Relógio`
+  - `Descrição`
+  - `Status`
+  - bloco de métodos suportados
+  - `Reconhecimento Facial` como método principal fixo
+- Ações:
+  - `Cancelar`
+  - `Salvar`
+
+Regras:
+- O formulário de edição não deve permitir troca do método principal para outro fator.
+- O método `Reconhecimento Facial` deve aparecer fixo/selecionado.
+- `Status` aceita apenas `Ativo`, `Inativo` e `Em Manutenção`.
+- O bloco `Adicionar colaboradores` pode ficar nesta mesma tela ou no fluxo `Gerenciar`, desde que respeite a mesma semântica funcional da área.
 
 ## 7. Regras de filtragem e estado da listagem
 
@@ -292,9 +342,100 @@ Mensagens de estado:
 
 ---
 
-## 11. Contrato de payload/API (MVP) — `Editar Relógio`, `Cerca Virtual` e aba `Colaboradores`
+## 11. Plano exato de implementação — Dia 2 e Dia 3
 
-### 11.1 Convenções gerais
+### Dia 2 — fluxo web inicial e estado pós-criação
+
+Tela 1: listagem de relógios (`Imagem 1`)
+- Rota alvo:
+  - `GET /painel/relogios/`
+- Entrega exata:
+  - breadcrumb `Início > Relógios de Ponto`
+  - cabeçalho com `Exportar AFD` e `+ Criar Relógio`
+  - banner orientativo com os 3 passos operacionais
+  - filtros `Buscar por nome ou descrição`, `Status` e `Tipo de REP`
+  - estado vazio `Nenhum resultado encontrado`
+  - card do relógio quando existir item salvo
+- Dados exibidos no card:
+  - nome
+  - badge de status
+  - badge `REP-P`
+  - responsável/contexto
+  - quantidade de colaboradores atribuídos
+  - método suportado
+  - código de ativação
+  - ações `Gerenciar` e `Inativar Relógio`
+
+Tela 2: criar relógio (formulário funcional)
+- Rota alvo:
+  - `GET|POST /painel/relogios/novo/`
+- Entrega exata:
+  - formulário usando exclusivamente o `TimeClockService`
+  - campos `Nome`, `Descrição`, `Tipo do Relógio`, `Status`
+  - método `Reconhecimento Facial` fixo e somente leitura
+  - mensagens de validação semânticas do domínio
+  - redirect para a listagem com o novo card visível
+
+Testes do Dia 2:
+- acesso autenticado e guarda de onboarding
+- render da listagem vazia
+- render do formulário de criação
+- POST válido cria relógio e mostra card na listagem
+- nome duplicado por tenant bloqueado com mensagem amigável
+- `Inativar Relógio` altera status sem apagar histórico
+
+### Dia 3 — detalhe, edição e atribuição de colaboradores
+
+Tela 3: detalhe do relógio, aba `Informações` (`Imagem 2`)
+- Rota alvo:
+  - `GET /painel/relogios/{id}/`
+- Entrega exata:
+  - breadcrumb completo
+  - título com nome do relógio
+  - ações `Editar Relógio` e `Inativar Relógio`
+  - aba `Informações` ativa por padrão
+  - card com status, tipo, plataforma, método, código de ativação, quantidade de colaboradores, última sincronização e criado em
+  - card `Cerca Virtual` com estado vazio e CTA `Configurar Cerca Virtual`
+
+Tela 4: editar relógio (`Imagem 3`)
+- Rota alvo:
+  - `GET|POST /painel/relogios/{id}/editar/`
+- Entrega exata:
+  - card `Informações básicas`
+  - edição de `Nome`, `Descrição` e `Status`
+  - método facial fixo/visível
+  - ações `Cancelar` e `Salvar`
+  - persistência via `TimeClockService.update_time_clock`
+
+Tela 5: área/aba `Colaboradores` (`Imagem 4`)
+- Rota alvo:
+  - `GET /painel/relogios/{id}/?aba=colaboradores`
+  - ou a mesma rota de detalhe com aba interna ativa
+- Entrega exata:
+  - painéis `Disponíveis (N)` e `No Relógio (N)`
+  - buscas independentes nos dois lados
+  - ações centrais `Mover Selecionados`, `Mover TODOS`, `Remover Selecionados`, `Remover TODOS`
+  - estado vazio coerente
+  - contadores atualizados após cada operação
+
+APIs e testes do Dia 3:
+- `PATCH /api/relogios/{id}/`
+- `GET /api/relogios/{id}/`
+- `GET /api/relogios/{id}/colaboradores/disponiveis/`
+- `GET /api/relogios/{id}/colaboradores/no-relogio/`
+- `POST /api/relogios/{id}/colaboradores/mover-selecionados/`
+- `POST /api/relogios/{id}/colaboradores/mover-todos/`
+- `POST /api/relogios/{id}/colaboradores/remover-selecionados/`
+- `POST /api/relogios/{id}/colaboradores/remover-todos/`
+- testes web de navegação e renderização
+- testes de autorização tenant-aware
+- testes de idempotência e elegibilidade nas operações de atribuição
+
+---
+
+## 12. Contrato de payload/API (MVP) — `Editar Relógio`, `Cerca Virtual` e aba `Colaboradores`
+
+### 12.1 Convenções gerais
 - Namespace sugerido da API REST: `/api/relogios/`
 - Autenticação: JWT obrigatório.
 - Escopo: todas as operações são tenant-aware (`request.tenant`).
@@ -311,7 +452,7 @@ Mensagens de estado:
 }
 ```
 
-### 11.2 `Editar Relógio`
+### 12.2 `Editar Relógio`
 
 Endpoint:
 - `PATCH /api/relogios/{relogio_id}/`
@@ -371,7 +512,7 @@ Erros esperados:
 - `404` relógio inexistente no tenant.
 - `409` conflito de nome duplicado no tenant.
 
-### 11.3 `Configurar Cerca Virtual`
+### 12.3 `Configurar Cerca Virtual`
 
 Endpoint:
 - `PUT /api/relogios/{relogio_id}/cerca-virtual/`
@@ -423,7 +564,7 @@ Erros esperados:
 - `404` relógio inexistente no tenant.
 - `409` conflito de regra de negócio (quando necessário).
 
-### 11.4 `Remover/Desativar Cerca Virtual`
+### 12.4 `Remover/Desativar Cerca Virtual`
 
 Endpoints:
 - `DELETE /api/relogios/{relogio_id}/cerca-virtual/`
@@ -436,7 +577,7 @@ Response `204` (delete físico lógico) ou `200` (toggle):
 Regra:
 - remover/desativar cerca virtual deve liberar batidas sem validação geográfica para o relógio.
 
-### 11.5 `GET` de detalhe com representação de cerca
+### 12.5 `GET` de detalhe com representação de cerca
 
 Endpoint:
 - `GET /api/relogios/{relogio_id}/`
@@ -472,7 +613,7 @@ Quando não houver cerca:
 }
 ```
 
-### 11.6 Mensagens de negócio para UI (edição e cerca)
+### 12.6 Mensagens de negócio para UI (edição e cerca)
 - `Relógio atualizado com sucesso.`
 - `Não foi possível atualizar o relógio. Revise os dados e tente novamente.`
 - `Cerca virtual configurada com sucesso.`
@@ -482,12 +623,12 @@ Quando não houver cerca:
 - `O raio da cerca deve estar entre 20m e 1000m.`
 - `Batida fora da cerca virtual não permitida para este relógio.`
 
-### 11.7 Ativação do relógio no app (código de ativação)
+### 12.7 Ativação do relógio no app (código de ativação)
 
-#### 11.7.1 Objetivo
+#### 12.7.1 Objetivo
 - Formalizar o passo `Criar seu relógio e fazer a ativação utilizando o código de ativação` para o app.
 
-#### 11.7.2 Endpoint de ativação
+#### 12.7.2 Endpoint de ativação
 - `POST /api/relogios/ativar/`
 
 Request exemplo:
@@ -539,11 +680,11 @@ Mensagens sugeridas:
 - `Código de ativação inválido ou expirado.`
 - `Relógio indisponível para ativação no momento.`
 
-#### 11.7.3 Relação com endpoint de device auth existente
+#### 12.7.3 Relação com endpoint de device auth existente
 - Pode ser implementado como endpoint dedicado (`/api/relogios/ativar/`) ou como extensão de `POST /api/auth/device/register/` aceitando `activation_code`.
 - Em ambos os casos, a regra de negócio deve ser idêntica.
 
-### 11.8 Pré-condições para colaborador bater ponto após ativação
+### 12.8 Pré-condições para colaborador bater ponto após ativação
 
 Para `POST /api/attendance/register/` ser aceito no dispositivo do relógio:
 - relógio do dispositivo em `ATIVO`
@@ -557,9 +698,9 @@ Erros semânticos esperados:
 - `Relógio inativo.`
 - `Autenticação facial não concluída para o colaborador.`
 
-### 11.9 Atribuição de colaboradores ao relógio (aba `Colaboradores`)
+### 12.9 Atribuição de colaboradores ao relógio (aba `Colaboradores`)
 
-#### 11.9.1 Endpoints de listagem (base da tela dual-list)
+#### 12.9.1 Endpoints de listagem (base da tela dual-list)
 - `GET /api/relogios/{relogio_id}/colaboradores/disponiveis/`
 - `GET /api/relogios/{relogio_id}/colaboradores/no-relogio/`
 
@@ -589,7 +730,7 @@ Response `200` exemplo (paginado):
 }
 ```
 
-#### 11.9.2 Mover selecionados (`Disponíveis -> No Relógio`)
+#### 12.9.2 Mover selecionados (`Disponíveis -> No Relógio`)
 
 Endpoint:
 - `POST /api/relogios/{relogio_id}/colaboradores/mover-selecionados/`
@@ -622,7 +763,7 @@ Semântica:
 - operação idempotente: colaboradores já vinculados entram em `ignored_count`.
 - atualização deve refletir os contadores `(N)` da tela após a resposta.
 
-#### 11.9.3 Mover TODOS (`Disponíveis -> No Relógio`)
+#### 12.9.3 Mover TODOS (`Disponíveis -> No Relógio`)
 
 Endpoint:
 - `POST /api/relogios/{relogio_id}/colaboradores/mover-todos/`
@@ -654,7 +795,7 @@ Semântica:
 - aplica ao conjunto filtrado atual de `Disponíveis`.
 - garante comportamento previsível com os filtros ativos no frontend.
 
-#### 11.9.4 Remover selecionados (`No Relógio -> Disponíveis`)
+#### 12.9.4 Remover selecionados (`No Relógio -> Disponíveis`)
 
 Endpoint:
 - `POST /api/relogios/{relogio_id}/colaboradores/remover-selecionados/`
@@ -682,7 +823,7 @@ Semântica:
 - remove apenas vínculo relógio-colaborador, sem excluir colaborador do tenant.
 - histórico de ponto permanece íntegro.
 
-#### 11.9.5 Remover TODOS (`No Relógio -> Disponíveis`)
+#### 12.9.5 Remover TODOS (`No Relógio -> Disponíveis`)
 
 Endpoint:
 - `POST /api/relogios/{relogio_id}/colaboradores/remover-todos/`
@@ -709,7 +850,7 @@ Response `200` exemplo:
 }
 ```
 
-#### 11.9.6 Erros e validações comuns das quatro ações
+#### 12.9.6 Erros e validações comuns das quatro ações
 - `400` payload inválido (`employee_ids` vazio, filtro malformado, limite excedido).
 - `404` relógio inexistente no tenant.
 - `409` conflito de negócio (ex.: tentativa de vincular colaborador não elegível).

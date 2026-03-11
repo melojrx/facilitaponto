@@ -33,4 +33,5 @@ urlpatterns = [
     # path("tenants/", include("apps.tenants.urls")),
     path("employees/", include("apps.employees.urls")),
     path("attendance/", include("apps.attendance.urls")),
+    path("relogios/", include("apps.attendance.urls_time_clocks")),
 ]

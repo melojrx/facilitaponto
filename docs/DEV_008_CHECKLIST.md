@@ -91,32 +91,34 @@
 - [ ] Coluna `Ações` da listagem com operações rápidas (reenviar link WhatsApp, editar, alterar status)
 
 ## 6) Módulo Relógios de Ponto (`/painel/relogio-digital` no código atual; alvo funcional `/painel/relogios`)
-- [ ] Tela de listagem 1:1 com breadcrumb, banner orientativo, filtros e estado vazio (`Nenhum resultado encontrado`)
-- [ ] Ação `Criar Relógio` abre formulário com `Nome`, `Descrição`, `Tipo do Relógio`, `Status` e autenticação facial fixa
-- [ ] Validações aplicadas: nome obrigatório/único por tenant, tipo obrigatório e método fixo `Reconhecimento Facial`
-- [ ] Após criar, relógio aparece em card com badge `Ativo`, badge de tipo `REP-P`, código de ativação e ações (`Gerenciar`, `Inativar Relógio`)
-- [ ] Fluxo `Inativar Relógio` altera status sem remover histórico
-- [ ] Status do relógio suporta `Ativo`, `Inativo` e `Em Manutenção` em listagem/detalhe/edição
-- [ ] Ação `Gerenciar` abre a tela de detalhe do relógio (`/painel/relogios/{id}/`) com abas `Informações` e `Colaboradores`
-- [ ] Aba `Informações` é padrão ao abrir detalhe e exibe metadados completos (status, tipo REP, plataforma, métodos, código de ativação, sincronização, criado em)
-- [ ] Card `Cerca Virtual` exibe estado vazio e CTA `Configurar Cerca Virtual`
-- [ ] Aba `Colaboradores` implementa dupla listagem (`Disponíveis` x `No Relógio`) com busca, filtros e ações de mover/remover em lote
-- [ ] Contadores `(N)` e estados desabilitado/habilitado dos botões de ação refletem seleção/lista em tempo real
-- [ ] API `PATCH /api/relogios/{id}/` para `Editar Relógio` com validações de nome único por tenant, método fixo `FACIAL` e status (`ATIVO|INATIVO|EM_MANUTENCAO`)
-- [ ] Fluxo de ativação por código documentado e implementado (`POST /api/relogios/ativar/` ou extensão de `POST /api/auth/device/register/`)
-- [ ] Ativação bloqueada quando status do relógio for `INATIVO` ou `EM_MANUTENCAO`
-- [ ] API `PUT /api/relogios/{id}/cerca-virtual/` para configurar geofence com validação de latitude/longitude/raio
-- [ ] API de remoção/desativação de cerca virtual (`DELETE` ou `PATCH ativo=false`) implementada com retorno consistente
-- [ ] `GET /api/relogios/{id}/` retorna representação de `cerca_virtual` (objeto ou `null`) para renderizar aba `Informações`
-- [ ] APIs da aba `Colaboradores` implementadas:
+- [x] Plano exato de execução das telas do `Dia 2` e `Dia 3` documentado em `docs/DEV_008_AREA_RELOGIOS_PONTO.md`
+- [x] Canal oficial do app do relógio no MVP formalizado como `APK Android` distribuído internamente para instalação direta no tablet da portaria, sem dependência inicial de `Play Store`
+- [x] Tela de listagem 1:1 com breadcrumb, banner orientativo, filtros e estado vazio (`Nenhum resultado encontrado`)
+- [x] Ação `Criar Relógio` abre formulário com `Nome`, `Descrição`, `Tipo do Relógio`, `Status` e autenticação facial fixa
+- [x] Validações aplicadas: nome obrigatório/único por tenant, tipo obrigatório e método fixo `Reconhecimento Facial`
+- [x] Após criar, relógio aparece em card com badge `Ativo`, badge de tipo `REP-P`, código de ativação e ações (`Gerenciar`, `Inativar Relógio`)
+- [x] Fluxo `Inativar Relógio` altera status sem remover histórico
+- [x] Status do relógio suporta `Ativo`, `Inativo` e `Em Manutenção` em listagem/detalhe/edição
+- [x] Ação `Gerenciar` abre a tela de detalhe do relógio (`/painel/relogios/{id}/`) com abas `Informações` e `Colaboradores`
+- [x] Aba `Informações` é padrão ao abrir detalhe e exibe metadados completos (status, tipo REP, plataforma, métodos, código de ativação, sincronização, criado em)
+- [x] Card `Cerca Virtual` exibe estado vazio e CTA `Configurar Cerca Virtual`
+- [x] Aba `Colaboradores` implementa dupla listagem (`Disponíveis` x `No Relógio`) com busca, filtros e ações de mover/remover em lote
+- [x] Contadores `(N)` e estados desabilitado/habilitado dos botões de ação refletem seleção/lista em tempo real
+- [x] API `PATCH /api/relogios/{id}/` para `Editar Relógio` com validações de nome único por tenant, método fixo `FACIAL` e status (`ATIVO|INATIVO|EM_MANUTENCAO`)
+- [x] Fluxo de ativação por código documentado e implementado (`POST /api/relogios/ativar/` ou extensão de `POST /api/auth/device/register/`)
+- [x] Ativação bloqueada quando status do relógio for `INATIVO` ou `EM_MANUTENCAO`
+- [x] API `PUT /api/relogios/{id}/cerca-virtual/` para configurar geofence com validação de latitude/longitude/raio
+- [x] API de remoção/desativação de cerca virtual (`DELETE` ou `PATCH ativo=false`) implementada com retorno consistente
+- [x] `GET /api/relogios/{id}/` retorna representação de `cerca_virtual` (objeto ou `null`) para renderizar aba `Informações`
+- [x] APIs da aba `Colaboradores` implementadas:
   - `GET /api/relogios/{id}/colaboradores/disponiveis/`
   - `GET /api/relogios/{id}/colaboradores/no-relogio/`
   - `POST /api/relogios/{id}/colaboradores/mover-selecionados/`
   - `POST /api/relogios/{id}/colaboradores/mover-todos/`
   - `POST /api/relogios/{id}/colaboradores/remover-selecionados/`
   - `POST /api/relogios/{id}/colaboradores/remover-todos/`
-- [ ] Regras de elegibilidade e idempotência respeitadas nas ações em lote (sem duplicar vínculo e sem excluir colaborador do tenant)
-- [ ] Batida (`POST /api/attendance/register/`) valida pré-condições do relógio: dispositivo ativado, relógio ativo, colaborador atribuído e colaborador ativo
+- [x] Regras de elegibilidade e idempotência respeitadas nas ações em lote (sem duplicar vínculo e sem excluir colaborador do tenant)
+- [x] Batida (`POST /api/attendance/register/`) valida pré-condições do relógio: dispositivo ativado, relógio ativo, colaborador atribuído e colaborador ativo
 
 ## 7) Módulo Tratamento de Ponto (`/painel/tratamento-ponto`)
 - [ ] Tela de listagem 1:1 com breadcrumb, período mensal, busca de colaborador, filtros de inconsistência/pendência e ação `Ver Pendências`

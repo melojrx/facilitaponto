@@ -2,7 +2,7 @@ import base64
 
 from rest_framework import serializers
 
-from .models import AttendanceRecord
+from .models import AttendanceRecord, TimeClock, TimeClockGeofence
 
 
 class AttendanceRegisterSerializer(serializers.Serializer):
@@ -113,3 +113,120 @@ class AttendanceSyncResultSerializer(serializers.Serializer):
     client_event_id = serializers.CharField()
     created = serializers.BooleanField()
     record = AttendanceRecordSerializer()
+
+
+class TimeClockGeofenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TimeClockGeofence
+        fields = (
+            "id",
+            "latitude",
+            "longitude",
+            "raio_metros",
+            "ativo",
+            "updated_at",
+        )
+        read_only_fields = ("id", "updated_at")
+
+
+class TimeClockDetailSerializer(serializers.ModelSerializer):
+    tipo_rep = serializers.CharField(source="rep_badge_label", read_only=True)
+    plataforma = serializers.CharField(source="get_plataforma_display", read_only=True)
+    metodos_autenticacao = serializers.SerializerMethodField()
+    codigo_ativacao = serializers.CharField(source="activation_code", read_only=True)
+    colaboradores_total = serializers.IntegerField(read_only=True)
+    cerca_virtual = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TimeClock
+        fields = (
+            "id",
+            "nome",
+            "descricao",
+            "tipo_rep",
+            "plataforma",
+            "status",
+            "metodos_autenticacao",
+            "codigo_ativacao",
+            "colaboradores_total",
+            "last_synced_at",
+            "created_at",
+            "updated_at",
+            "cerca_virtual",
+        )
+        read_only_fields = fields
+
+    def get_metodos_autenticacao(self, obj):
+        return [obj.metodo_autenticacao]
+
+    def get_cerca_virtual(self, obj):
+        geofence = getattr(obj, "geofence", None)
+        if geofence is None:
+            return None
+        return TimeClockGeofenceSerializer(geofence).data
+
+
+class TimeClockUpdateSerializer(serializers.Serializer):
+    nome = serializers.CharField(max_length=80)
+    descricao = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    status = serializers.ChoiceField(choices=TimeClock.Status.choices)
+
+
+class TimeClockActivationSerializer(serializers.Serializer):
+    activation_code = serializers.CharField(max_length=6)
+    device_id = serializers.CharField(max_length=100)
+    nome_dispositivo = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    plataforma = serializers.ChoiceField(choices=TimeClock.Plataforma.choices)
+
+    def validate_activation_code(self, value):
+        normalized = value.strip().upper()
+        if not normalized:
+            raise serializers.ValidationError("activation_code é obrigatório.")
+        return normalized
+
+    def validate_device_id(self, value):
+        normalized = value.strip()
+        if not normalized:
+            raise serializers.ValidationError("device_id é obrigatório.")
+        return normalized
+
+
+class TimeClockEmployeeListQuerySerializer(serializers.Serializer):
+    q = serializers.CharField(required=False, allow_blank=True)
+
+
+class TimeClockEmployeeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nome = serializers.CharField()
+    matricula = serializers.CharField()
+    cpf = serializers.CharField()
+
+
+class TimeClockEmployeeListSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = TimeClockEmployeeSerializer(many=True)
+
+
+class TimeClockEmployeeActionSerializer(serializers.Serializer):
+    employee_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+        max_length=500,
+        required=False,
+    )
+    q = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        if not attrs.get("employee_ids") and not attrs.get("q", "").strip():
+            raise serializers.ValidationError(
+                "Informe employee_ids ou um filtro q para a operação em lote."
+            )
+        return attrs
+
+
+class TimeClockEmployeeActionResultSerializer(serializers.Serializer):
+    moved_count = serializers.IntegerField(required=False)
+    removed_count = serializers.IntegerField(required=False)
+    ignored_count = serializers.IntegerField()
+    disponiveis_count = serializers.IntegerField()
+    no_relogio_count = serializers.IntegerField()

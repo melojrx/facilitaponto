@@ -74,9 +74,11 @@
 
 {% block panel_content %}
   <div class="profile-wrap">
-    <div class="breadcrumb">
-      <a href="{% url 'web:painel' %}">Início</a> › <span>Perfil</span>
-    </div>
+    <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+      <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+      <span class="panel-breadcrumb-sep">›</span>
+      <span class="panel-breadcrumb-current" aria-current="page">Perfil</span>
+    </nav>
 
     <section class="card profile-card">
       <h2>Informações Pessoais</h2>

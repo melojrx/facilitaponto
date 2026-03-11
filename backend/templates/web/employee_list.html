@@ -300,12 +300,12 @@
 {% endblock %}
 
 {% block panel_content %}
-  <nav class="breadcrumb" aria-label="Navegação estrutural">
-    <a href="{% url 'web:painel' %}">Início</a>
-    <span class="breadcrumb-sep">›</span>
-    <span>{{ company_name }}</span>
-    <span class="breadcrumb-sep">›</span>
-    <span aria-current="page">Colaboradores</span>
+  <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <a class="panel-breadcrumb-link" href="{% url 'web:company' %}">{{ company_name }}</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <span class="panel-breadcrumb-current" aria-current="page">Colaboradores</span>
   </nav>
 
   <section class="card">

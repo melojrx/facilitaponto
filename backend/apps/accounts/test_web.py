@@ -1,5 +1,6 @@
 import json
 import re
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -1566,3 +1567,445 @@ class TestCollaboratorWebFlow:
 
         assert response.status_code == 200
         assert "Ja existe colaborador com este CPF nesta empresa." in response.content.decode()
+
+
+@pytest.mark.django_db
+class TestTimeClockWebFlow:
+    CREATE_URL = "/painel/relogios/novo/"
+    LIST_URL = "/painel/relogios/"
+
+    def _make_tenant(self, step=3):
+        return Tenant.objects.create(
+            tipo_pessoa="PJ",
+            documento="31721174000107",
+            cnpj="31721174000107",
+            razao_social="Acme Relogios LTDA",
+            onboarding_step=step,
+        )
+
+    def _attach_tenant(self, user, tenant):
+        user.tenant = tenant
+        user.save(update_fields=["tenant"])
+
+    def test_get_exige_autenticacao(self, client):
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 302
+        assert response.url == f"/login/?next={self.LIST_URL}"
+
+    def test_get_sem_empresa_redireciona_para_criar_empresa(self, client, user):
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL, follow=False)
+
+        assert response.status_code == 302
+        assert response.url == "/painel/empresa/nova/"
+
+    def test_get_bloqueia_antes_da_primeira_jornada(self, client, user):
+        tenant = self._make_tenant(step=2)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL, follow=False)
+
+        assert response.status_code == 302
+        assert response.url == "/painel/"
+
+    def test_listagem_vazia_renderiza_estado_inicial(self, client, user):
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Relógios de Ponto" in content
+        assert "Nenhum resultado encontrado" in content
+        assert "Criar Relógio" in content
+
+    def test_get_lista_aplica_busca_e_filtros(self, client, user):
+        from apps.attendance.models import TimeClock
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            descricao="Tablet principal da entrada",
+            activation_code="AB12CD",
+            tipo_relogio=TimeClock.TipoRelogio.APLICATIVO,
+            status=TimeClock.Status.ATIVO,
+        )
+        TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Almoxarifado",
+            descricao="Equipamento reserva",
+            activation_code="EF34GH",
+            tipo_relogio=TimeClock.TipoRelogio.APLICATIVO,
+            status=TimeClock.Status.INATIVO,
+        )
+        client.force_login(user)
+
+        response = client.get(
+            self.LIST_URL,
+            data={
+                "q": "Portaria",
+                "status": TimeClock.Status.ATIVO,
+                "tipo_rep": TimeClock.TipoRelogio.APLICATIVO,
+            },
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Relogio Portaria" in content
+        assert "Relogio Almoxarifado" not in content
+        assert 'value="Portaria"' in content
+        assert (
+            f'<option value="{TimeClock.Status.ATIVO}" selected>'
+            in content
+        )
+
+    def test_get_renderiza_formulario_de_criacao(self, client, user):
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.get(self.CREATE_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Criar Relógio" in content
+        assert 'name="nome"' in content
+        assert 'name="descricao"' in content
+        assert 'name="tipo_relogio"' in content
+        assert 'name="status"' in content
+        assert "Reconhecimento Facial" in content
+
+    def test_post_valido_cria_relogio_e_redireciona_para_lista(self, client, user):
+        from apps.attendance.models import TimeClock
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.post(
+            self.CREATE_URL,
+            data={
+                "nome": "Relogio Portaria",
+                "descricao": "Tablet principal da entrada",
+                "tipo_relogio": "APLICATIVO",
+                "status": "ATIVO",
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == self.LIST_URL
+
+        time_clock = TimeClock.all_objects.get(tenant=tenant, nome="Relogio Portaria")
+        assert time_clock.created_by == user
+        assert time_clock.status == TimeClock.Status.ATIVO
+        assert len(time_clock.activation_code) == 6
+
+        list_response = client.get(self.LIST_URL)
+        content = list_response.content.decode()
+        assert "Relogio Portaria" in content
+        assert "Código de Ativação" in content
+        assert "Gerenciar" in content
+
+    def test_post_usa_service_como_ponto_unico_de_criacao(self, client, user, monkeypatch):
+        from apps.attendance.models import TimeClock
+        from apps.attendance.services import TimeClockService
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        captured = {}
+        time_clock = TimeClock(
+            tenant=tenant,
+            nome="Servico Relogio",
+            activation_code="AB12CD",
+        )
+        time_clock.id = uuid.uuid4()
+
+        def fake_create_time_clock(self, **kwargs):
+            captured.update(kwargs)
+            return time_clock
+
+        monkeypatch.setattr(TimeClockService, "create_time_clock", fake_create_time_clock)
+
+        response = client.post(
+            self.CREATE_URL,
+            data={
+                "nome": "Servico Relogio",
+                "descricao": "",
+                "tipo_relogio": "APLICATIVO",
+                "status": "ATIVO",
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == self.LIST_URL
+        assert captured["tenant"] == tenant
+        assert captured["user"] == user
+        assert captured["nome"] == "Servico Relogio"
+
+    def test_post_nome_duplicado_exibe_erro_amigavel(self, client, user):
+        from apps.attendance.models import TimeClock
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        TimeClock.all_objects.create(
+            tenant=tenant,
+            nome="Relogio Portaria",
+            activation_code="ZX12CV",
+        )
+        client.force_login(user)
+
+        response = client.post(
+            self.CREATE_URL,
+            data={
+                "nome": "relogio portaria",
+                "descricao": "",
+                "tipo_relogio": "APLICATIVO",
+                "status": "ATIVO",
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 200
+        assert "Já existe relógio com este nome nesta empresa." in response.content.decode()
+
+    def test_post_toggle_status_inativa_relogio(self, client, user):
+        from apps.attendance.models import TimeClock
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        time_clock = TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            activation_code="MN45OP",
+            status=TimeClock.Status.ATIVO,
+        )
+        client.force_login(user)
+
+        response = client.post(f"/painel/relogios/{time_clock.id}/status/", follow=False)
+
+        time_clock.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == self.LIST_URL
+        assert time_clock.status == TimeClock.Status.INATIVO
+
+    def test_get_detalhe_renderiza_aba_informacoes(self, client, user):
+        from apps.attendance.models import TimeClock
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        time_clock = TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            descricao="Tablet principal da portaria",
+            activation_code="XY12ZA",
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/relogios/{time_clock.id}/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Relogio Portaria" in content
+        assert "Informações" in content
+        assert "Código de Ativação" in content
+        assert "Cerca Virtual" in content
+        assert "Nenhuma cerca virtual configurada." in content
+
+    def test_get_edicao_renderiza_valores_atuais(self, client, user):
+        from apps.attendance.models import TimeClock
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        time_clock = TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            descricao="Tablet principal da portaria",
+            activation_code="RT34YU",
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/relogios/{time_clock.id}/editar/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Editar Relógio" in content
+        assert 'value="Relogio Portaria"' in content
+        assert "Abrir aba Colaboradores" in content
+
+    def test_post_edicao_atualiza_relogio_e_redireciona_para_detalhe(self, client, user):
+        from apps.attendance.models import TimeClock
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        time_clock = TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            descricao="Tablet principal da portaria",
+            activation_code="FG56HJ",
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/relogios/{time_clock.id}/editar/",
+            data={
+                "nome": "Relogio Portaria Principal",
+                "descricao": "Tablet da entrada principal",
+                "tipo_relogio": "APLICATIVO",
+                "status": "EM_MANUTENCAO",
+            },
+            follow=False,
+        )
+
+        time_clock.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == f"/painel/relogios/{time_clock.id}/"
+        assert time_clock.nome == "Relogio Portaria Principal"
+        assert time_clock.status == TimeClock.Status.EM_MANUTENCAO
+
+    def test_get_aba_colaboradores_renderiza_disponiveis_e_no_relogio(self, client, user):
+        from apps.attendance.models import TimeClock, TimeClockEmployeeAssignment
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        time_clock = TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            activation_code="JK78LM",
+        )
+        assigned_employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Francisco Gadelha",
+            cpf="11111111111",
+            pis="11111111111",
+            ativo=True,
+        )
+        available_employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Lopes",
+            cpf="22222222222",
+            pis="22222222222",
+            ativo=True,
+        )
+        TimeClockEmployeeAssignment.objects.create(
+            tenant=tenant,
+            time_clock=time_clock,
+            employee=assigned_employee,
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/relogios/{time_clock.id}/?aba=colaboradores")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Adicionar colaboradores" in content
+        assert "Disponíveis (1)" in content
+        assert "No Relógio (1)" in content
+        assert available_employee.nome in content
+        assert assigned_employee.nome in content
+
+    def test_post_assign_selected_vincula_colaborador_ao_relogio(self, client, user):
+        from apps.attendance.models import TimeClock, TimeClockEmployeeAssignment
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        time_clock = TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            activation_code="NO90PQ",
+        )
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Lopes",
+            cpf="33333333333",
+            pis="33333333333",
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/relogios/{time_clock.id}/?aba=colaboradores",
+            data={
+                "aba": "colaboradores",
+                "action": "assign_selected",
+                "available_employee_ids": [str(employee.id)],
+                "available_q": "",
+                "assigned_q": "",
+            },
+            follow=False,
+        )
+
+        time_clock.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == f"/painel/relogios/{time_clock.id}/?aba=colaboradores&available_q=&assigned_q="
+        assert TimeClockEmployeeAssignment.all_objects.filter(
+            tenant=tenant,
+            time_clock=time_clock,
+            employee=employee,
+        ).exists()
+
+    def test_post_remove_selected_desvincula_colaborador_do_relogio(self, client, user):
+        from apps.attendance.models import TimeClock, TimeClockEmployeeAssignment
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        time_clock = TimeClock.all_objects.create(
+            tenant=tenant,
+            created_by=user,
+            nome="Relogio Portaria",
+            activation_code="RS12TU",
+        )
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Francisco Gadelha",
+            cpf="44444444444",
+            pis="44444444444",
+            ativo=True,
+        )
+        TimeClockEmployeeAssignment.objects.create(
+            tenant=tenant,
+            time_clock=time_clock,
+            employee=employee,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/relogios/{time_clock.id}/?aba=colaboradores",
+            data={
+                "aba": "colaboradores",
+                "action": "remove_selected",
+                "assigned_employee_ids": [str(employee.id)],
+                "available_q": "",
+                "assigned_q": "",
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == f"/painel/relogios/{time_clock.id}/?aba=colaboradores&available_q=&assigned_q="
+        assert not TimeClockEmployeeAssignment.all_objects.filter(
+            tenant=tenant,
+            time_clock=time_clock,
+            employee=employee,
+        ).exists()

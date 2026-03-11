@@ -21,7 +21,7 @@ O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seg
 - Upload de foto de batida já em **storage S3/MinIO** com `foto_hash` para auditoria.
 - **DEV-008** fechado no núcleo funcional: onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`, painel com liberação progressiva, jornada e testes integrados.
 - Bloco `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica.
-- Próxima sprint: execução na ordem `Relógios de Ponto -> Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
+- Próxima sprint: execução na ordem `Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
 - Estratégia de WhatsApp formalizada: arquitetura com `adapter pluggable`, provider inicial `WAHA` por baixo atrito no MVP e opções futuras documentadas (`Evolution API` e `Meta WhatsApp Cloud API`).
 - `docs/DEV_008_CHECKLIST.md` passa a ser a fonte oficial do acompanhamento detalhado e do corte de escopo do bloco.
 - Frente mobile (**DEV-010 a DEV-013**) permanece no roadmap, mas entra após estabilização do painel web/admin.
@@ -346,7 +346,7 @@ Tarefas — Frontend Web (Django Templates):
   - alternativa de envio de link de auto-cadastro facial por WhatsApp com modal de confirmação de envio
   - ações rápidas na linha da listagem (reenviar link, editar, alterar status)
   - regras de domínio de CPF/PIS, vínculo de jornada e fluxo de biometria.
-- [ ] Implementar módulo `Relógios de Ponto` conforme especificação dedicada:
+- [x] Implementar módulo `Relógios de Ponto` conforme especificação dedicada:
   - listagem inicial com banner, filtros e estado vazio
   - formulário `Criar Relógio` com método de autenticação fixo (`Reconhecimento Facial`)
   - validações de nome único por tenant e método fixo `FACIAL`

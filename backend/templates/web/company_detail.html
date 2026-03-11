@@ -112,10 +112,10 @@
 {% endblock %}
 
 {% block panel_content %}
-  <nav class="breadcrumb" aria-label="Navegação estrutural">
-    <a href="{% url 'web:painel' %}">Início</a>
-    <span class="breadcrumb-sep">›</span>
-    <span aria-current="page">Empresa</span>
+  <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <span class="panel-breadcrumb-current" aria-current="page">Empresa</span>
   </nav>
 
   <div class="detail-wrapper">

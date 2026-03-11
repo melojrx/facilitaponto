@@ -1,0 +1,538 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}Relógios de Ponto | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}Relógios de Ponto{% endblock %}
+{% block panel_heading_subtitle %}Liste, crie e acompanhe os relógios digitais da empresa.{% endblock %}
+
+{% block panel_styles %}
+  <style>
+    .clock-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .clock-breadcrumb a {
+      color: var(--brand);
+      text-decoration: none;
+    }
+
+    .clock-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .clock-toolbar-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .clock-banner,
+    .clock-filters,
+    .clock-card,
+    .clock-empty-state {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    .clock-banner,
+    .clock-filters {
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .clock-banner {
+      background: #f8fbff;
+      border-color: #d6e4f7;
+    }
+
+    .clock-banner p,
+    .clock-banner ol {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .clock-banner ol {
+      margin-top: 12px;
+      padding-left: 20px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .clock-filters form {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) 220px 220px auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .clock-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .clock-field label {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .clock-field input,
+    .clock-field select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0 12px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .clock-filters-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 600;
+      text-decoration: none;
+      transition:
+        border-color .2s ease,
+        background-color .2s ease,
+        color .2s ease;
+    }
+
+    .btn-ghost:hover {
+      border-color: #c7d4e6;
+      background: #f8fbff;
+      color: var(--brand);
+    }
+
+    .clock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 520px));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .clock-card {
+      display: grid;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid #dbe6f2;
+      background:
+        radial-gradient(circle at top right, rgba(29, 78, 216, 0.07), transparent 28%),
+        linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+      box-shadow:
+        0 10px 30px rgba(15, 23, 42, 0.06),
+        0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    .clock-card-body {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .clock-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .clock-card-head-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .clock-card-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #eef5ff, #dfeeff);
+      color: var(--brand);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: inset 0 0 0 1px #c9dcf6;
+    }
+
+    .clock-card-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .clock-card-heading {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .clock-card-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0;
+      line-height: 1.15;
+    }
+
+    .clock-card-description {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .clock-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .clock-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 14px 0 0;
+      border-top: 1px solid #edf2f7;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .clock-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .clock-meta-item svg {
+      width: 15px;
+      height: 15px;
+      stroke: #7a92b0;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .clock-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .clock-stat {
+      border: 1px solid #e5edf7;
+      border-radius: 14px;
+      background: #f8fbff;
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .clock-stat-label {
+      color: #6e84a1;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .clock-stat-value {
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .clock-stat-subvalue {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .clock-card-footer {
+      border-top: 1px solid #e8eef6;
+      padding: 16px 22px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: linear-gradient(180deg, #fcfdff, #f8fbff);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge.active {
+      background: #ecfdf5;
+      border-color: #bbf7d0;
+      color: #15803d;
+    }
+
+    .badge.inactive {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #c2410c;
+    }
+
+    .badge.maintenance {
+      background: #fefce8;
+      border-color: #fde68a;
+      color: #a16207;
+    }
+
+    .badge.rep {
+      background: #f5f3ff;
+      border-color: #ddd6fe;
+      color: #7c3aed;
+    }
+
+    .btn-link-disabled {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #94a3b8;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: not-allowed;
+    }
+
+    .clock-empty-state {
+      padding: 42px 24px;
+      text-align: center;
+    }
+
+    .clock-empty-state h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .clock-empty-state p {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 980px) {
+      .clock-filters form {
+        grid-template-columns: 1fr;
+      }
+
+      .clock-filters-actions {
+        justify-content: stretch;
+      }
+
+      .clock-filters-actions > * {
+        flex: 1 1 auto;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .clock-grid,
+      .clock-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .clock-card-head {
+        flex-direction: column;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block panel_content %}
+  <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <span class="panel-breadcrumb-current" aria-current="page">Relógios de Ponto</span>
+  </nav>
+
+  <div class="clock-toolbar">
+    <div></div>
+    <div class="clock-toolbar-actions">
+      <a class="btn" href="#" aria-disabled="true">Exportar AFD</a>
+      <a class="btn btn-primary" href="{% url 'web:relogio_create' %}">+ Criar Relógio</a>
+    </div>
+  </div>
+
+  <section class="clock-banner">
+    <p>
+      Baixe o app do relógio digital da sua empresa no canal oficial definido para
+      celular, tablet ou computador.
+    </p>
+    <ol>
+      <li>Crie seu relógio e faça a ativação utilizando o código de ativação.</li>
+      <li>Adicione os colaboradores ao relógio que irão bater ponto.</li>
+      <li>Seus colaboradores já podem bater o ponto.</li>
+    </ol>
+  </section>
+
+  <section class="clock-filters">
+    <form method="get" action="{% url 'web:relogio_digital' %}">
+      <div class="clock-field">
+        <label for="id_q">Buscar por nome ou descrição</label>
+        <input
+          id="id_q"
+          type="search"
+          name="q"
+          value="{{ time_clock_query }}"
+          placeholder="Buscar por nome ou descrição"
+        >
+      </div>
+      <div class="clock-field">
+        <label for="id_status">Status</label>
+        <select id="id_status" name="status" onchange="this.form.requestSubmit()">
+          <option value="">Todos</option>
+          {% for value, label in time_clock_status_options %}
+            <option value="{{ value }}" {% if time_clock_status_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="clock-field">
+        <label for="id_tipo_rep">Tipo de REP</label>
+        <select id="id_tipo_rep" name="tipo_rep" onchange="this.form.requestSubmit()">
+          <option value="">Todos</option>
+          {% for value, label in time_clock_rep_options %}
+            <option value="{{ value }}" {% if time_clock_rep_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="clock-filters-actions">
+        <a class="btn-ghost" href="{% url 'web:relogio_digital' %}">Limpar</a>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+      </div>
+    </form>
+  </section>
+
+  {% if time_clocks %}
+    <section class="clock-grid">
+      {% for time_clock in time_clocks %}
+        <article class="clock-card">
+          <div class="clock-card-body">
+            <div class="clock-card-head">
+              <div class="clock-card-head-main">
+                <span class="clock-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="5" y="3.5" width="14" height="17" rx="2.5"></rect>
+                    <line x1="9" y1="8" x2="15" y2="8"></line>
+                    <line x1="9" y1="12" x2="15" y2="12"></line>
+                    <line x1="9" y1="16" x2="13" y2="16"></line>
+                  </svg>
+                </span>
+                <div class="clock-card-heading">
+                  <h2 class="clock-card-title">{{ time_clock.nome }}</h2>
+                  {% if time_clock.descricao %}
+                    <p class="clock-card-description">{{ time_clock.descricao }}</p>
+                  {% else %}
+                    <p class="clock-card-description">Relógio digital configurado para o fluxo operacional da empresa.</p>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="clock-badges">
+                <span class="badge {{ time_clock.status_class }}">{{ time_clock.status_label }}</span>
+                <span class="badge rep">{{ time_clock.rep_badge_label }}</span>
+              </div>
+            </div>
+
+            <div class="clock-meta">
+              <span class="clock-meta-item">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20 21a8 8 0 0 0-16 0"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                {{ time_clock.created_by_label }}
+              </span>
+              <span class="clock-meta-item">
+                <svg viewBox="0 0 24 24">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                {{ time_clock.assignments_total }}
+                colaborador{% if time_clock.assignments_total != 1 %}es{% endif %}
+                atribuído{% if time_clock.assignments_total != 1 %}s{% endif %}
+              </span>
+            </div>
+
+            <div class="clock-stats">
+              <div class="clock-stat">
+                <span class="clock-stat-label">Método Suportado</span>
+                <span class="clock-stat-value">Facial</span>
+                <span class="clock-stat-subvalue">1 método ativo no MVP</span>
+              </div>
+              <div class="clock-stat">
+                <span class="clock-stat-label">Código de Ativação</span>
+                <span class="clock-stat-value">{{ time_clock.activation_code }}</span>
+                <span class="clock-stat-subvalue">Use este código no tablet da portaria</span>
+              </div>
+            </div>
+          </div>
+          <div class="clock-card-footer">
+            <a class="btn" href="{{ time_clock.detail_url }}">Gerenciar</a>
+            <form method="post" action="{{ time_clock.toggle_status_url }}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'web:relogio_digital' %}">
+              <button type="submit" class="btn">{{ time_clock.toggle_status_label }}</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="clock-empty-state">
+      <h2>Nenhum resultado encontrado</h2>
+      <p>
+        {% if time_clock_is_filtered %}
+          Nenhum relógio corresponde aos filtros aplicados.
+        {% else %}
+          Crie o primeiro relógio para ativar o fluxo operacional do ponto digital.
+        {% endif %}
+      </p>
+      <a class="btn btn-primary" href="{% url 'web:relogio_create' %}">Criar Relógio</a>
+    </section>
+  {% endif %}
+{% endblock %}

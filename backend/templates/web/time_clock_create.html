@@ -1,0 +1,204 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}{% if is_edit_mode %}Editar Relógio{% else %}Criar Relógio{% endif %} | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}{% if is_edit_mode %}Editar Relógio{% else %}Criar Relógio{% endif %}{% endblock %}
+{% block panel_heading_subtitle %}{% if is_edit_mode %}Atualize os dados administrativos do relógio digital e preserve seu contexto operacional.{% else %}Cadastre um relógio digital da empresa com autenticação facial fixa.{% endif %}{% endblock %}
+
+{% block panel_styles %}
+  <style>
+    .clock-form-breadcrumb {
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .clock-form-breadcrumb a {
+      color: var(--brand);
+      text-decoration: none;
+    }
+
+    .clock-form-shell {
+      width: min(100%, 760px);
+      margin: 0 auto;
+    }
+
+    .clock-form-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    .clock-form-card h2,
+    .clock-form-card h3,
+    .clock-form-card p {
+      margin: 0;
+    }
+
+    .clock-form-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .clock-form-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .clock-form-field label {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .clock-form-field input,
+    .clock-form-field select,
+    .clock-form-field textarea {
+      width: 100%;
+      min-height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 0 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .clock-form-field textarea {
+      min-height: 120px;
+      padding: 12px 14px;
+      resize: vertical;
+    }
+
+    .clock-form-field input:focus,
+    .clock-form-field select:focus,
+    .clock-form-field textarea:focus {
+      outline: 0;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+    }
+
+    .clock-form-help {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .clock-form-errors {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--danger);
+      font-size: 13px;
+    }
+
+    .clock-form-readonly {
+      min-height: 46px;
+      border-radius: 12px;
+      border: 1px solid #dbe7f5;
+      background: #f8fbff;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      color: #244668;
+    }
+
+    .clock-form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 16px;
+    }
+  </style>
+{% endblock %}
+
+{% block panel_content %}
+  <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <a class="panel-breadcrumb-link" href="{% url 'web:relogio_digital' %}">Relógios de Ponto</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    {% if is_edit_mode %}
+      <a class="panel-breadcrumb-link" href="{{ time_clock_detail_url }}">{{ time_clock.nome }}</a>
+      <span class="panel-breadcrumb-sep">›</span>
+      <span class="panel-breadcrumb-current" aria-current="page">Editar Relógio</span>
+    {% else %}
+      <span class="panel-breadcrumb-current" aria-current="page">Criar Relógio</span>
+    {% endif %}
+  </nav>
+
+  <div class="clock-form-shell">
+    <form method="post" action="{{ form_action_url }}" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <section class="clock-form-card" style="margin-bottom: 16px;">
+          <ul class="clock-form-errors">
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
+      <section class="clock-form-card">
+        <h2>Informações básicas</h2>
+        <p class="clock-form-help">Detalhes do relógio digital usado no fluxo operacional da empresa.</p>
+
+        <div class="clock-form-grid">
+          <div class="clock-form-field">
+            <label for="{{ form.nome.id_for_label }}">{{ form.nome.label }}</label>
+            {{ form.nome }}
+            {% if form.nome.errors %}<ul class="clock-form-errors">{% for error in form.nome.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          </div>
+
+          <div class="clock-form-field">
+            <label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}<ul class="clock-form-errors">{% for error in form.descricao.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          </div>
+
+          <div class="clock-form-field">
+            <label for="{{ form.tipo_relogio.id_for_label }}">{{ form.tipo_relogio.label }}</label>
+            {{ form.tipo_relogio }}
+            {% if form.tipo_relogio.errors %}<ul class="clock-form-errors">{% for error in form.tipo_relogio.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          </div>
+
+          <div class="clock-form-field">
+            <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+            {{ form.status }}
+            {% if form.status.errors %}<ul class="clock-form-errors">{% for error in form.status.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          </div>
+
+          <div class="clock-form-field">
+            <label>Método de Autenticação Suportado</label>
+            <div class="clock-form-readonly">
+              <span>Reconhecimento Facial</span>
+            </div>
+            <div class="clock-form-help">No MVP, o relógio digital suporta apenas autenticação facial.</div>
+          </div>
+        </div>
+
+        <div class="clock-form-actions">
+          <a class="btn" href="{% if is_edit_mode %}{{ time_clock_detail_url }}{% else %}{% url 'web:relogio_digital' %}{% endif %}">Cancelar</a>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </section>
+
+      {% if is_edit_mode %}
+        <section class="clock-form-card" style="margin-top: 18px;">
+          <h2>Adicionar colaboradores</h2>
+          <p class="clock-form-help">
+            A gestão operacional dos colaboradores atribuídos a este relógio fica na tela de gerenciamento.
+          </p>
+          <div class="clock-form-actions" style="margin-top: 0;">
+            <a class="btn btn-primary" href="{{ time_clock_detail_url }}?aba=colaboradores">Abrir aba Colaboradores</a>
+          </div>
+        </section>
+      {% endif %}
+    </form>
+  </div>
+{% endblock %}

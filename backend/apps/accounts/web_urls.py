@@ -9,9 +9,11 @@ from .web_views import (
     create_collaborator_view,
     create_company_view,
     create_journey_view,
+    create_time_clock_view,
     delete_journey_view,
     edit_collaborator_view,
     edit_journey_view,
+    edit_time_clock_view,
     journey_list_view,
     landing_view,
     login_view,
@@ -20,7 +22,10 @@ from .web_views import (
     painel_view,
     profile_view,
     signup_view,
+    time_clock_detail_view,
+    time_clock_list_view,
     toggle_collaborator_status_view,
+    toggle_time_clock_status_view,
 )
 
 app_name = "web"
@@ -47,7 +52,20 @@ urlpatterns = [
         name="colaborador_status_toggle",
     ),
     path("painel/colaboradores/", collaborator_list_view, name="colaboradores"),
-    path("painel/relogio-digital/", module_placeholder_view, {"module_key": "relogio_digital"}, name="relogio_digital"),
+    path("painel/relogios/novo/", create_time_clock_view, name="relogio_create"),
+    path("painel/relogios/<uuid:time_clock_id>/", time_clock_detail_view, name="relogio_detail"),
+    path(
+        "painel/relogios/<uuid:time_clock_id>/editar/",
+        edit_time_clock_view,
+        name="relogio_edit",
+    ),
+    path(
+        "painel/relogios/<uuid:time_clock_id>/status/",
+        toggle_time_clock_status_view,
+        name="relogio_status_toggle",
+    ),
+    path("painel/relogios/", time_clock_list_view, name="relogio_digital"),
+    path("painel/relogio-digital/", time_clock_list_view, name="relogio_digital_legacy"),
     path(
         "painel/tratamento-ponto/",
         module_placeholder_view,

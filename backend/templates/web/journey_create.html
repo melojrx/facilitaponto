@@ -713,14 +713,14 @@
 {% endblock %}
 
 {% block panel_content %}
-  <nav class="breadcrumb" aria-label="Navegação estrutural">
-    <a href="{% url 'web:painel' %}">Início</a>
-    <span class="breadcrumb-sep">›</span>
-    <span>{{ company_name }}</span>
-    <span class="breadcrumb-sep">›</span>
-    <a href="{% url 'web:jornadas' %}">Jornadas de Trabalho</a>
-    <span class="breadcrumb-sep">›</span>
-    <span aria-current="page">{% if is_edit_mode %}Editar Jornada{% else %}Nova Jornada de Trabalho{% endif %}</span>
+  <nav class="panel-breadcrumb" aria-label="Navegação estrutural">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <a class="panel-breadcrumb-link" href="{% url 'web:company' %}">{{ company_name }}</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <a class="panel-breadcrumb-link" href="{% url 'web:jornadas' %}">Jornadas de Trabalho</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <span class="panel-breadcrumb-current" aria-current="page">{% if is_edit_mode %}Editar Jornada{% else %}Nova Jornada de Trabalho{% endif %}</span>
   </nav>
 
   <form method="post" action="{{ form_action_url }}" id="journey-form" novalidate class="journey-form">

@@ -1,0 +1,750 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}{{ time_clock.nome }} | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}{{ time_clock.nome }}{% endblock %}
+{% block panel_heading_subtitle %}Gerencie o relógio digital, sua ativação operacional e os colaboradores atribuídos.{% endblock %}
+
+{% block panel_styles %}
+  <style>
+    .clock-detail-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .clock-detail-breadcrumb a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .clock-detail-breadcrumb a:hover {
+      color: var(--brand);
+    }
+
+    .clock-detail-breadcrumb-sep {
+      color: #9db0c8;
+    }
+
+    .clock-detail-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .clock-detail-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .clock-detail-actions form {
+      margin: 0;
+    }
+
+    .clock-detail-actions .btn,
+    .clock-detail-actions form .btn {
+      min-width: 156px;
+    }
+
+    .btn-toolbar {
+      background: #fff;
+      border-color: #d5e0ee;
+      color: #334155;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .btn-toolbar:hover {
+      border-color: #bfd0e6;
+      background: #f8fbff;
+    }
+
+    .btn-toolbar-danger {
+      background: #fff;
+      border-color: #fecaca;
+      color: #b91c1c;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .btn-toolbar-danger:hover {
+      background: #fff5f5;
+      border-color: #fca5a5;
+    }
+
+    .clock-detail-tabs {
+      display: inline-flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 6px;
+      border: 1px solid #dbe6f2;
+      border-radius: 16px;
+      background: #f8fbff;
+    }
+
+    .clock-detail-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 700;
+      transition:
+        background-color .2s ease,
+        border-color .2s ease,
+        color .2s ease,
+        box-shadow .2s ease;
+    }
+
+    .clock-detail-tab.active {
+      color: var(--text);
+      background: #fff;
+      border-color: #d6e4f7;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+
+    .clock-detail-panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .clock-detail-panel h2,
+    .clock-detail-panel h3,
+    .clock-detail-panel p {
+      margin: 0;
+    }
+
+    .clock-detail-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+
+    .clock-detail-panel-heading {
+      display: grid;
+      gap: 6px;
+    }
+
+    .clock-detail-panel-heading h2,
+    .clock-detail-panel-heading p {
+      margin: 0;
+    }
+
+    .clock-detail-panel-heading p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .clock-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .clock-detail-info-column {
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .clock-detail-meta {
+      display: grid;
+      gap: 6px;
+    }
+
+    .clock-detail-meta strong {
+      color: #58708f;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .clock-detail-meta span {
+      font-size: 16px;
+      color: var(--text);
+      line-height: 1.45;
+      font-weight: 500;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge.active {
+      background: #ecfdf5;
+      border-color: #bbf7d0;
+      color: #15803d;
+    }
+
+    .badge.inactive {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #c2410c;
+    }
+
+    .badge.maintenance {
+      background: #fefce8;
+      border-color: #fde68a;
+      color: #a16207;
+    }
+
+    .badge.rep {
+      background: #f5f3ff;
+      border-color: #ddd6fe;
+      color: #7c3aed;
+    }
+
+    .clock-detail-search-bar input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0 12px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .clock-detail-search-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .clock-detail-filter-placeholder {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid #d4deec;
+      border-radius: 10px;
+      background: #fff;
+      color: #475569;
+      font-size: 14px;
+      font-weight: 600;
+      width: fit-content;
+    }
+
+    .clock-detail-assign-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 200px minmax(0, 1fr);
+      align-items: stretch;
+      gap: 14px;
+    }
+
+    .clock-detail-assign-column {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fff;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 412px;
+    }
+
+    .clock-detail-column-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      gap: 12px;
+      background: #fff;
+    }
+
+    .clock-detail-column-header h3 {
+      font-size: 16px;
+    }
+
+    .clock-detail-list-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 252px;
+    }
+
+    .clock-detail-list-head {
+      display: grid;
+      grid-template-columns: 20px 48px minmax(0, 1fr) minmax(96px, auto);
+      gap: 12px;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid #dbe6f2;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .clock-detail-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      display: grid;
+      gap: 0;
+      align-content: start;
+    }
+
+    .clock-detail-list-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid #edf2f7;
+      display: grid;
+      grid-template-columns: 20px 42px minmax(0, 1fr) minmax(80px, auto);
+      gap: 12px;
+      align-items: center;
+    }
+
+    .clock-detail-list-item:last-child {
+      border-bottom: 0;
+    }
+
+    .clock-detail-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: #e8f1ff;
+      color: var(--brand);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .clock-detail-employee {
+      display: grid;
+      gap: 4px;
+      align-content: center;
+    }
+
+    .clock-detail-employee strong,
+    .clock-detail-employee span {
+      display: block;
+    }
+
+    .clock-detail-employee span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .clock-detail-empty {
+      min-height: 216px;
+      padding: 32px 18px;
+      text-align: center;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .clock-detail-actions-panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      align-content: center;
+      align-self: center;
+      min-height: 204px;
+    }
+
+    .clock-detail-actions-panel form {
+      margin: 0;
+    }
+
+    .clock-detail-actions-panel .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .clock-detail-inline-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1100px) {
+      .clock-detail-assign-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .clock-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 820px) {
+      .clock-detail-assign-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .clock-detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .clock-detail-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .clock-detail-actions .btn,
+      .clock-detail-actions form,
+      .clock-detail-actions form .btn {
+        width: 100%;
+      }
+
+      .clock-detail-actions form {
+        width: 100%;
+      }
+
+      .clock-detail-tabs {
+        display: flex;
+        width: 100%;
+      }
+
+      .clock-detail-tab {
+        flex: 1 1 0;
+      }
+    }
+  </style>
+{% endblock %}
+
+  {% block panel_content %}
+  <nav class="clock-detail-breadcrumb" aria-label="Navegação estrutural">
+    <a href="{% url 'web:painel' %}">Início</a>
+    <span class="clock-detail-breadcrumb-sep">›</span>
+    <a href="{% url 'web:relogio_digital' %}">Relógios de Ponto</a>
+    <span class="clock-detail-breadcrumb-sep">›</span>
+    <span aria-current="page">{{ time_clock.nome }}</span>
+  </nav>
+
+  <div class="clock-detail-toolbar">
+    <div class="clock-detail-actions">
+      <a class="btn btn-toolbar" href="{{ time_clock_edit_url }}">Editar Relógio</a>
+      <form method="post" action="{{ time_clock_toggle_status_url }}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}{% if request.GET.aba %}?aba={{ request.GET.aba }}{% endif %}">
+        <button
+          type="submit"
+          class="btn {% if time_clock.status == 'INATIVO' %}btn-primary{% else %}btn-toolbar-danger{% endif %}"
+        >
+          {% if time_clock.status == "INATIVO" %}Reativar Relógio{% else %}Inativar Relógio{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="clock-detail-tabs" role="tablist" aria-label="Abas do relógio">
+    {% for tab in time_clock_tabs %}
+      <a
+        class="clock-detail-tab {% if time_clock_active_tab == tab.key %}active{% endif %}"
+        href="{{ tab.url }}"
+        aria-current="{% if time_clock_active_tab == tab.key %}page{% else %}false{% endif %}"
+      >
+        {{ tab.label }}
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if time_clock_active_tab == "informacoes" %}
+    <section class="clock-detail-panel">
+      <div class="clock-detail-panel-header">
+        <div class="clock-detail-panel-heading">
+          <h2>Informações</h2>
+        </div>
+      </div>
+
+      <div class="clock-detail-grid">
+        <div class="clock-detail-info-column">
+          <div class="clock-detail-meta">
+            <strong>Nome do Relógio</strong>
+            <span>{{ time_clock.nome }}</span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Plataforma</strong>
+            <span>{{ time_clock.get_plataforma_display }}</span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Colaboradores</strong>
+            <span>{{ time_clock.assignments_total }}</span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Descrição</strong>
+            <span>{% if time_clock.descricao %}{{ time_clock.descricao }}{% else %}-{% endif %}</span>
+          </div>
+        </div>
+        <div class="clock-detail-info-column">
+          <div class="clock-detail-meta">
+            <strong>Tipo do Relógio</strong>
+            <span><span class="badge rep">{{ time_clock.rep_badge_label }}</span></span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Métodos de Autenticação Suportados</strong>
+            <span>{{ time_clock.get_metodo_autenticacao_display }}</span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Última Sincronização</strong>
+            <span>{{ time_clock_last_synced_label }}</span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Criado por</strong>
+            <span>{{ time_clock_created_by_label }}</span>
+          </div>
+        </div>
+        <div class="clock-detail-info-column">
+          <div class="clock-detail-meta">
+            <strong>Status</strong>
+            <span><span class="badge {{ time_clock_status_class }}">{{ time_clock.get_status_display }}</span></span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Código de Ativação</strong>
+            <span>{{ time_clock.activation_code }}</span>
+          </div>
+          <div class="clock-detail-meta">
+            <strong>Criado em</strong>
+            <span>{{ time_clock_created_at_label }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="clock-detail-panel">
+      <div class="clock-detail-panel-header">
+        <div class="clock-detail-panel-heading">
+          <h2>Cerca Virtual</h2>
+        </div>
+        <a class="btn" href="#" aria-disabled="true">Configurar Cerca Virtual</a>
+      </div>
+      <p>
+        {{ time_clock_geofence_label }}
+      </p>
+      {% if time_clock_geofence and time_clock_geofence.ativo %}
+        <p class="clock-detail-inline-note">Latitude {{ time_clock_geofence.latitude }} • Longitude {{ time_clock_geofence.longitude }}</p>
+      {% endif %}
+    </section>
+  {% else %}
+    <section class="clock-detail-panel">
+      <div class="clock-detail-panel-header">
+        <div>
+          <h2>Adicionar colaboradores</h2>
+          <p class="clock-detail-inline-note">Gerencie quais colaboradores podem utilizar este relógio de ponto.</p>
+        </div>
+      </div>
+
+      <div class="clock-detail-assign-layout">
+        <section class="clock-detail-assign-column">
+          <div class="clock-detail-column-header">
+            <h3>Disponíveis ({{ time_clock_available_total }})</h3>
+            <div class="clock-detail-search-stack">
+              <form method="get" action="{{ time_clock_detail_url }}" class="clock-detail-search-bar">
+                <input type="hidden" name="aba" value="colaboradores">
+                <input type="hidden" name="assigned_q" value="{{ time_clock_assigned_search }}">
+                <input type="search" name="available_q" value="{{ time_clock_available_search }}" placeholder="Pesquisar colaboradores">
+              </form>
+              <button type="button" class="clock-detail-filter-placeholder" aria-disabled="true">Filtros Avançados</button>
+            </div>
+          </div>
+          {% if time_clock_available_employees %}
+            <form method="post" action="{{ time_clock_detail_url }}?aba=colaboradores" data-clock-transfer-form="available">
+              {% csrf_token %}
+              <input type="hidden" name="aba" value="colaboradores">
+              <input type="hidden" name="available_q" value="{{ time_clock_available_search }}">
+              <input type="hidden" name="assigned_q" value="{{ time_clock_assigned_search }}">
+              <div class="clock-detail-list-shell">
+                <div class="clock-detail-list-head" aria-hidden="true">
+                  <span><input type="checkbox" disabled></span>
+                  <span>Foto</span>
+                  <span>Nome</span>
+                  <span>Matrícula</span>
+                </div>
+                <ul class="clock-detail-list">
+                  {% for employee in time_clock_available_employees %}
+                    <li class="clock-detail-list-item">
+                      <input type="checkbox" name="available_employee_ids" value="{{ employee.id }}" data-transfer-checkbox="available">
+                      <span class="clock-detail-avatar">{{ employee.initials }}</span>
+                      <div class="clock-detail-employee">
+                        <strong>{{ employee.nome }}</strong>
+                        <span>CPF {{ employee.cpf }}</span>
+                      </div>
+                      <span>{{ employee.matricula }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </form>
+          {% else %}
+            <div class="clock-detail-list-shell">
+              <div class="clock-detail-list-head" aria-hidden="true">
+                <span><input type="checkbox" disabled></span>
+                <span>Foto</span>
+                <span>Nome</span>
+                <span>Matrícula</span>
+              </div>
+              <div class="clock-detail-empty">Nenhum colaborador disponível</div>
+            </div>
+          {% endif %}
+        </section>
+
+        <section class="clock-detail-actions-panel" aria-label="Ações de atribuição">
+          <h3>Ações</h3>
+
+          <form method="post" action="{{ time_clock_detail_url }}?aba=colaboradores" data-action-form="assign-selected">
+            {% csrf_token %}
+            <input type="hidden" name="aba" value="colaboradores">
+            <input type="hidden" name="available_q" value="{{ time_clock_available_search }}">
+            <input type="hidden" name="assigned_q" value="{{ time_clock_assigned_search }}">
+            <input type="hidden" name="action" value="assign_selected">
+            <button type="submit" class="btn btn-primary" {% if not time_clock_available_total %}disabled{% endif %}>Mover Selecionados →</button>
+          </form>
+
+          <form method="post" action="{{ time_clock_detail_url }}?aba=colaboradores">
+            {% csrf_token %}
+            <input type="hidden" name="aba" value="colaboradores">
+            <input type="hidden" name="available_q" value="{{ time_clock_available_search }}">
+            <input type="hidden" name="assigned_q" value="{{ time_clock_assigned_search }}">
+            <input type="hidden" name="action" value="assign_all">
+            <button type="submit" class="btn btn-primary" {% if not time_clock_available_total %}disabled{% endif %}>Mover TODOS »</button>
+          </form>
+
+          <form method="post" action="{{ time_clock_detail_url }}?aba=colaboradores" data-action-form="remove-selected">
+            {% csrf_token %}
+            <input type="hidden" name="aba" value="colaboradores">
+            <input type="hidden" name="available_q" value="{{ time_clock_available_search }}">
+            <input type="hidden" name="assigned_q" value="{{ time_clock_assigned_search }}">
+            <input type="hidden" name="action" value="remove_selected">
+            <button type="submit" class="btn" {% if not time_clock_assigned_total %}disabled{% endif %}>← Remover Selecionados</button>
+          </form>
+
+          <form method="post" action="{{ time_clock_detail_url }}?aba=colaboradores">
+            {% csrf_token %}
+            <input type="hidden" name="aba" value="colaboradores">
+            <input type="hidden" name="available_q" value="{{ time_clock_available_search }}">
+            <input type="hidden" name="assigned_q" value="{{ time_clock_assigned_search }}">
+            <input type="hidden" name="action" value="remove_all">
+            <button type="submit" class="btn" {% if not time_clock_assigned_total %}disabled{% endif %}>« Remover TODOS</button>
+          </form>
+        </section>
+
+        <section class="clock-detail-assign-column">
+          <div class="clock-detail-column-header">
+            <h3>No Relógio ({{ time_clock_assigned_total }})</h3>
+            <form method="get" action="{{ time_clock_detail_url }}" class="clock-detail-search-bar">
+              <input type="hidden" name="aba" value="colaboradores">
+              <input type="hidden" name="available_q" value="{{ time_clock_available_search }}">
+              <input type="search" name="assigned_q" value="{{ time_clock_assigned_search }}" placeholder="Pesquisar no relógio">
+            </form>
+          </div>
+          {% if time_clock_assigned_employees %}
+            <form method="post" action="{{ time_clock_detail_url }}?aba=colaboradores" data-clock-transfer-form="assigned">
+              {% csrf_token %}
+              <input type="hidden" name="aba" value="colaboradores">
+              <input type="hidden" name="available_q" value="{{ time_clock_available_search }}">
+              <input type="hidden" name="assigned_q" value="{{ time_clock_assigned_search }}">
+              <div class="clock-detail-list-shell">
+                <div class="clock-detail-list-head" aria-hidden="true">
+                  <span><input type="checkbox" disabled></span>
+                  <span>Foto</span>
+                  <span>Nome</span>
+                  <span>Matrícula</span>
+                </div>
+                <ul class="clock-detail-list">
+                  {% for employee in time_clock_assigned_employees %}
+                    <li class="clock-detail-list-item">
+                      <input type="checkbox" name="assigned_employee_ids" value="{{ employee.id }}" data-transfer-checkbox="assigned">
+                      <span class="clock-detail-avatar">{{ employee.initials }}</span>
+                      <div class="clock-detail-employee">
+                        <strong>{{ employee.nome }}</strong>
+                        <span>CPF {{ employee.cpf }}</span>
+                      </div>
+                      <span>{{ employee.matricula }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </form>
+          {% else %}
+            <div class="clock-detail-list-shell">
+              <div class="clock-detail-list-head" aria-hidden="true">
+                <span><input type="checkbox" disabled></span>
+                <span>Foto</span>
+                <span>Nome</span>
+                <span>Matrícula</span>
+              </div>
+              <div class="clock-detail-empty">Nenhum colaborador atribuído</div>
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}
+
+{% block panel_scripts %}
+  <script>
+    (function () {
+      function syncSelections(sourceName, targetFormSelector) {
+        const sourceForm = document.querySelector('[data-clock-transfer-form="' + sourceName + '"]');
+        const targetForm = document.querySelector('[data-action-form="' + targetFormSelector + '"]');
+        if (!sourceForm || !targetForm) return;
+
+        const checkedValues = Array.from(
+          sourceForm.querySelectorAll('input[type="checkbox"][data-transfer-checkbox="' + sourceName + '"]:checked')
+        ).map(function (input) {
+          return input.value;
+        });
+
+        targetForm.querySelectorAll('input[data-cloned-selection="true"]').forEach(function (input) {
+          input.remove();
+        });
+
+        checkedValues.forEach(function (value) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = sourceName === "available" ? "available_employee_ids" : "assigned_employee_ids";
+          input.value = value;
+          input.setAttribute("data-cloned-selection", "true");
+          targetForm.appendChild(input);
+        });
+
+        const button = targetForm.querySelector('button[type="submit"]');
+        if (button) button.disabled = checkedValues.length === 0;
+      }
+
+      ["available", "assigned"].forEach(function (side) {
+        const sourceForm = document.querySelector('[data-clock-transfer-form="' + side + '"]');
+        if (!sourceForm) return;
+        const targetForm = side === "available" ? "assign-selected" : "remove-selected";
+        syncSelections(side, targetForm);
+        sourceForm.addEventListener("change", function () {
+          syncSelections(side, targetForm);
+        });
+      });
+    })();
+  </script>
+{% endblock %}
