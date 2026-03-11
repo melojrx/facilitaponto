@@ -52,12 +52,18 @@ O projeto está organizado para evoluir em três frentes:
 - Fundação do backend e ambiente Docker
 - Multitenancy com isolamento por tenant
 - Autenticação JWT (usuário e dispositivo)
-- Fluxo web P0 de autenticação (DEV-008 parcial):
+- Núcleo funcional do onboarding web (DEV-008):
   - Landing pública (`/`)
   - Cadastro de conta (`/cadastro/`)
   - Login (`/login/`)
   - Logout (`POST /logout/`)
   - Guarda de acesso para `/painel/`
+  - Cadastro de empresa PJ/PF com regra `1 owner -> 1 empresa -> 1 tenant`
+  - Painel com liberação progressiva de menu por estado do onboarding
+  - CRUD web de jornadas (`listar`, `criar`, `editar`, `excluir`)
+  - Modal contextual pós-empresa com CTA para `Criar jornada`
+  - Consulta pública de CEP e CNPJ com fallback manual no onboarding
+  - Teste integrado do fluxo `signup -> login -> painel -> empresa -> jornada -> logout`
 - Cadastro de funcionários + sequência NSR atômica por tenant
 - Módulo de biometria DEV-005 concluído (consentimento, enroll, verify e cache mobile):
   - Consentimento LGPD
@@ -187,6 +193,13 @@ make smoke-dev001  # Validação técnica DEV-001
 ---
 
 ## Endpoints principais já disponíveis
+
+### 🧭 Onboarding e utilitários públicos
+
+| Método | Endpoint |
+|---|---|
+| `GET` | `/api/public/cep/` |
+| `GET` | `/api/public/cnpj/` |
 
 ### 🔐 Autenticação
 

@@ -1,6 +1,6 @@
 # Roadmap de Desenvolvimento — Sistema de Ponto Eletrônico
-**Versão:** 2.1  
-**Data:** 2026-03-08  
+**Versão:** 2.2  
+**Data:** 2026-03-11  
 **Prazo MVP:** 8 semanas  
 **Stack:** Django 5 + DRF + React Native (Expo) + PostgreSQL + Redis + Celery  
 
@@ -16,11 +16,12 @@ Este projeto é um **SaaS multitenant de ponto eletrônico com reconhecimento fa
 
 O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seguindo os padrões definidos neste documento.
 
-### Snapshot de execução (2026-03-08)
+### Snapshot de execução (2026-03-11)
 - Backend concluído até **DEV-007** (biometria, registro de ponto, sync offline backend, comprovante eletrônico).
 - Upload de foto de batida já em **storage S3/MinIO** com `foto_hash` para auditoria.
-- Ajuste prioritário aprovado: **DEV-008** para onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`.
-- Próxima frente após DEV-008: **DEV-010 a DEV-013** (app mobile completo com modo offline).
+- **DEV-008** fechado no núcleo funcional: onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`, painel com liberação progressiva, jornada e testes integrados.
+- Próxima sprint: módulos web/admin `Colaboradores`, `Relógios de Ponto`, `Tratamento de Ponto`, `Relatórios` e `Solicitações`.
+- Frente mobile (**DEV-010 a DEV-013**) permanece no roadmap, mas entra após estabilização do painel web/admin.
 
 ---
 
@@ -216,19 +217,33 @@ Tarefas:
 **Referência:** PB-006, PB-100  
 **Estimativa:** 16h
 
-**Status atual (2026-03-08):**
-- ✅ Entregue bloco P0 web/auth:
+**Status atual (2026-03-11):**
+- ✅ Fechado para aceite funcional:
   - landing pública (`/`)
   - cadastro (`/cadastro/`)
   - login (`/login/`)
   - logout (`POST /logout/`)
   - guarda de acesso de `/painel/` para autenticados
-- ✅ Evolução de `accounts.User` para suportar dados básicos no signup web: `first_name`, `last_name`, `phone`
-- ⏳ Pendente: completar onboarding da empresa (PJ/PF), CPF obrigatório do owner e vínculo 1:1 owner/tenant
+  - owner com `CPF` obrigatório, `email`/`cpf` únicos e vínculo `1:1` com empresa/tenant
+  - onboarding de empresa `PJ/PF` com bloqueio de segunda empresa
+  - consultas públicas de `CEP` e `CNPJ` com fallback manual
+  - painel pós-empresa com modal contextual para `Criar jornada`
+  - CRUD web de jornadas
+  - teste integrado `signup -> login -> painel -> empresa -> jornada -> logout`
+- 🟡 Permanecem fora do aceite do bloco:
+  - aderência visual final da tela de jornada e catálogo completo de estados/mensagens
+  - módulos `Colaboradores`, `Relógios de Ponto`, `Tratamento de Ponto`, `Relatórios` e `Solicitações`
 
-**Cronograma sugerido (2 dias úteis):**
-- **Dia 1 (Backend + Modelagem):** novas entidades/constraints, migrations e serviços transacionais de onboarding.
-- **Dia 2 (Frontend Web + Integração + Testes):** telas de cadastro/login/logout/painel inicial e testes ponta a ponta do fluxo.
+**Fechamento executado (sprint de 5 dias úteis):**
+- **Dia 1:** saneamento de baseline, lint, ambiente Docker, smoke e validação da suíte
+- **Dia 2:** integração de `CNPJ` com fallback manual e testes do provider
+- **Dia 3:** fluxo visual pós-empresa e acabamento funcional da tela de jornada
+- **Dia 4:** teste integrado ponta a ponta e consolidação dos critérios de aceite
+- **Dia 5:** revisão de documentação, encerramento formal do bloco e definição da próxima sprint
+
+**Fonte de verdade do status executado:** `docs/DEV_008_CHECKLIST.md`
+
+**Leitura desta seção:** o detalhamento abaixo preserva o backlog original do `DEV-008`; os itens não concluídos foram formalmente removidos do aceite do bloco e encaminhados para a próxima sprint.
 
 **Detalhamento funcional e modelagem:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`
 **Especificação 1:1 da tela de jornada:** `docs/DEV_008_TELA_NOVA_JORNADA.md`

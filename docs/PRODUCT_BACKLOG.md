@@ -1,15 +1,16 @@
 # Product Backlog — Sistema de Ponto Eletrônico
-**Versão:** 1.2  
-**Data:** 2026-03-08  
+**Versão:** 1.3  
+**Data:** 2026-03-11  
 
 ---
 
-## Status de Execução (2026-03-08)
+## Status de Execução (2026-03-11)
 
-- ✅ Entregue no backend: PB-001 a PB-005, PB-010 a PB-014, PB-030 a PB-034.
+- ✅ Entregue no backend/web: PB-001 a PB-006, PB-010 a PB-014, PB-030 a PB-034 e PB-100 no núcleo funcional self-service.
 - 🟡 Parcial: PB-035 com carimbo MVP (`timestamp_carimbo` + `hash_carimbo`); integração TSA RFC 3161 externa permanece como evolução.
 - 🆕 Regra de negócio formalizada: conta proprietária com vínculo **1:1** com empresa (CNPJ/CPF) e isolamento total por tenant.
-- 🚧 Próximo bloco crítico: PB-006 (onboarding conta+empresa 1:1) e PB-020 a PB-028 (app mobile).
+- 🚧 Próxima sprint: fechamento operacional do painel web com `Colaboradores`, `Relógios de Ponto`, `Tratamento de Ponto`, `Relatórios` e `Solicitações`.
+- ⏭️ Bloco seguinte após estabilização web/admin: PB-020 a PB-028 (app mobile).
 
 ---
 

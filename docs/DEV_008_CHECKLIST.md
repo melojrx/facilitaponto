@@ -1,11 +1,11 @@
 # DEV-008 Checklist (Versionado)
-**Versão:** 2.7  
-**Data:** 2026-03-09  
+**Versão:** 2.8  
+**Data:** 2026-03-11  
 **Escopo:** onboarding conta proprietária + empresa única + liberação progressiva do painel
 
 **Documentos base:** `docs/DEV_008_ONBOARDING_MODELAGEM.md`, `docs/DEV_008_TELA_NOVA_JORNADA.md`, `docs/DEV_008_AREA_COLABORADORES.md`, `docs/DEV_008_AREA_RELOGIOS_PONTO.md`, `docs/DEV_008_TRATAMENTO_PONTO.md`, `docs/DEV_008_AREA_RELATORIOS.md`, `docs/DEV_008_AREA_SOLICITACOES.md`
 
-## Snapshot de execução (atualizado em 2026-03-09)
+## Snapshot de execução (atualizado em 2026-03-11)
 - [x] Landing pública (`/`) implementada com CTAs para `Entrar` e `Começar Agora`
 - [x] Login web (`/login/`) com UX atualizada no padrão visual da landing
 - [x] Cadastro web (`/cadastro/`) com UX atualizada e campos `nome`, `sobrenome`, `e-mail`, `CPF`, `telefone`, `senha` e `confirmar senha`
@@ -17,6 +17,9 @@
 - [x] Regra 1:1 endurecida com lock transacional no owner + constraint de banco para 1 owner por tenant
 - [x] CRUD web de jornadas implementado (`listar`, `criar`, `editar`, `excluir` com inativação segura)
 - [x] Exclusão de jornada com modal de confirmação, explicação de impacto e bloqueio visual quando há vínculos detectados
+- [x] Consulta pública de CNPJ implementada com provider `CNPJá Open`, fallback manual e testes de erro/timeout
+- [x] Painel pós-empresa com modal contextual de `Criar jornada` funcionando de ponta a ponta
+- [x] Teste integrado do fluxo `signup -> login -> painel -> empresa -> jornada -> logout`
 
 ## 1) Premissas obrigatórias
 - [x] Regra 1:1 preservada: `1 owner -> 1 empresa -> 1 tenant`
@@ -36,8 +39,8 @@
 - [x] Garantir contexto de tenant nas operações subsequentes
 
 ## 3) Integrações externas do onboarding
-- [ ] Consulta de CNPJ (provider primário: CNPJá Open)
-- [ ] Fallback manual ativo em falha/timeout do provider
+- [x] Consulta de CNPJ (provider primário: CNPJá Open)
+- [x] Fallback manual ativo em falha/timeout do provider
 - [x] Consulta de CEP via ViaCEP
 - [x] Fallback manual ativo em CEP inválido/indisponibilidade
 
@@ -49,7 +52,7 @@
   - área de conteúdo para cards/listagens
 - [x] Estado sem empresa: exibir banner/CTA `Criar sua primeira empresa`
 - [x] Estado após empresa: exibir pendência `Criar horário da equipe`
-- [ ] Exibir modal contextual com CTA `Criar jornada`
+- [x] Exibir modal contextual com CTA `Criar jornada`
 - [x] Navegação para tela `Nova Jornada de Trabalho` ao clicar em `Criar jornada`
 - [x] Tela de nova jornada MVP implementada (nome, descrição, 4 tipos e painel explicativo por tipo)
 - [ ] Tela de nova jornada 1:1 com layout aprovado (breadcrumb, card principal, 4 cards de tipo e ações)
@@ -158,18 +161,36 @@
 
 ## 11) Qualidade e testes
 - [x] Testes unitários de validação CPF/CNPJ e regras 1:1
-- [ ] Testes de integração: signup -> login -> painel -> cadastro empresa -> criar jornada -> logout
+- [x] Testes de integração: signup -> login -> painel -> cadastro empresa -> criar jornada -> logout
 - [x] Testes de autorização e isolamento tenant-aware
-- [ ] Testes de integrações externas (CNPJ e CEP): sucesso, falha e timeout
+- [x] Testes de integrações externas (CNPJ e CEP): sucesso, falha e timeout
 
 ## 12) Critério de aceite DEV-008
 - [x] Owner consegue concluir onboarding inicial sem intervenção manual do time técnico
 - [x] Sistema bloqueia segunda empresa para a mesma conta
 - [x] Menu libera funcionalidades progressivamente conforme onboarding
-- [ ] Fluxo visual pós-empresa e modal de `Criar jornada` funciona de ponta a ponta
+- [x] Fluxo visual pós-empresa e modal de `Criar jornada` funciona de ponta a ponta
 - [x] Sem vazamento cross-tenant durante todo o processo
 
 ## 13) Comando de validação sugerido
 ```bash
 pytest apps/ -k "onboarding or accounts or tenants or journeys"
 ```
+
+## 14) Encerramento formal do bloco (2026-03-11)
+- [x] `DEV-008` encerrado para aceite funcional do onboarding e da liberação progressiva do painel
+- [x] Escopo efetivamente concluído neste bloco:
+  - cadastro/login/logout web
+  - owner com `CPF` obrigatório e vínculo `1:1` com empresa/tenant
+  - onboarding de empresa `PJ/PF`
+  - consultas públicas de `CEP` e `CNPJ` com fallback manual
+  - painel pós-empresa com CTA/modal para `Criar jornada`
+  - CRUD web de jornadas
+  - testes integrados e testes de integrações externas
+- [x] Itens removidos do bloco de aceite do `DEV-008` e transferidos para a próxima sprint:
+  - refinamento visual final da stack/tela de jornada ainda não fechado nos itens pendentes das seções `1` e `4`
+  - módulo `Colaboradores` (seção `5`)
+  - módulo `Relógios de Ponto` (seção `6`)
+  - módulo `Tratamento de Ponto` (seção `7`)
+  - módulo `Relatórios` (seção `8`)
+  - módulo `Solicitações` (seção `9`)
