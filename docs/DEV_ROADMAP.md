@@ -420,6 +420,7 @@ Tarefas — Qualidade, Segurança e Documentação:
 > ⚠️ **Atenção:** Este projeto usa bibliotecas nativas (MLKit) que **não funcionam no Expo Go**.
 > O ambiente de desenvolvimento usa **Expo Dev Client** com **Prebuild** para gerar o projeto nativo Android.
 > O build de produção (APK para o tablet) é gerado via **EAS Build**.
+> O canal oficial do app do relógio no MVP é o `APK Android` distribuído internamente para instalação direta no tablet da portaria, sem dependência inicial de `Play Store`.
 
 Tarefas:
 - [ ] Criar projeto Expo com TypeScript: `npx create-expo-app ponto-app --template expo-template-typescript`

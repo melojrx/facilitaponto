@@ -51,8 +51,19 @@ Empresas precisam de um sistema de ponto eletrônico legalmente válido, simples
   - `WAHA` é a escolha preferencial do primeiro adapter
 - Evoluções futuras devem permanecer documentadas e opcionais:
   - `Evolution API`
-  - `Meta WhatsApp Cloud API` ou BSP oficial
+- `Meta WhatsApp Cloud API` ou BSP oficial
 - A troca de provider não deve exigir reescrita do fluxo de negócio; apenas novo adapter/integrador.
+
+### Diretriz de distribuição do app do relógio
+
+- O canal oficial do app do relógio no MVP é um `APK Android próprio`, distribuído internamente para instalação direta no tablet da portaria.
+- O app não depende de `Play Store` ou `App Store` como canal inicial de distribuição.
+- O fluxo oficial de entrega do app é:
+  - build via `EAS Build`
+  - geração de `APK preview` para testes internos
+  - geração de `APK production` para instalação no tablet do cliente
+- Qualquer página pública de download futuro deve apenas servir como apoio operacional ao mesmo artefato oficial (`APK assinado`), sem mudar o fluxo de negócio.
+- Evoluções futuras como `Play Store` podem existir, mas ficam fora do canal oficial do MVP.
 
 ## 3. Público-Alvo
 

@@ -153,6 +153,7 @@ eas build --platform android --profile production
 ```
 
 > Builds EAS **não são automáticos via GitHub Actions**. São disparados manualmente após validação em HML.
+> Para o MVP, este `APK Android assinado` é o canal oficial do app do relógio. `Play Store` fica como evolução futura, não como requisito inicial de distribuição.
 
 ---
 
