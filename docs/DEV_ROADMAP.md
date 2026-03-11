@@ -21,7 +21,9 @@ O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seg
 - Upload de foto de batida já em **storage S3/MinIO** com `foto_hash` para auditoria.
 - **DEV-008** fechado no núcleo funcional: onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`, painel com liberação progressiva, jornada e testes integrados.
 - Bloco `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica.
-- Próxima sprint: execução na ordem `Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
+- Captura facial assistida no painel já implementada no núcleo do colaborador, com modal mínimo, consentimento obrigatório e enroll facial.
+- Pré-requisito operacional da biometria formalizado: `BIOMETRIA_KEY`, dependências de ML/imagem no container e preload dos pesos `ArcFace` + `retinaface` antes do primeiro uso real.
+- Próxima sprint: concluir na ordem `Captura facial no painel (acabamento/fechamento) -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
 - Estratégia de WhatsApp formalizada: arquitetura com `adapter pluggable`, provider inicial `WAHA` por baixo atrito no MVP e opções futuras documentadas (`Evolution API` e `Meta WhatsApp Cloud API`).
 - `docs/DEV_008_CHECKLIST.md` passa a ser a fonte oficial do acompanhamento detalhado e do corte de escopo do bloco.
 - Frente mobile (**DEV-010 a DEV-013**) permanece no roadmap, mas entra após estabilização do painel web/admin.

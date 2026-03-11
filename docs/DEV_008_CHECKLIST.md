@@ -28,6 +28,8 @@
 - [x] Painel pós-empresa com modal contextual de `Criar jornada` funcionando de ponta a ponta
 - [x] Teste integrado do fluxo `signup -> login -> painel -> empresa -> jornada -> logout`
 - [x] Módulo `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica
+- [x] Captura facial assistida no painel implementada com modal mínimo, consentimento obrigatório e enroll
+- [x] Runtime biométrico formalizado como pré-requisito operacional da feature (`BIOMETRIA_KEY`, dependências de ML/imagem e preload de pesos do `DeepFace`)
 - [x] Sequência oficial do próximo bloco registrada: `Relógios de Ponto -> Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`
 
 ## 1) Premissas obrigatórias
@@ -85,7 +87,11 @@
 - [ ] Ao selecionar template de jornada (ex.: `Jornada Integral`), o card de tipo correspondente (ex.: `Semanal`) fica ativo e a seção expande com bloco explicativo
 - [ ] Em `Personalizado (entrada manual)`, exibir estado inicial de seleção de tipo e expandir conforme card escolhido
 - [x] Fluxo de biometria permite captura imediata e fluxo posterior com rastreabilidade de consentimento/enroll
-- [ ] Modal `Captura de Reconhecimento Facial` implementado com prévia, recaptura e consentimento obrigatório para confirmar
+- [x] Modal `Captura de Reconhecimento Facial` implementado com prévia, recaptura e consentimento obrigatório para confirmar
+- [x] Pré-requisito operacional da captura formalizado:
+  - `BIOMETRIA_KEY` carregada no ambiente
+  - dependências biométricas instaladas no runtime
+  - preload de pesos `ArcFace` + `retinaface` antes do primeiro uso real
 - [ ] Fluxo de envio de link de auto-cadastro facial por WhatsApp implementado com token expirável e uso único
 - [ ] Antes do envio por WhatsApp, exibir modal de confirmação com telefone do colaborador e ações `Cancelar`/`Enviar`
 - [ ] Coluna `Ações` da listagem com operações rápidas (reenviar link WhatsApp, editar, alterar status)
@@ -212,7 +218,6 @@ pytest apps/ -k "onboarding or accounts or tenants or journeys"
 - [x] Estado biométrico do colaborador com rastreabilidade básica de consentimento e enroll
 - [x] Smoke da área validado com testes web + model/service + `biometrics` + `attendance`
 - [x] Itens fora desta sprint e movidos para o próximo bloco funcional:
-  - modal `Capturar Foto Facial`
   - envio de link de auto-cadastro facial por WhatsApp
   - jornada individual `Personalizado (entrada manual)` no cadastro
   - semântica completa da aba `Transferidos`

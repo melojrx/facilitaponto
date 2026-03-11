@@ -11,7 +11,8 @@
 - 🆕 Regra de negócio formalizada: conta proprietária com vínculo **1:1** com empresa (CNPJ/CPF) e isolamento total por tenant.
 - ✅ Bloco `Colaboradores` entregue no núcleo funcional do painel web.
 - ✅ Bloco `Relógios de Ponto` entregue no núcleo funcional web + API.
-- 🚧 Próxima sprint: executar na ordem `Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
+- ✅ Captura facial assistida no painel entregue no núcleo de domínio/web; acabamento final permanece na próxima etapa.
+- 🚧 Próxima sprint: concluir na ordem `Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
 - 📌 A fonte oficial do acompanhamento detalhado desse bloco é `docs/DEV_008_CHECKLIST.md`.
 - 📌 Direção técnica do WhatsApp no MVP: `adapter pluggable` com provider inicial `WAHA`; alternativas futuras documentadas para escala/compliance.
 - ⏭️ Bloco seguinte após estabilização web/admin: PB-020 a PB-028 (app mobile).

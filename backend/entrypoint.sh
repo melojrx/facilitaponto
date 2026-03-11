@@ -21,5 +21,10 @@ if [ "${RUN_COLLECTSTATIC:-1}" = "1" ]; then
   python manage.py collectstatic --noinput
 fi
 
+if [ "${PRELOAD_BIOMETRIC_MODELS:-1}" = "1" ]; then
+  echo "Pré-carregando modelos biométricos..."
+  python scripts/preload_biometric_models.py
+fi
+
 echo "Iniciando servidor..."
 exec "$@"

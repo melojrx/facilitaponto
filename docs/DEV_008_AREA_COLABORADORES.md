@@ -34,10 +34,10 @@ Entregue no núcleo funcional:
 - edição web de colaborador
 - ação real de ativar/inativar colaborador na listagem
 - rastreabilidade biométrica no painel com leitura de consentimento e embedding ativos
+- captura facial assistida no painel com modal, consentimento obrigatório e enroll facial
 - testes web, de model/service e validação cruzada com `biometrics`/`attendance`
 
 Fora do bloco entregue nesta sprint:
-- captura facial imediata no painel via modal
 - envio de link de auto-cadastro facial por WhatsApp
 - template manual/personalizado de jornada dentro do cadastro do colaborador
 - semântica operacional real da aba `Transferidos`
@@ -247,6 +247,24 @@ Regras de estado do modal:
 - `Recapturar Foto` substitui a imagem atual e mantém consentimento desmarcado.
 - Fechar modal sem confirmar não altera status biométrico do colaborador.
 
+#### Pré-requisito operacional da captura facial
+
+Para que o fluxo do painel funcione com imagem real no ambiente implantado, o runtime precisa estar pronto para processar biometria de fato:
+- `BIOMETRIA_KEY` válida e carregada no ambiente.
+- dependências biométricas instaladas no container (`deepface`, `tensorflow`, `opencv`, `numpy`).
+- modelos pré-treinados do `DeepFace` disponíveis no cache local do container.
+
+Decisão operacional do projeto:
+- o container backend deve executar preload de pesos biométricos no startup antes de aceitar tráfego;
+- o preload cobre, no mínimo, os modelos usados hoje pelo sistema:
+  - `ArcFace` (`facial_recognition`)
+  - `retinaface` (`face_detector`)
+- o diretório de cache padrão do container foi formalizado como `DEEPFACE_HOME=/opt/deepface`.
+
+Observação importante:
+- no primeiro bootstrap de um ambiente novo, o preload ainda depende de acesso à internet para baixar os pesos caso eles não estejam empacotados previamente na imagem;
+- após o preload concluído, o fluxo de captura deixa de depender do primeiro request do usuário para baixar modelos.
+
 #### 5.5.2 Fluxo alternativo `Enviar link por WhatsApp`
 
 Objetivo:
@@ -397,6 +415,8 @@ Mensagens de operação:
 ## 10. Encerramento do bloco (2026-03-11)
 
 - [x] Bloco `Colaboradores` encerrado para aceite funcional do cadastro operacional, vínculo com jornada e rastreabilidade biométrica básica.
+- [x] Fluxo de captura facial assistida no painel implementado com modal mínimo, consentimento obrigatório e enroll biométrico.
+- [x] Pré-requisito operacional da biometria formalizado: runtime com dependências biométricas, `BIOMETRIA_KEY` e preload de pesos do `DeepFace`.
 - [x] Smoke do fluxo coberto por testes:
   - acesso autenticado ao módulo após `onboarding_step >= 3`
   - criação de colaborador

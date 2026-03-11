@@ -7,9 +7,13 @@ FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=config.settings.production
+    DJANGO_SETTINGS_MODULE=config.settings.production \
+    DEEPFACE_HOME=/opt/deepface \
+    PRELOAD_BIOMETRIC_MODELS=1
 
 WORKDIR /app
+
+RUN mkdir -p /opt/deepface/.deepface/weights
 
 # Dependências do sistema (necessárias para psycopg2 e deepface)
 RUN apt-get update && apt-get install -y --no-install-recommends \
