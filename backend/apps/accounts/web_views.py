@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Count, Q
@@ -19,7 +20,7 @@ from apps.attendance.forms import TimeClockForm
 from apps.attendance.models import TimeClock
 from apps.attendance.services import TimeClockService
 from apps.biometrics.forms import AssistedBiometricCaptureForm
-from apps.biometrics.services import AssistedBiometricCaptureService
+from apps.biometrics.services import AssistedBiometricCaptureService, BiometricInviteService
 from apps.employees.forms import EmployeeRegistrationForm, WorkScheduleForm
 from apps.employees.models import Employee, WorkSchedule
 from apps.employees.services import EmployeeRegistrationService
@@ -127,6 +128,39 @@ def _get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
+def _self_enroll_feedback(*, success=False, error_message=""):
+    if success:
+        return {
+            "tone": "success",
+            "title": "Cadastro facial concluído",
+            "message": "Seu consentimento foi registrado e a biometria facial foi concluída com sucesso.",
+            "hint": "Você já pode fechar esta página e seguir com a operação normal do ponto.",
+        }
+
+    normalized = (error_message or "").strip()
+    lowered = normalized.lower()
+
+    if "expir" in lowered:
+        title = "Link expirado"
+        hint = "Solicite um novo envio ao gestor da empresa para concluir o cadastro facial."
+    elif "utilizado" in lowered:
+        title = "Link já utilizado"
+        hint = "Se precisar refazer o cadastro facial, solicite um novo envio ao gestor."
+    elif "revogado" in lowered or "substitu" in lowered:
+        title = "Link substituído"
+        hint = "Solicite o link mais recente ao gestor para seguir com o cadastro facial."
+    else:
+        title = "Link indisponível"
+        hint = "Se o problema persistir, solicite um novo envio ao gestor da empresa."
+
+    return {
+        "tone": "error",
+        "title": title,
+        "message": normalized or "Link de cadastro facial inválido ou indisponível.",
+        "hint": hint,
+    }
+
+
 def _resolve_user_tenant(user):
     return resolve_tenant_from_user(user)
 
@@ -208,6 +242,67 @@ def landing_view(request):
     if request.user.is_authenticated:
         return redirect("web:painel")
     return render(request, "web/landing.html")
+
+
+@require_http_methods(["GET", "POST"])
+def biometric_self_enroll_view(request):
+    token = (request.POST.get("token") or request.GET.get("token") or "").strip()
+    invite_service = BiometricInviteService()
+    invite = None
+    form = AssistedBiometricCaptureForm(
+        initial={"versao_termo": BiometricInviteService.SELF_ENROLL_TERM_VERSION}
+    )
+    success = False
+    error_message = ""
+    feedback = None
+
+    if request.method == "POST":
+        try:
+            invite = invite_service.get_invite_for_token(raw_token=token)
+        except DjangoValidationError as exc:
+            error_message = exc.messages[0]
+            feedback = _self_enroll_feedback(error_message=error_message)
+        else:
+            form = AssistedBiometricCaptureForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    invite_service.complete_self_enroll(
+                        raw_token=token,
+                        imagem_bytes=form.cleaned_data["imagem_bytes"],
+                        consentimento_aceito=form.cleaned_data["consentimento"],
+                        versao_termo=form.cleaned_data["versao_termo"],
+                        ip_origem=_get_client_ip(request),
+                    )
+                except DjangoValidationError as exc:
+                    error_message = exc.messages[0]
+                    feedback = _self_enroll_feedback(error_message=error_message)
+                else:
+                    success = True
+                    feedback = _self_enroll_feedback(success=True)
+            else:
+                error_message = "Revise os dados e tente novamente."
+    elif token:
+        try:
+            invite = invite_service.get_invite_for_token(raw_token=token)
+        except DjangoValidationError as exc:
+            error_message = exc.messages[0]
+            feedback = _self_enroll_feedback(error_message=error_message)
+    else:
+        error_message = "Link de cadastro facial invalido ou expirado."
+        feedback = _self_enroll_feedback(error_message=error_message)
+
+    return render(
+        request,
+        "web/biometric_self_enroll.html",
+        {
+            "invite": invite,
+            "form": form,
+            "token": token,
+            "success": success,
+            "error_message": error_message,
+            "feedback": feedback,
+        },
+    )
 
 
 @require_http_methods(["GET", "POST"])
@@ -419,7 +514,7 @@ def collaborator_list_view(request):
     filtered_qs = (
         Employee.all_objects.filter(tenant=tenant)
         .select_related("work_schedule")
-        .prefetch_related("consentimentos_biometricos", "facial_embeddings")
+        .prefetch_related("consentimentos_biometricos", "facial_embeddings", "biometric_invites")
     )
     if collaborator_query:
         query_digits = only_digits(collaborator_query)
@@ -464,6 +559,10 @@ def collaborator_list_view(request):
                 "capture_biometric_url": (
                     reverse("web:colaborador_edit", kwargs={"employee_id": employee.id})
                     + "?open_biometric_modal=1"
+                ),
+                "whatsapp_invite_url": (
+                    reverse("web:colaborador_edit", kwargs={"employee_id": employee.id})
+                    + "?open_whatsapp_modal=1"
                 ),
                 "toggle_status_url": reverse(
                     "web:colaborador_status_toggle",
@@ -953,7 +1052,7 @@ def _get_collaborator_or_404(*, tenant, employee_id):
         return (
             Employee.all_objects.filter(tenant=tenant)
             .select_related("work_schedule")
-            .prefetch_related("consentimentos_biometricos", "facial_embeddings")
+            .prefetch_related("consentimentos_biometricos", "facial_embeddings", "biometric_invites")
             .get(id=employee_id)
         )
     except Employee.DoesNotExist as exc:
@@ -999,7 +1098,13 @@ def edit_collaborator_view(request, employee_id):
                 "web:colaborador_biometria_capture",
                 kwargs={"employee_id": employee.id},
             ),
+            "biometric_whatsapp_action_url": reverse(
+                "web:colaborador_biometria_whatsapp",
+                kwargs={"employee_id": employee.id},
+            ),
             "open_biometric_modal": request.GET.get("open_biometric_modal") == "1",
+            "open_whatsapp_modal": request.GET.get("open_whatsapp_modal") == "1",
+            "employee_phone_for_whatsapp": employee.telefone or "",
         },
     )
 
@@ -1044,6 +1149,40 @@ def capture_collaborator_biometric_view(request, employee_id):
         return redirect(retry_url)
 
     messages.success(request, "Cadastro facial concluído com sucesso.")
+    return redirect(redirect_url)
+
+
+@login_required(login_url="/login/")
+@require_POST
+def send_collaborator_biometric_invite_view(request, employee_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(
+            request,
+            "Cadastre sua empresa antes de enviar convite biométrico.",
+        )
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    employee = _get_collaborator_or_404(tenant=tenant, employee_id=employee_id)
+    redirect_url = reverse("web:colaborador_edit", kwargs={"employee_id": employee.id})
+    retry_url = f"{redirect_url}?open_whatsapp_modal=1"
+
+    try:
+        BiometricInviteService().send_whatsapp_invite(
+            employee=employee,
+            requested_by=request.user,
+        )
+    except (DjangoValidationError, PermissionDenied) as exc:
+        errors = exc.messages if hasattr(exc, "messages") else [str(exc)]
+        for error in errors:
+            messages.error(request, error)
+        return redirect(retry_url)
+
+    messages.success(request, "Link de cadastro facial enviado para o WhatsApp do colaborador.")
     return redirect(redirect_url)
 
 

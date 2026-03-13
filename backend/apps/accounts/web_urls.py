@@ -3,6 +3,7 @@
 from django.urls import path
 
 from .web_views import (
+    biometric_self_enroll_view,
     capture_collaborator_biometric_view,
     collaborator_list_view,
     company_edit_view,
@@ -22,6 +23,7 @@ from .web_views import (
     module_placeholder_view,
     painel_view,
     profile_view,
+    send_collaborator_biometric_invite_view,
     signup_view,
     time_clock_detail_view,
     time_clock_list_view,
@@ -33,6 +35,7 @@ app_name = "web"
 
 urlpatterns = [
     path("", landing_view, name="landing"),
+    path("biometria/cadastro-facial/", biometric_self_enroll_view, name="biometric_self_enroll"),
     path("cadastro/", signup_view, name="signup"),
     path("login/", login_view, name="login"),
     path("logout/", logout_view, name="logout"),
@@ -51,6 +54,11 @@ urlpatterns = [
         "painel/colaboradores/<int:employee_id>/biometria/capturar/",
         capture_collaborator_biometric_view,
         name="colaborador_biometria_capture",
+    ),
+    path(
+        "painel/colaboradores/<int:employee_id>/biometria/whatsapp/",
+        send_collaborator_biometric_invite_view,
+        name="colaborador_biometria_whatsapp",
     ),
     path(
         "painel/colaboradores/<int:employee_id>/status/",

@@ -184,6 +184,22 @@ AWS_S3_FILE_OVERWRITE = False
 # Biometria
 # -----------------------------------------------------------------------------
 BIOMETRIA_KEY = config("BIOMETRIA_KEY")  # Fernet key para criptografar embeddings
+BIOMETRIC_SELF_ENROLL_BASE_URL = config(
+    "BIOMETRIC_SELF_ENROLL_BASE_URL",
+    default="http://localhost:8000/biometria/cadastro-facial",
+)
+BIOMETRIC_INVITE_EXPIRATION_HOURS = config(
+    "BIOMETRIC_INVITE_EXPIRATION_HOURS",
+    default=24,
+    cast=int,
+)
+
+# WhatsApp
+WHATSAPP_PROVIDER = config("WHATSAPP_PROVIDER", default="waha")
+WHATSAPP_TIMEOUT = config("WHATSAPP_TIMEOUT", default=5.0, cast=float)
+WHATSAPP_WAHA_BASE_URL = config("WHATSAPP_WAHA_BASE_URL", default="")
+WHATSAPP_WAHA_SESSION = config("WHATSAPP_WAHA_SESSION", default="default")
+WHATSAPP_WAHA_API_TOKEN = config("WHATSAPP_WAHA_API_TOKEN", default="")
 
 # -----------------------------------------------------------------------------
 # Internacionalização

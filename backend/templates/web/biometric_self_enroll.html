@@ -1,0 +1,673 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadastro Facial | FacilitaPonto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --line: #dbe4ee;
+      --text: #252a3d;
+      --muted: #5f7390;
+      --brand: #2f74bd;
+      --danger: #b1241d;
+      --danger-bg: #fff2f0;
+      --success: #047857;
+      --success-bg: #ecfdf5;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef4fb 100%);
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      justify-content: center;
+    }
+
+    .brand img {
+      width: min(100%, 240px);
+      height: auto;
+    }
+
+    .hero,
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    .hero {
+      padding: 28px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .hero h1,
+    .hero p,
+    .card h2,
+    .card p {
+      margin: 0;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 3vw, 2.6rem);
+      line-height: 1.1;
+    }
+
+    .hero p {
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 760px;
+    }
+
+    .status {
+      width: fit-content;
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .card {
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .state-box {
+      border-radius: 18px;
+      padding: 18px 20px;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .state-box.error {
+      border: 1px solid #efc0ba;
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    .state-box.success {
+      border: 1px solid #a7f3d0;
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      display: grid;
+      gap: 6px;
+      background: #fbfdff;
+    }
+
+    .summary-card span:first-child {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .summary-card strong {
+      font-size: 16px;
+    }
+
+    .capture-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .preview-box {
+      min-height: 360px;
+      border: 1px dashed #bfd0e3;
+      border-radius: 22px;
+      background: linear-gradient(180deg, #f8fbff 0%, #f8fafc 100%);
+      padding: 22px;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .preview-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--brand);
+      border: 1px solid #bfdbfe;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .preview-box video,
+    .preview-box img {
+      width: min(100%, 320px);
+      max-height: 240px;
+      object-fit: cover;
+      border-radius: 18px;
+      border: 1px solid #dbe6f2;
+      background: #0f172a;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    }
+
+    .preview-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .preview-caption {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      max-width: 360px;
+    }
+
+    .side {
+      display: grid;
+      gap: 14px;
+    }
+
+    .side-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .side-card h3,
+    .side-card p {
+      margin: 0;
+    }
+
+    .side-card h3 {
+      font-size: 16px;
+    }
+
+    .side-card p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .source-switcher,
+    .camera-actions,
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: #c0cfdf;
+      background: #f8fbff;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: .6;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #245d9c;
+      border-color: #245d9c;
+    }
+
+    .btn-soft {
+      color: #274d78;
+      border-color: #d3e0ef;
+    }
+
+    .source-button[data-active="true"] {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .field {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field label {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .field input[type="file"] {
+      width: 100%;
+      min-height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 10px 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .consent input {
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading {
+      display: none;
+      border: 1px solid #dbe6f2;
+      border-radius: 18px;
+      background: #fbfdff;
+      padding: 16px;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .loading[data-visible="true"] {
+      display: flex;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 3px solid #dbeafe;
+      border-top-color: #1d4ed8;
+      animation: spin .9s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 920px) {
+      .summary-grid,
+      .capture-shell {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="brand">
+      <img src="{% static 'img/logo-facilitaponto.png' %}" alt="FacilitaPonto">
+    </div>
+
+    <section class="hero">
+      <span class="status">Cadastro facial seguro</span>
+      <h1>Conclua seu cadastro facial</h1>
+      <p>Use este link para registrar o consentimento e enviar uma foto facial válida para o sistema de ponto eletrônico.</p>
+    </section>
+
+    {% if success %}
+      <section class="card">
+        <div class="state-box success">
+          <strong>{{ feedback.title }}</strong><br>
+          {{ feedback.message }}<br>
+          {{ feedback.hint }}
+        </div>
+      </section>
+    {% elif error_message and not invite %}
+      <section class="card">
+        <div class="state-box error">
+          <strong>{{ feedback.title }}</strong><br>
+          {{ feedback.message }}<br>
+          {{ feedback.hint }}
+        </div>
+      </section>
+    {% elif invite %}
+      <section class="card">
+        {% if error_message %}
+          <div class="state-box error">
+            <strong>{{ feedback.title|default:"Não foi possível concluir o cadastro facial" }}</strong><br>
+            {{ feedback.message|default:error_message }}<br>
+            {{ feedback.hint|default:"Revise a imagem, confirme o consentimento e tente novamente." }}
+          </div>
+        {% endif %}
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <span>Colaborador</span>
+            <strong>{{ invite.employee.nome }}</strong>
+          </div>
+          <div class="summary-card">
+            <span>Empresa</span>
+            <strong>{{ invite.employee.tenant.razao_social }}</strong>
+          </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" data-self-enroll-form>
+          {% csrf_token %}
+          <input type="hidden" name="token" value="{{ token }}">
+          {{ form.versao_termo }}
+          {{ form.imagem_capturada }}
+
+          <div class="capture-shell">
+            <div class="preview-box">
+              <span class="preview-chip">Frente</span>
+              <video autoplay playsinline hidden data-self-enroll-video></video>
+              <img src="" alt="Pré-visualização da foto facial" hidden data-self-enroll-preview>
+              <span class="preview-title" data-self-enroll-preview-title>Nenhuma foto capturada</span>
+              <span class="preview-caption" data-self-enroll-preview-empty>
+                Ative a webcam para capturar na hora ou envie uma foto frontal com boa iluminação.
+              </span>
+            </div>
+
+            <div class="side">
+              <section class="side-card">
+                <h3>Foto facial</h3>
+                <p>Escolha o canal que preferir. A webcam é o caminho principal; o upload continua disponível como fallback.</p>
+
+                <div class="source-switcher">
+                  <button type="button" class="btn source-button" data-source-mode="camera" data-active="true">Usar webcam</button>
+                  <button type="button" class="btn source-button" data-source-mode="upload">Enviar foto</button>
+                </div>
+
+                <div class="field" data-camera-panel>
+                  <label>Captura pela webcam</label>
+                  <div class="camera-actions">
+                    <button type="button" class="btn btn-soft" data-start-camera>Ativar câmera</button>
+                    <button type="button" class="btn btn-primary" data-take-photo disabled>Capturar agora</button>
+                  </div>
+                  <span class="preview-caption" data-camera-status>
+                    Permita o acesso à câmera do navegador para capturar a foto.
+                  </span>
+                </div>
+
+                <div class="field hidden" data-upload-panel>
+                  <label for="{{ form.imagem.id_for_label }}">Selecionar imagem</label>
+                  {{ form.imagem }}
+                </div>
+              </section>
+
+              <section class="side-card">
+                <h3>Consentimento</h3>
+                <label class="consent" for="{{ form.consentimento.id_for_label }}">
+                  {{ form.consentimento }}
+                  <span>Declaro que autorizo a captura de dados biométricos faciais para uso no sistema de ponto eletrônico.</span>
+                </label>
+              </section>
+
+              <div class="loading" data-loading aria-live="polite">
+                <span class="spinner" aria-hidden="true"></span>
+                <span>Processando consentimento e cadastro facial...</span>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-soft" data-reset-capture>Recapturar Foto</button>
+                <button type="submit" class="btn btn-primary" data-confirm-submit disabled>Confirmar e Salvar</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </section>
+    {% endif %}
+  </main>
+
+  {% if invite and not success %}
+    <script>
+      (function () {
+        const form = document.querySelector("[data-self-enroll-form]");
+        if (!form) return;
+
+        const fileInput = form.querySelector('input[type="file"]');
+        const consentInput = form.querySelector('input[type="checkbox"]');
+        const capturedInput = form.querySelector('input[name="imagem_capturada"]');
+        const preview = form.querySelector("[data-self-enroll-preview]");
+        const video = form.querySelector("[data-self-enroll-video]");
+        const previewTitle = form.querySelector("[data-self-enroll-preview-title]");
+        const emptyState = form.querySelector("[data-self-enroll-preview-empty]");
+        const sourceButtons = form.querySelectorAll("[data-source-mode]");
+        const cameraPanel = form.querySelector("[data-camera-panel]");
+        const uploadPanel = form.querySelector("[data-upload-panel]");
+        const startCameraButton = form.querySelector("[data-start-camera]");
+        const takePhotoButton = form.querySelector("[data-take-photo]");
+        const resetButton = form.querySelector("[data-reset-capture]");
+        const submitButton = form.querySelector("[data-confirm-submit]");
+        const loading = form.querySelector("[data-loading]");
+        const cameraStatus = form.querySelector("[data-camera-status]");
+        let stream = null;
+        let sourceMode = "camera";
+        let isSubmitting = false;
+
+        function syncState() {
+          const hasFile = Boolean(fileInput && fileInput.files && fileInput.files.length);
+          const hasCaptured = Boolean(capturedInput && capturedInput.value);
+          const hasConsent = Boolean(consentInput && consentInput.checked);
+          submitButton.disabled = isSubmitting || !((hasFile || hasCaptured) && hasConsent);
+          resetButton.disabled = isSubmitting || !(hasFile || hasCaptured);
+          startCameraButton.disabled = isSubmitting;
+          takePhotoButton.disabled = isSubmitting || !stream;
+          sourceButtons.forEach(function (button) {
+            button.disabled = isSubmitting;
+          });
+        }
+
+        function setLoadingState(nextState) {
+          isSubmitting = nextState;
+          loading.dataset.visible = String(nextState);
+          submitButton.textContent = nextState ? "Processando..." : "Confirmar e Salvar";
+          syncState();
+        }
+
+        function stopCamera() {
+          if (!stream) return;
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          stream = null;
+          video.srcObject = null;
+          video.hidden = true;
+          takePhotoButton.disabled = true;
+        }
+
+        function resetPreview() {
+          video.hidden = true;
+          preview.hidden = true;
+          preview.removeAttribute("src");
+          previewTitle.textContent = "Nenhuma foto capturada";
+          emptyState.hidden = false;
+        }
+
+        function showPreview(source, title) {
+          preview.src = source;
+          preview.hidden = false;
+          video.hidden = true;
+          previewTitle.textContent = title || "Foto pronta para revisão";
+          emptyState.hidden = true;
+        }
+
+        async function startCamera() {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            cameraStatus.textContent = "Este navegador não suporta captura por webcam. Use o envio de foto.";
+            return;
+          }
+
+          stopCamera();
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+            video.srcObject = stream;
+            video.hidden = false;
+            emptyState.hidden = true;
+            preview.hidden = true;
+            preview.removeAttribute("src");
+            previewTitle.textContent = "Webcam pronta para captura";
+            cameraStatus.textContent = "Posicione o rosto de frente para a câmera e clique em Capturar agora.";
+            takePhotoButton.disabled = false;
+          } catch (error) {
+            cameraStatus.textContent = "Não foi possível acessar a webcam. Use o envio de foto como fallback.";
+          }
+        }
+
+        function setSourceMode(mode) {
+          sourceMode = mode;
+          sourceButtons.forEach(function (button) {
+            button.dataset.active = String(button.dataset.sourceMode === mode);
+          });
+          const isCamera = mode === "camera";
+          cameraPanel.classList.toggle("hidden", !isCamera);
+          uploadPanel.classList.toggle("hidden", isCamera);
+          if (!isCamera) {
+            stopCamera();
+            cameraStatus.textContent = "O envio de foto permanece disponível como fallback operacional.";
+          }
+        }
+
+        sourceButtons.forEach(function (button) {
+          button.addEventListener("click", function () {
+            setSourceMode(button.dataset.sourceMode);
+          });
+        });
+
+        fileInput.addEventListener("change", function () {
+          capturedInput.value = "";
+          syncState();
+          if (!fileInput.files || !fileInput.files[0]) {
+            resetPreview();
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            showPreview(event.target.result, "Foto pronta para revisão");
+          };
+          reader.readAsDataURL(fileInput.files[0]);
+        });
+
+        startCameraButton.addEventListener("click", function () {
+          startCamera();
+        });
+
+        takePhotoButton.addEventListener("click", function () {
+          if (!stream) return;
+          const canvas = document.createElement("canvas");
+          const width = video.videoWidth || 640;
+          const height = video.videoHeight || 480;
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext("2d");
+          context.drawImage(video, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+          capturedInput.value = dataUrl;
+          fileInput.value = "";
+          showPreview(dataUrl, "Foto capturada pela webcam");
+          cameraStatus.textContent = "A foto foi capturada. Revise a imagem e confirme o consentimento.";
+          syncState();
+        });
+
+        consentInput.addEventListener("change", syncState);
+
+        resetButton.addEventListener("click", function () {
+          capturedInput.value = "";
+          form.reset();
+          setSourceMode(sourceMode);
+          if (sourceMode === "camera") {
+            startCamera();
+          } else {
+            stopCamera();
+          }
+        });
+
+        form.addEventListener("reset", function () {
+          window.setTimeout(function () {
+            resetPreview();
+            syncState();
+          }, 0);
+        });
+
+        form.addEventListener("submit", function () {
+          setLoadingState(true);
+          stopCamera();
+        });
+
+        setSourceMode("camera");
+        startCamera();
+        syncState();
+      })();
+    </script>
+  {% endif %}
+</body>
+</html>

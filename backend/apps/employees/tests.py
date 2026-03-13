@@ -1,14 +1,16 @@
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import close_old_connections
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.accounts.serializers import TenantTokenObtainPairSerializer
-from apps.biometrics.models import ConsentimentoBiometrico, FacialEmbedding
+from apps.biometrics.models import BiometricInvite, ConsentimentoBiometrico, FacialEmbedding
 from apps.employees.models import Employee, NSRSequence, WorkSchedule
 from apps.employees.services import EmployeeRegistrationService, get_next_nsr
 from apps.tenants.models import Tenant
@@ -201,6 +203,69 @@ class TestEmployeeModel:
             ativo=True,
         )
         assert employee.biometric_status == Employee.BiometricStatus.CADASTRADA
+
+    def test_snapshot_biometrico_reflete_convite_whatsapp_enviado(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Comercial 44h",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        employee = Employee.all_objects.create(
+            tenant=tenant_a,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        BiometricInvite.all_objects.create(
+            tenant=tenant_a,
+            employee=employee,
+            sent_to="85999990000",
+            token_hash=BiometricInvite.build_token_hash("token-ativo"),
+            expires_at=timezone.now() + timedelta(hours=2),
+            status=BiometricInvite.Status.SENT,
+            provider="fake",
+        )
+
+        snapshot = employee.biometric_snapshot()
+
+        assert snapshot["status"] == Employee.BiometricStatus.PENDENTE
+        assert "Link de cadastro facial enviado por WhatsApp" in snapshot["detail"]
+        assert snapshot["has_active_invite"] is True
+        assert snapshot["invite_summary_value"] == "Aguardando conclusão"
+
+    def test_snapshot_biometrico_reflete_convite_whatsapp_expirado(self, tenant_a):
+        schedule = WorkSchedule.all_objects.create(
+            tenant=tenant_a,
+            nome="Comercial 44h",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+        employee = Employee.all_objects.create(
+            tenant=tenant_a,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        BiometricInvite.all_objects.create(
+            tenant=tenant_a,
+            employee=employee,
+            sent_to="85999990000",
+            token_hash=BiometricInvite.build_token_hash("token-expirado"),
+            expires_at=timezone.now() - timedelta(minutes=5),
+            status=BiometricInvite.Status.EXPIRED,
+            provider="fake",
+        )
+
+        snapshot = employee.biometric_snapshot()
+
+        assert snapshot["status"] == Employee.BiometricStatus.PENDENTE
+        assert "expirou" in snapshot["detail"]
+        assert snapshot["invite_summary_value"] == "Expirado"
 
 
 @pytest.mark.django_db

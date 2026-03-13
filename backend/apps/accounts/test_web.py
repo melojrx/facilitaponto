@@ -3,6 +3,7 @@ import json
 import re
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from io import BytesIO
 
 import pytest
@@ -11,11 +12,12 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import close_old_connections
 from django.test import override_settings
+from django.utils import timezone
 from PIL import Image
 
 from apps.accounts.forms import CompanyOnboardingForm
 from apps.accounts.models import User
-from apps.biometrics.models import ConsentimentoBiometrico, FacialEmbedding
+from apps.biometrics.models import BiometricInvite, ConsentimentoBiometrico, FacialEmbedding
 from apps.tenants.models import Tenant
 
 
@@ -59,6 +61,143 @@ class TestWebPublicPages:
 
         assert response.status_code == 302
         assert response.url == "/login/?next=/painel/"
+
+
+@pytest.mark.django_db
+class TestPublicBiometricSelfEnrollFlow:
+    def _make_tenant(self):
+        return Tenant.objects.create(
+            tipo_pessoa="PJ",
+            documento="31721174000107",
+            cnpj="31721174000107",
+            razao_social="Acme Convite LTDA",
+            onboarding_step=3,
+        )
+
+    def _create_schedule(self, tenant):
+        from apps.employees.models import WorkSchedule
+
+        return WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada Comercial",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+        )
+
+    def _create_employee(self, tenant):
+        from apps.employees.models import Employee
+
+        return Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=self._create_schedule(tenant),
+            ativo=True,
+        )
+
+    def _create_invite(self, tenant, employee, raw_token, *, status="sent", expires_at=None):
+        from django.utils import timezone
+
+        if expires_at is None:
+            expires_at = timezone.now() + timedelta(hours=1)
+
+        return BiometricInvite.all_objects.create(
+            tenant=tenant,
+            employee=employee,
+            sent_to=employee.telefone,
+            token_hash=BiometricInvite.build_token_hash(raw_token),
+            expires_at=expires_at,
+            status=status,
+            provider="fake",
+        )
+
+    def test_get_link_publico_valido_renderiza_pagina(self, client):
+        tenant = self._make_tenant()
+        employee = self._create_employee(tenant)
+        self._create_invite(tenant, employee, "token-publico")
+
+        response = client.get("/biometria/cadastro-facial/?token=token-publico")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Conclua seu cadastro facial" in content
+        assert "Maria Clara" in content
+        assert "Usar webcam" in content
+
+    def test_get_link_expirado_exibe_mensagem_e_atualiza_status(self, client):
+        from django.utils import timezone
+
+        tenant = self._make_tenant()
+        employee = self._create_employee(tenant)
+        invite = self._create_invite(
+            tenant,
+            employee,
+            "token-expirado",
+            expires_at=timezone.now() - timedelta(minutes=5),
+        )
+
+        response = client.get("/biometria/cadastro-facial/?token=token-expirado")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Link expirado" in content
+        assert "expirou" in content
+        assert "Solicite um novo envio ao gestor da empresa" in content
+        invite.refresh_from_db()
+        assert invite.status == BiometricInvite.Status.EXPIRED
+
+    def test_get_link_utilizado_exibe_estado_final_refinado(self, client):
+        tenant = self._make_tenant()
+        employee = self._create_employee(tenant)
+        self._create_invite(
+            tenant,
+            employee,
+            "token-usado",
+            status=BiometricInvite.Status.USED,
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+        response = client.get("/biometria/cadastro-facial/?token=token-usado")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Link já utilizado" in content
+        assert "solicite um novo envio ao gestor" in content
+
+    def test_post_link_publico_conclui_cadastro_facial(self, client, monkeypatch):
+        tenant = self._make_tenant()
+        employee = self._create_employee(tenant)
+        self._create_invite(tenant, employee, "token-publico")
+
+        captured = {}
+
+        def fake_complete_self_enroll(self, **kwargs):
+            captured.update(kwargs)
+            return {"invite": object(), "snapshot": {"status": "CADASTRADA"}}
+
+        monkeypatch.setattr(
+            "apps.accounts.web_views.BiometricInviteService.complete_self_enroll",
+            fake_complete_self_enroll,
+        )
+
+        response = client.post(
+            "/biometria/cadastro-facial/",
+            data={
+                "token": "token-publico",
+                "imagem": _build_test_image_file(),
+                "consentimento": "on",
+                "versao_termo": "whatsapp-v1",
+            },
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Cadastro facial concluído" in content
+        assert "biometria facial foi concluída com sucesso" in content
+        assert captured["raw_token"] == "token-publico"
+        assert captured["consentimento_aceito"] is True
+        assert captured["imagem_bytes"]
 
 
 @pytest.mark.django_db
@@ -1351,6 +1490,38 @@ class TestCollaboratorWebFlow:
         assert "Cadastro Facial Concluido" in content
         assert "Cadastro facial concluido em" in content
 
+    def test_listagem_exibe_status_de_convite_whatsapp_enviado(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        BiometricInvite.all_objects.create(
+            tenant=tenant,
+            employee=employee,
+            sent_to="85999990000",
+            token_hash=BiometricInvite.build_token_hash("token-enviado-lista"),
+            expires_at=timezone.now() + timedelta(hours=2),
+            status=BiometricInvite.Status.SENT,
+            provider="fake",
+        )
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Link de cadastro facial enviado por WhatsApp" in content
+
     def test_listagem_filtra_por_busca_e_jornada(self, client, user):
         from apps.employees.models import Employee
 
@@ -1447,6 +1618,7 @@ class TestCollaboratorWebFlow:
         assert 'value="52998224725"' in content
         assert "Rastreabilidade biométrica" in content
         assert "Capturar Foto Facial" in content
+        assert "Enviar por WhatsApp" in content
 
     def test_get_editar_colaborador_com_flag_reabre_modal_biometrico(self, client, user):
         from apps.employees.models import Employee
@@ -1471,6 +1643,65 @@ class TestCollaboratorWebFlow:
         assert "Usar webcam" in response.content.decode()
         assert "Enviar foto" in response.content.decode()
 
+    def test_get_editar_colaborador_com_flag_reabre_modal_whatsapp(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/colaboradores/{employee.id}/editar/?open_whatsapp_modal=1")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert 'data-auto-open="true"' in content
+        assert "Enviar link de cadastro facial?" in content
+        assert "85999990000" in content
+
+    def test_get_editar_colaborador_exibe_resumo_do_convite_whatsapp(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        BiometricInvite.all_objects.create(
+            tenant=tenant,
+            employee=employee,
+            sent_to="85999990000",
+            token_hash=BiometricInvite.build_token_hash("token-edicao"),
+            expires_at=timezone.now() + timedelta(hours=2),
+            status=BiometricInvite.Status.SENT,
+            provider="fake",
+        )
+        client.force_login(user)
+
+        response = client.get(f"/painel/colaboradores/{employee.id}/editar/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Convite Remoto" in content
+        assert "Aguardando conclusão" in content
+        assert "Expira em" in content
+
     def test_listagem_exibe_acao_rapida_para_captura_biometrica(self, client, user):
         from apps.employees.models import Employee
 
@@ -1492,6 +1723,31 @@ class TestCollaboratorWebFlow:
         assert response.status_code == 200
         assert (
             f'/painel/colaboradores/{employee.id}/editar/?open_biometric_modal=1'
+            in response.content.decode()
+        )
+
+    def test_listagem_exibe_acao_rapida_para_whatsapp(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        assert (
+            f'/painel/colaboradores/{employee.id}/editar/?open_whatsapp_modal=1'
             in response.content.decode()
         )
 
@@ -1692,6 +1948,71 @@ class TestCollaboratorWebFlow:
         assert response.status_code == 200
         assert "Não foi possível concluir o cadastro facial. Tente novamente." in response.content.decode()
         assert 'data-auto-open="true"' in response.content.decode()
+
+    def test_post_envio_whatsapp_dispara_service(self, client, user, monkeypatch):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="85999990000",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        captured = {}
+
+        def fake_send_whatsapp_invite(self, **kwargs):
+            captured.update(kwargs)
+            return {"invite": object(), "invite_url": "https://example.com?token=abc"}
+
+        monkeypatch.setattr(
+            "apps.accounts.web_views.BiometricInviteService.send_whatsapp_invite",
+            fake_send_whatsapp_invite,
+        )
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/biometria/whatsapp/",
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == f"/painel/colaboradores/{employee.id}/editar/"
+        assert captured["employee"].id == employee.id
+        assert captured["requested_by"] == user
+
+    def test_post_envio_whatsapp_sem_telefone_reabre_modal(self, client, user):
+        from apps.employees.models import Employee
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = Employee.all_objects.create(
+            tenant=tenant,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            telefone="",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            f"/painel/colaboradores/{employee.id}/biometria/whatsapp/",
+            follow=True,
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Telefone invalido para envio por WhatsApp." in content
+        assert 'data-auto-open="true"' in content
 
     def test_post_editar_colaborador_atualiza_registro(self, client, user):
         from apps.employees.models import Employee

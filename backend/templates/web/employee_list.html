@@ -407,12 +407,17 @@
                         <path d="M7.5 16a6 6 0 0 1 9 0"></path>
                       </svg>
                     </a>
-                    <span class="action-icon disabled" title="Envio de link por WhatsApp entra na próxima etapa" aria-hidden="true">
+                    <a
+                      href="{{ collaborator.whatsapp_invite_url }}"
+                      class="action-icon"
+                      title="Enviar link de cadastro facial por WhatsApp"
+                      aria-label="Enviar link de cadastro facial por WhatsApp para {{ collaborator.nome }}"
+                    >
                       <svg viewBox="0 0 24 24">
                         <path d="M20 12a8 8 0 0 1-11.7 7.1L4 20l1-4.1A8 8 0 1 1 20 12z"></path>
                         <path d="M8.5 9.5c.3-.7.6-.8 1-.8h.4c.1 0 .4 0 .6.5s.7 1.6.8 1.7c.1.1.1.3 0 .4s-.2.4-.3.5-.3.3-.4.4-.2.2-.1.4c.1.2.6 1 1.3 1.5.9.8 1.7 1 1.9 1.1.2.1.4.1.5 0 .1-.2.5-.6.6-.8.2-.2.3-.2.5-.1.2.1 1.4.7 1.6.8s.4.2.4.3c0 .1 0 .7-.2 1.1-.2.4-1 .8-1.4.9-.4.1-.9.2-1.5.1-.4-.1-.9-.2-1.5-.5a9 9 0 0 1-2.5-1.6 8.8 8.8 0 0 1-1.8-2.2c-.5-.8-.7-1.6-.8-2.2-.1-.6 0-1 .1-1.3.1-.3.3-.7.6-1z"></path>
                       </svg>
-                    </span>
+                    </a>
                     <a href="{{ collaborator.edit_url }}" class="action-icon" title="Editar colaborador" aria-label="Editar colaborador {{ collaborator.nome }}">
                       <svg viewBox="0 0 24 24">
                         <path d="M12 20h9"></path>

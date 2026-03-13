@@ -57,6 +57,15 @@ services:
     ports:
       - "6379:6379"
 
+  waha:
+    image: devlikeapro/waha:latest
+    ports:
+      - "3000:3000"
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: WEBJS
+      WHATSAPP_RESTART_ALL_SESSIONS: "true"
+      WAHA_API_KEY: ponto-digital-dev
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"

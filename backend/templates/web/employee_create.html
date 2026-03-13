@@ -150,7 +150,7 @@
 
     .biometric-summary-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -441,6 +441,25 @@
       border-top: 1px solid #e8eef6;
     }
 
+    .biometric-phone-highlight {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid #dbe6f2;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .biometric-whatsapp-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
     .biometric-loading {
       position: absolute;
       inset: 0;
@@ -641,12 +660,25 @@
               {% endif %}
             </span>
           </div>
+          <div class="biometric-summary-card">
+            <span class="biometric-summary-label">Convite Remoto</span>
+            <span class="biometric-summary-value">
+              {% if is_edit_mode and employee_biometric %}{{ employee_biometric.invite_summary_value }}{% else %}Não enviado{% endif %}
+            </span>
+            <span class="biometric-summary-detail">
+              {% if is_edit_mode and employee_biometric %}
+                {{ employee_biometric.invite_summary_detail }}
+              {% else %}
+                Use o envio por WhatsApp quando o colaborador não estiver presente para a captura no painel.
+              {% endif %}
+            </span>
+          </div>
         </div>
 
         {% if is_edit_mode %}
           <div class="biometric-actions">
             <button type="button" class="btn btn-primary" data-open-biometric-modal>Capturar Foto Facial</button>
-            <button type="button" class="btn btn-secondary-soft" disabled aria-disabled="true">Enviar por WhatsApp</button>
+            <button type="button" class="btn btn-secondary-soft" data-open-whatsapp-modal>Enviar por WhatsApp</button>
           </div>
         {% endif %}
       </div>
@@ -749,6 +781,68 @@
             <button type="button" class="btn" data-close-biometric-modal>Cancelar</button>
             <button type="button" class="btn btn-secondary-soft" data-reset-biometric>Recapturar Foto</button>
             <button type="submit" class="btn btn-primary" data-confirm-biometric disabled>Confirmar e Salvar</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+  {% endif %}
+
+  {% if is_edit_mode and biometric_whatsapp_action_url %}
+    <dialog class="biometric-modal" data-whatsapp-modal{% if open_whatsapp_modal %} data-auto-open="true"{% endif %}>
+      <div class="biometric-modal-body">
+        <div class="biometric-modal-header">
+          <h3>Enviar link de cadastro facial?</h3>
+          <p>Uma mensagem será enviada via WhatsApp com instruções para o colaborador concluir o cadastro facial fora do painel administrativo.</p>
+        </div>
+
+        <form method="post" action="{{ biometric_whatsapp_action_url }}" data-whatsapp-invite-form>
+          {% csrf_token %}
+
+          <div class="biometric-modal-main">
+            <div class="biometric-preview-box" style="min-height: 220px;">
+              <span class="biometric-preview-chip">Canal remoto</span>
+              <span class="biometric-preview-title">Convite por WhatsApp</span>
+              <span class="biometric-preview-caption">
+                O link será seguro, expirável e permitirá que o colaborador finalize a biometria fora do painel.
+              </span>
+              <span class="biometric-phone-highlight">
+                {% if employee_phone_for_whatsapp %}
+                  {{ employee_phone_for_whatsapp }}
+                {% else %}
+                  Telefone não informado
+                {% endif %}
+              </span>
+            </div>
+
+            <div class="biometric-modal-side">
+              <section class="biometric-modal-card">
+                <h4>Telefone de destino</h4>
+                <p>
+                  {% if employee_phone_for_whatsapp %}
+                    Uma mensagem será enviada para <strong>{{ employee_phone_for_whatsapp }}</strong> com instruções para o cadastro facial do colaborador.
+                  {% else %}
+                    O colaborador ainda não possui um telefone válido no cadastro. Atualize o telefone antes de enviar o convite.
+                  {% endif %}
+                </p>
+              </section>
+
+              <section class="biometric-modal-card">
+                <h4>Regras do link</h4>
+                <p class="biometric-whatsapp-note">O link é de uso único, expira automaticamente e substitui convites ativos anteriores do mesmo colaborador.</p>
+              </section>
+            </div>
+          </div>
+
+          <div class="biometric-modal-actions">
+            <button type="button" class="btn" data-close-whatsapp-modal>Cancelar</button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              data-confirm-whatsapp
+              {% if not employee_phone_for_whatsapp %}disabled aria-disabled="true"{% endif %}
+            >
+              Enviar
+            </button>
           </div>
         </form>
       </div>
@@ -996,6 +1090,49 @@
         }
 
         dialog.addEventListener("close", stopCamera);
+      })();
+    </script>
+  {% endif %}
+
+  {% if is_edit_mode and biometric_whatsapp_action_url %}
+    <script>
+      (function () {
+        const dialog = document.querySelector("[data-whatsapp-modal]");
+        const openButton = document.querySelector("[data-open-whatsapp-modal]");
+        const closeButton = document.querySelector("[data-close-whatsapp-modal]");
+        const form = document.querySelector("[data-whatsapp-invite-form]");
+        if (!dialog || !openButton || !closeButton || !form) return;
+
+        const confirmButton = form.querySelector("[data-confirm-whatsapp]");
+        const shouldAutoOpen = dialog.dataset.autoOpen === "true";
+
+        openButton.addEventListener("click", function () {
+          dialog.showModal();
+        });
+
+        closeButton.addEventListener("click", function () {
+          dialog.close();
+        });
+
+        dialog.addEventListener("click", function (event) {
+          const rect = dialog.getBoundingClientRect();
+          const inside =
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width;
+          if (!inside) dialog.close();
+        });
+
+        form.addEventListener("submit", function () {
+          if (!confirmButton || confirmButton.disabled) return;
+          confirmButton.disabled = true;
+          confirmButton.textContent = "Enviando...";
+        });
+
+        if (shouldAutoOpen) {
+          dialog.showModal();
+        }
       })();
     </script>
   {% endif %}

@@ -76,26 +76,106 @@ class Employee(TenantModelMixin, models.Model):
         prefetched = getattr(self, "_prefetched_objects_cache", {})
         if related_name in prefetched:
             return list(prefetched[related_name])
-        return list(getattr(self, related_name).all())
+        related_manager = getattr(self, related_name)
+        related_model = getattr(related_manager, "model", None)
+        relation_field = getattr(related_manager, "field", None)
+        if related_model is not None and relation_field is not None and hasattr(related_model, "all_objects"):
+            return list(related_model.all_objects.filter(**{relation_field.name: self}))
+        return list(related_manager.all())
+
+    @staticmethod
+    def _format_snapshot_datetime(value):
+        if not value:
+            return None
+        return timezone.localtime(value).strftime("%d/%m/%Y %H:%M")
 
     def biometric_snapshot(self):
         embeddings = self._prefetched_related_list("facial_embeddings")
         consents = self._prefetched_related_list("consentimentos_biometricos")
+        invites = self._prefetched_related_list("biometric_invites")
 
         active_embedding = next((embedding for embedding in embeddings if embedding.ativo), None)
         latest_consent = consents[0] if consents else None
+        active_invite = next((invite for invite in invites if invite.is_active), None)
+        latest_invite = invites[0] if invites else None
+
+        invite_summary_value = "Não enviado"
+        invite_summary_detail = (
+            "Use o convite por WhatsApp quando o colaborador não estiver presente para a captura no painel."
+        )
+        latest_invite_status = getattr(latest_invite, "status", None)
+        latest_invite_at = None
+        latest_invite_expires_at = None
+
+        if latest_invite:
+            latest_invite_at = latest_invite.sent_at or latest_invite.created_at
+            latest_invite_expires_at = latest_invite.expires_at
+
+            if active_invite:
+                invite_summary_value = "Aguardando conclusão"
+                invite_summary_detail = (
+                    f"Link enviado por WhatsApp em {self._format_snapshot_datetime(latest_invite_at)}. "
+                    f"Expira em {self._format_snapshot_datetime(latest_invite_expires_at)}."
+                )
+            elif latest_invite_status == "expired":
+                invite_summary_value = "Expirado"
+                invite_summary_detail = (
+                    f"Último link expirou em {self._format_snapshot_datetime(latest_invite_expires_at)}. "
+                    "Solicite um novo envio para o colaborador."
+                )
+            elif latest_invite_status == "used":
+                invite_summary_value = "Concluído"
+                invite_summary_detail = (
+                    f"Último link remoto foi concluído em {self._format_snapshot_datetime(latest_invite.used_at)}."
+                )
+            elif latest_invite_status == "failed":
+                invite_summary_value = "Falhou"
+                invite_summary_detail = latest_invite.last_error or (
+                    "O último envio por WhatsApp falhou. Revise o telefone e tente novamente."
+                )
+            elif latest_invite_status == "revoked":
+                invite_summary_value = "Substituído"
+                invite_summary_detail = (
+                    "O último link remoto foi substituído por um novo envio e não está mais disponível."
+                )
 
         if active_embedding:
             return {
                 "status": self.BiometricStatus.CADASTRADA,
                 "label": self.BiometricStatus.CADASTRADA.label,
                 "detail": (
-                    f"Cadastro facial concluido em {timezone.localtime(active_embedding.created_at).strftime('%d/%m/%Y %H:%M')}."
+                    f"Cadastro facial concluido em {self._format_snapshot_datetime(active_embedding.created_at)}."
                 ),
                 "latest_consent_at": latest_consent.timestamp if latest_consent else None,
                 "latest_embedding_at": active_embedding.created_at,
                 "has_active_consent": bool(latest_consent and latest_consent.aceito),
                 "has_active_embedding": True,
+                "has_active_invite": bool(active_invite),
+                "latest_invite_status": latest_invite_status,
+                "latest_invite_at": latest_invite_at,
+                "latest_invite_expires_at": latest_invite_expires_at,
+                "invite_summary_value": invite_summary_value,
+                "invite_summary_detail": invite_summary_detail,
+            }
+
+        if active_invite:
+            return {
+                "status": self.BiometricStatus.PENDENTE,
+                "label": self.BiometricStatus.PENDENTE.label,
+                "detail": (
+                    f"Link de cadastro facial enviado por WhatsApp em {self._format_snapshot_datetime(latest_invite_at)}. "
+                    "Aguardando conclusão do colaborador."
+                ),
+                "latest_consent_at": latest_consent.timestamp if latest_consent else None,
+                "latest_embedding_at": None,
+                "has_active_consent": bool(latest_consent and latest_consent.aceito),
+                "has_active_embedding": False,
+                "has_active_invite": True,
+                "latest_invite_status": latest_invite_status,
+                "latest_invite_at": latest_invite_at,
+                "latest_invite_expires_at": latest_invite_expires_at,
+                "invite_summary_value": invite_summary_value,
+                "invite_summary_detail": invite_summary_detail,
             }
 
         if latest_consent and latest_consent.aceito:
@@ -103,12 +183,55 @@ class Employee(TenantModelMixin, models.Model):
                 "status": self.BiometricStatus.CONSENTIMENTO,
                 "label": self.BiometricStatus.CONSENTIMENTO.label,
                 "detail": (
-                    f"Consentimento registrado em {timezone.localtime(latest_consent.timestamp).strftime('%d/%m/%Y %H:%M')}. Enroll facial pendente."
+                    f"Consentimento registrado em {self._format_snapshot_datetime(latest_consent.timestamp)}. Enroll facial pendente."
                 ),
                 "latest_consent_at": latest_consent.timestamp,
                 "latest_embedding_at": None,
                 "has_active_consent": True,
                 "has_active_embedding": False,
+                "has_active_invite": False,
+                "latest_invite_status": latest_invite_status,
+                "latest_invite_at": latest_invite_at,
+                "latest_invite_expires_at": latest_invite_expires_at,
+                "invite_summary_value": invite_summary_value,
+                "invite_summary_detail": invite_summary_detail,
+            }
+
+        if latest_invite_status == "expired":
+            return {
+                "status": self.BiometricStatus.PENDENTE,
+                "label": self.BiometricStatus.PENDENTE.label,
+                "detail": (
+                    f"Último link de cadastro facial expirou em {self._format_snapshot_datetime(latest_invite_expires_at)}. "
+                    "Solicite um novo envio."
+                ),
+                "latest_consent_at": latest_consent.timestamp if latest_consent else None,
+                "latest_embedding_at": None,
+                "has_active_consent": False,
+                "has_active_embedding": False,
+                "has_active_invite": False,
+                "latest_invite_status": latest_invite_status,
+                "latest_invite_at": latest_invite_at,
+                "latest_invite_expires_at": latest_invite_expires_at,
+                "invite_summary_value": invite_summary_value,
+                "invite_summary_detail": invite_summary_detail,
+            }
+
+        if latest_invite_status == "failed":
+            return {
+                "status": self.BiometricStatus.PENDENTE,
+                "label": self.BiometricStatus.PENDENTE.label,
+                "detail": invite_summary_detail,
+                "latest_consent_at": latest_consent.timestamp if latest_consent else None,
+                "latest_embedding_at": None,
+                "has_active_consent": False,
+                "has_active_embedding": False,
+                "has_active_invite": False,
+                "latest_invite_status": latest_invite_status,
+                "latest_invite_at": latest_invite_at,
+                "latest_invite_expires_at": latest_invite_expires_at,
+                "invite_summary_value": invite_summary_value,
+                "invite_summary_detail": invite_summary_detail,
             }
 
         if latest_consent and not latest_consent.aceito:
@@ -116,12 +239,18 @@ class Employee(TenantModelMixin, models.Model):
                 "status": self.BiometricStatus.PENDENTE,
                 "label": self.BiometricStatus.PENDENTE.label,
                 "detail": (
-                    f"Ultimo consentimento biometrico recusado em {timezone.localtime(latest_consent.timestamp).strftime('%d/%m/%Y %H:%M')}."
+                    f"Ultimo consentimento biometrico recusado em {self._format_snapshot_datetime(latest_consent.timestamp)}."
                 ),
                 "latest_consent_at": latest_consent.timestamp,
                 "latest_embedding_at": None,
                 "has_active_consent": False,
                 "has_active_embedding": False,
+                "has_active_invite": False,
+                "latest_invite_status": latest_invite_status,
+                "latest_invite_at": latest_invite_at,
+                "latest_invite_expires_at": latest_invite_expires_at,
+                "invite_summary_value": invite_summary_value,
+                "invite_summary_detail": invite_summary_detail,
             }
 
         return {
@@ -132,6 +261,12 @@ class Employee(TenantModelMixin, models.Model):
             "latest_embedding_at": None,
             "has_active_consent": False,
             "has_active_embedding": False,
+            "has_active_invite": False,
+            "latest_invite_status": latest_invite_status,
+            "latest_invite_at": latest_invite_at,
+            "latest_invite_expires_at": latest_invite_expires_at,
+            "invite_summary_value": invite_summary_value,
+            "invite_summary_detail": invite_summary_detail,
         }
 
     @property
