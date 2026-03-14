@@ -19,17 +19,20 @@
 - O acompanhamento de execução, aceite e corte de escopo fica em `docs/DEV_008_CHECKLIST.md`.
 - As regras detalhadas de interface/módulo vivem nos anexos específicos (`jornada`, `colaboradores`, `relógios`, `tratamento`, `relatórios`, `solicitações`).
 
-## Snapshot de implementação (2026-03-11)
+## Snapshot de implementação (2026-03-13)
 
 - `DEV-008` está encerrado para aceite funcional no onboarding.
 - `Colaboradores` está entregue no núcleo funcional do painel web.
+- `Relógios de Ponto` está entregue no núcleo funcional do painel web/API.
+- O fluxo biométrico operacional já cobre:
+  - captura facial assistida no painel
+  - webcam no painel como canal principal
+  - upload de imagem como fallback operacional
+  - envio de convite remoto por WhatsApp com link seguro, expirável e de uso único
 - O próximo bloco operacional segue a ordem oficial:
-  - `1. Relógios de Ponto`
-  - `2. Captura facial no painel`
-  - `3. Envio por WhatsApp`
-  - `4. Tratamento de Ponto`
-  - `5. Relatórios`
-  - `6. Solicitações`
+  - `1. Tratamento de Ponto`
+  - `2. Relatórios`
+  - `3. Solicitações`
 - A fonte oficial desta ordem e do status detalhado permanece em `docs/DEV_008_CHECKLIST.md`.
 
 ## 1. Objetivo do DEV-008
@@ -260,7 +263,7 @@ Observação: manter modelagem simples (sem motor de workflow); transições dis
 - `GET|POST /painel/jornadas/{id}/editar/`
 - `POST /painel/jornadas/{id}/excluir/`
 
-### Status de implementação (snapshot real em 2026-03-11)
+### Status de implementação (snapshot real em 2026-03-13)
 
 Entregue no núcleo funcional:
 - Landing pública em `GET /` e autenticação web com sessões:
@@ -294,16 +297,23 @@ Entregue no núcleo funcional:
   - cadastro e edição
   - ativação/inativação
   - rastreabilidade biométrica básica
+  - captura facial assistida no painel
+  - webcam como canal principal com upload como fallback operacional
+  - envio de convite biométrico remoto por WhatsApp com autoatendimento via link seguro
+- Módulo `Relógios de Ponto` entregue no núcleo funcional:
+  - listagem, criação, edição e alteração de status no painel
+  - detalhe operacional com abas `Informações` e `Colaboradores`
+  - geofence/cerca virtual
+  - ativação por código
+  - APIs de gestão e atribuição de colaboradores
 
 Itens pendentes após o encerramento do `DEV-008`:
 - refinamento visual final da tela de jornada e catálogo completo de estados/mensagens
 - acabamentos remanescentes de `Colaboradores`:
-  - captura facial no painel
-  - envio por WhatsApp
   - jornada individual `Personalizado (entrada manual)`
   - semântica completa de `Transferidos`
+  - ações rápidas adicionais na listagem
 - módulos pós-onboarding ainda não implementados:
-  - `Relógios de Ponto`
   - `Tratamento de Ponto`
   - `Relatórios`
   - `Solicitações`

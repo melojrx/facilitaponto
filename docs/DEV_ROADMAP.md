@@ -224,7 +224,7 @@ Tarefas:
 **Referência:** PB-006, PB-100  
 **Estimativa:** 16h
 
-**Status atual (2026-03-11):**
+**Status atual (2026-03-13):**
 - ✅ Fechado para aceite funcional:
   - landing pública (`/`)
   - cadastro (`/cadastro/`)
@@ -237,9 +237,15 @@ Tarefas:
   - painel pós-empresa com modal contextual para `Criar jornada`
   - CRUD web de jornadas
   - teste integrado `signup -> login -> painel -> empresa -> jornada -> logout`
-- 🟡 Permanecem fora do aceite do bloco:
+- ✅ Entregas posteriores já incorporadas ao código:
+  - módulo `Colaboradores` no núcleo funcional do painel web
+  - captura facial assistida no painel com webcam como canal principal e upload como fallback operacional
+  - envio de convite biométrico remoto por WhatsApp com link seguro, expirável e de uso único
+  - módulo `Relógios de Ponto` com web + API operacional
+- 🟡 Permanecem pendentes no código:
   - aderência visual final da tela de jornada e catálogo completo de estados/mensagens
-  - módulos `Colaboradores`, `Relógios de Ponto`, `Tratamento de Ponto`, `Relatórios` e `Solicitações`
+  - acabamentos remanescentes de `Colaboradores` (`Transferidos`, ações rápidas e jornada individual manual)
+  - módulos `Tratamento de Ponto`, `Relatórios` e `Solicitações`
 
 **Fechamento executado (sprint de 5 dias úteis):**
 - **Dia 1:** saneamento de baseline, lint, ambiente Docker, smoke e validação da suíte

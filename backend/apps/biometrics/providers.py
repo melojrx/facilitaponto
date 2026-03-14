@@ -50,7 +50,7 @@ class WahaWhatsAppProvider(WhatsAppProvider):
             "Accept": "application/json",
         }
         if self.api_token:
-            headers["Authorization"] = f"Bearer {self.api_token}"
+            headers["X-Api-Key"] = self.api_token
 
         raw_body = json.dumps(payload).encode("utf-8")
         http_request = request.Request(url, data=raw_body, headers=headers, method="POST")
@@ -69,18 +69,26 @@ class WahaWhatsAppProvider(WhatsAppProvider):
             ) from exc
 
         parsed_payload = json.loads(response_body)
-        message_id = str(
-            parsed_payload.get("id")
-            or parsed_payload.get("messageId")
-            or parsed_payload.get("message", {}).get("id")
-            or ""
-        )
+        message_id = self._extract_message_id(parsed_payload)
 
         return WhatsAppSendResult(
             provider=self.provider_name,
             message_id=message_id,
             payload=parsed_payload,
         )
+
+    @staticmethod
+    def _extract_message_id(payload: dict) -> str:
+        """
+        Extrai o ID da mensagem do payload do WAHA.
+
+        O WAHA retorna `id` como um dicionário com `_serialized` ou como
+        string dependendo da versão. Normaliza para string curta e segura.
+        """
+        raw = payload.get("id") or payload.get("messageId") or payload.get("message", {}).get("id") or ""
+        if isinstance(raw, dict):
+            return str(raw.get("id") or raw.get("_serialized") or "")[:255]
+        return str(raw)[:255]
 
     @staticmethod
     def _build_chat_id(phone_number):

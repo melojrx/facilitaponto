@@ -12,7 +12,7 @@
 - `docs/DEV_ROADMAP.md` e `docs/PRODUCT_BACKLOG.md` mantêm apenas o recorte macro de prioridade; o detalhamento operacional permanece neste checklist.
 - Ao concluir ou mover escopo, atualizar primeiro este arquivo e depois refletir o ajuste nos demais documentos.
 
-## Snapshot de execução (atualizado em 2026-03-11)
+## Snapshot de execução (atualizado em 2026-03-13)
 - [x] Landing pública (`/`) implementada com CTAs para `Entrar` e `Começar Agora`
 - [x] Login web (`/login/`) com UX atualizada no padrão visual da landing
 - [x] Cadastro web (`/cadastro/`) com UX atualizada e campos `nome`, `sobrenome`, `e-mail`, `CPF`, `telefone`, `senha` e `confirmar senha`
@@ -29,8 +29,9 @@
 - [x] Teste integrado do fluxo `signup -> login -> painel -> empresa -> jornada -> logout`
 - [x] Módulo `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica
 - [x] Captura facial assistida no painel implementada com modal mínimo, consentimento obrigatório e enroll
+- [x] Convite biométrico remoto por WhatsApp implementado com link seguro, expirável e de uso único
 - [x] Runtime biométrico formalizado como pré-requisito operacional da feature (`BIOMETRIA_KEY`, dependências de ML/imagem e preload de pesos do `DeepFace`)
-- [x] Sequência oficial do próximo bloco registrada: `Relógios de Ponto -> Captura facial no painel -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`
+- [x] Sequência oficial do próximo bloco atualizada para o estado real do código: `Tratamento de Ponto -> Relatórios -> Solicitações`
 
 ## 1) Premissas obrigatórias
 - [x] Regra 1:1 preservada: `1 owner -> 1 empresa -> 1 tenant`
@@ -92,11 +93,11 @@
   - `BIOMETRIA_KEY` carregada no ambiente
   - dependências biométricas instaladas no runtime
   - preload de pesos `ArcFace` + `retinaface` antes do primeiro uso real
-- [ ] `Webcam no painel` implementada como canal principal da captura facial assistida
+- [x] `Webcam no painel` implementada como canal principal da captura facial assistida
 - [x] `Upload no painel` mantido como fallback operacional da captura biométrica
 - [x] Diretriz registrada: webcam e upload convergem para o mesmo fluxo negocial de consentimento + enroll
-- [ ] Fluxo de envio de link de auto-cadastro facial por WhatsApp implementado com token expirável e uso único
-- [ ] Antes do envio por WhatsApp, exibir modal de confirmação com telefone do colaborador e ações `Cancelar`/`Enviar`
+- [x] Fluxo de envio de link de auto-cadastro facial por WhatsApp implementado com token expirável e uso único
+- [x] Antes do envio por WhatsApp, exibir modal de confirmação com telefone do colaborador e ações `Cancelar`/`Enviar`
 - [ ] Coluna `Ações` da listagem com operações rápidas (reenviar link WhatsApp, editar, alterar status)
 
 ## 6) Módulo Relógios de Ponto (`/painel/relogio-digital` no código atual; alvo funcional `/painel/relogios`)
@@ -227,18 +228,14 @@ pytest apps/ -k "onboarding or accounts or tenants or journeys"
   - ação rápida de WhatsApp na coluna `Ações`
 
 ## 16) Sequência oficial do próximo bloco funcional
-- [x] Ordem oficial de execução definida para evitar sobreposição e regressão:
-  - `1. Relógios de Ponto`
-  - `2. Captura facial no painel`
-  - `3. Envio por WhatsApp`
-  - `4. Tratamento de Ponto`
-  - `5. Relatórios`
-  - `6. Solicitações`
+- [x] Ordem oficial de execução atualizada após fechamento de `Relógios de Ponto` e do fluxo biométrico remoto:
+  - `1. Tratamento de Ponto`
+  - `2. Relatórios`
+  - `3. Solicitações`
 - [x] Justificativa operacional registrada:
-  - `Relógios de Ponto` fecha o uso real do colaborador no contexto da batida.
-  - `Captura facial no painel` entra depois de colaborador + jornada + contexto operacional já consolidados.
-  - `Envio por WhatsApp` fica como canal remoto complementar, não como base do fluxo biométrico.
-  - `Tratamento`, `Relatórios` e `Solicitações` dependem de dados operacionais já produzidos pelos blocos anteriores.
+  - `Relógios de Ponto` já fecha o uso real do colaborador no contexto da batida.
+  - `Captura facial no painel` e `Envio por WhatsApp` já foram incorporados ao fluxo biométrico operacional.
+  - `Tratamento`, `Relatórios` e `Solicitações` continuam dependentes dos dados operacionais já produzidos pelos blocos anteriores.
 
 ## 17) Decisão técnica formal para WhatsApp
 - [x] O fluxo de envio por WhatsApp deve ser implementado com arquitetura `adapter pluggable`.

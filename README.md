@@ -64,6 +64,14 @@ O projeto está organizado para evoluir em três frentes:
   - Modal contextual pós-empresa com CTA para `Criar jornada`
   - Consulta pública de CEP e CNPJ com fallback manual no onboarding
   - Teste integrado do fluxo `signup -> login -> painel -> empresa -> jornada -> logout`
+- Módulo web de colaboradores:
+  - Listagem, cadastro, edição e ativação/inativação
+  - Captura facial assistida no painel
+  - Convite biométrico remoto por WhatsApp com autoatendimento via link seguro
+- Módulo de relógios de ponto:
+  - Listagem, criação, edição e alteração de status
+  - Detalhe operacional com geofence e atribuição de colaboradores
+  - APIs de ativação e gestão do relógio digital
 - Cadastro de funcionários + sequência NSR atômica por tenant
 - Módulo de biometria DEV-005 concluído (consentimento, enroll, verify e cache mobile):
   - Consentimento LGPD
@@ -87,6 +95,13 @@ O projeto está organizado para evoluir em três frentes:
 | Lint (`ruff check .`) | ✅ Passando |
 | Migrações (`--check --dry-run`) | ✅ Sem drift |
 | Testes backend (`apps/`) | ✅ Passando |
+
+### ⏭️ Próximos blocos
+
+- Tratamento de Ponto
+- Relatórios
+- Solicitações
+- Acabamentos visuais e operacionais remanescentes de jornadas/colaboradores
 
 ---
 

@@ -65,6 +65,8 @@ services:
       WHATSAPP_DEFAULT_ENGINE: WEBJS
       WHATSAPP_RESTART_ALL_SESSIONS: "true"
       WAHA_API_KEY: ponto-digital-dev
+      WAHA_DASHBOARD_USERNAME: admin
+      WAHA_DASHBOARD_PASSWORD: admin
 
   minio:
     image: minio/minio:latest

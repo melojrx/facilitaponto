@@ -82,7 +82,7 @@ class BiometricInvite(TenantModelMixin, models.Model):
     sent_at = models.DateTimeField(null=True, blank=True)
     used_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
-    provider_message_id = models.CharField(max_length=120, blank=True, default="")
+    provider_message_id = models.CharField(max_length=255, blank=True, default="")
     last_error = models.CharField(max_length=255, blank=True, default="")
     provider_payload = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
