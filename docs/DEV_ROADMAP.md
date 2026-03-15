@@ -16,16 +16,19 @@ Este projeto é um **SaaS multitenant de ponto eletrônico com reconhecimento fa
 
 O desenvolvimento é **assistido por IA**. Cada tarefa deve ser implementada seguindo os padrões definidos neste documento.
 
-### Snapshot de execução (2026-03-11)
+### Snapshot de execução (2026-03-15)
 - Backend concluído até **DEV-007** (biometria, registro de ponto, sync offline backend, comprovante eletrônico).
 - Upload de foto de batida já em **storage S3/MinIO** com `foto_hash` para auditoria.
 - **DEV-008** fechado no núcleo funcional: onboarding `1 conta proprietária : 1 empresa (CNPJ/CPF) : 1 tenant`, painel com liberação progressiva, jornada e testes integrados.
 - Bloco `Colaboradores` entregue no núcleo funcional: cadastro operacional, listagem com filtros/abas, edição, ativação/inativação e rastreabilidade biométrica básica.
 - Captura facial assistida no painel já implementada no núcleo do colaborador, com modal mínimo, consentimento obrigatório e enroll facial.
-- Próxima evolução imediata da biometria no painel: `webcam no modal` como canal principal; `upload` permanece como fallback operacional.
-- `Envio por WhatsApp` permanece como pendência prioritária já confirmada do fluxo biométrico remoto.
+- O fluxo biométrico remoto já cobre webcam no painel, upload como fallback e envio por WhatsApp.
 - Pré-requisito operacional da biometria formalizado: `BIOMETRIA_KEY`, dependências de ML/imagem no container e preload dos pesos `ArcFace` + `retinaface` antes do primeiro uso real.
-- Próxima sprint: concluir na ordem `Captura facial no painel (acabamento/fechamento) -> Envio por WhatsApp -> Tratamento de Ponto -> Relatórios -> Solicitações`.
+- `Tratamento de Ponto` está concluído no núcleo operacional web/API.
+- `Solicitações de Ajuste` está concluído no núcleo operacional web/API.
+- Reavaliação curta de escopo aberta entre os próximos blocos:
+  - `Relatórios`
+  - `Solicitações de Acesso`
 - Estratégia de WhatsApp formalizada: arquitetura com `adapter pluggable`, provider inicial `WAHA` por baixo atrito no MVP e opções futuras documentadas (`Evolution API` e `Meta WhatsApp Cloud API`).
 - `docs/DEV_008_CHECKLIST.md` passa a ser a fonte oficial do acompanhamento detalhado e do corte de escopo do bloco.
 - Frente mobile (**DEV-010 a DEV-013**) permanece no roadmap, mas entra após estabilização do painel web/admin.
@@ -370,23 +373,24 @@ Tarefas — Frontend Web (Django Templates):
   - contrato API de cerca virtual (`PUT|PATCH|DELETE /api/relogios/{id}/cerca-virtual/`) com regra geográfica de validação de batida
   - contrato API da aba `Colaboradores` para mover/remover selecionados e mover/remover todos com contadores sincronizados no retorno
   - pré-condições de batida no dispositivo: relógio ativo + colaborador atribuído + colaborador ativo + biometria facial válida
-- [ ] Implementar módulo `Tratamento de Ponto` conforme especificação dedicada:
+- [x] Implementar módulo `Tratamento de Ponto` conforme especificação dedicada:
   - listagem mensal por colaborador com filtros (`período`, busca, inconsistências, pendências)
   - ação `Ver Espelho` para abrir espelho individual por período
   - tela `Espelho de Ponto` com cards de indicadores, legenda de status de marcações e tabela diária
   - ação `Editar` por dia e `Ajuste Automático` com trilha auditável
   - contrato API para listagem/resumo e ajustes por dia no período aberto
+  - decisão formal de ajustes com governança mínima por perfil
 - [ ] Implementar módulo `Relatórios` conforme especificação dedicada:
   - tela índice com cards (`Espelho de Ponto`, `Cartão de Ponto`, `Detalhes dos Cálculos`)
   - formulários com período, colaborador e geração/exportação de PDF
   - `Detalhes dos Cálculos` com modos `Por Dia` e `Consolidado`
   - contrato API de geração e download de relatórios
-- [ ] Implementar módulo `Solicitações` conforme especificação dedicada:
-  - tela índice com cards `Solicitações de Ajuste` e `Solicitações de Acesso`
-  - contadores de pendências e navegação `Acessar`
-  - telas internas de `Acessar` (ajustes e acessos) com filtros, tabela detalhada e ação `Visualizar`
-  - fluxo de decisão (aprovar/rejeitar) com trilha auditável
-  - contrato API de resumo, listagem, detalhe e decisão por tipo
+- [~] Implementar módulo `Solicitações` conforme especificação dedicada:
+  - [x] tela índice com cards `Solicitações de Ajuste` e `Solicitações de Acesso`
+  - [x] contadores de pendências e navegação `Acessar` para ajustes
+  - [x] tela interna de `Solicitações de Ajuste` com filtros, tabela detalhada, `Visualizar` e decisão
+  - [x] contrato API de resumo, listagem, detalhe e decisão para ajustes
+  - [ ] fluxo de `Solicitações de Acesso`
 
 Tarefas — Qualidade, Segurança e Documentação:
 - [ ] Testes unitários de validação de CPF/CNPJ e regras 1:1 owner/tenant.

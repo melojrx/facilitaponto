@@ -19,7 +19,7 @@
 - O acompanhamento de execução, aceite e corte de escopo fica em `docs/DEV_008_CHECKLIST.md`.
 - As regras detalhadas de interface/módulo vivem nos anexos específicos (`jornada`, `colaboradores`, `relógios`, `tratamento`, `relatórios`, `solicitações`).
 
-## Snapshot de implementação (2026-03-13)
+## Snapshot de implementação (2026-03-15)
 
 - `DEV-008` está encerrado para aceite funcional no onboarding.
 - `Colaboradores` está entregue no núcleo funcional do painel web.
@@ -29,10 +29,11 @@
   - webcam no painel como canal principal
   - upload de imagem como fallback operacional
   - envio de convite remoto por WhatsApp com link seguro, expirável e de uso único
-- O próximo bloco operacional segue a ordem oficial:
-  - `1. Tratamento de Ponto`
-  - `2. Relatórios`
-  - `3. Solicitações`
+- `Tratamento de Ponto` está entregue no núcleo operacional web/API.
+- `Solicitações de Ajuste` está entregue no núcleo operacional web/API, apoiado no mesmo domínio de `AttendanceAdjustment`.
+- A próxima decisão de execução fica entre:
+  - `Relatórios`
+  - `Solicitações de Acesso`
 - A fonte oficial desta ordem e do status detalhado permanece em `docs/DEV_008_CHECKLIST.md`.
 
 ## 1. Objetivo do DEV-008

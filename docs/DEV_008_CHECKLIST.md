@@ -176,6 +176,16 @@
   - `GET /api/solicitacoes/acessos/{id}/`
   - `POST /api/solicitacoes/acessos/{id}/decidir/`
 
+## 9.1) Reavaliação curta de escopo (2026-03-15)
+- [x] Sub-bloco `Tratamento de Ponto + Solicitações de Ajuste` considerado encerrado para este ciclo
+- [x] Decisão registrada: `Solicitações de Ajuste` deixa de ser apenas backlog e passa a integrar o bloco operacional já entregue
+- [x] Pendências remanescentes reagrupadas para a próxima decisão de execução:
+  - `Relatórios`
+  - `Solicitações de Acesso`
+- [x] Próxima revisão deve escolher explicitamente entre:
+  - concluir `Solicitações` com o domínio de acessos
+  - iniciar `Relatórios` como próximo bloco principal
+
 ## 10) Liberação de menu por estado
 - [x] Sem empresa: apenas `Início` e `Empresa` ativos
 - [x] Com empresa e sem jornada: liberar `Jornadas de Trabalho`
@@ -230,14 +240,18 @@ pytest apps/ -k "onboarding or accounts or tenants or journeys"
   - ação rápida de WhatsApp na coluna `Ações`
 
 ## 16) Sequência oficial do próximo bloco funcional
-- [x] Ordem oficial de execução atualizada após fechamento de `Relógios de Ponto` e do fluxo biométrico remoto:
+- [x] Ordem oficial anterior foi executada parcialmente e reavaliada:
   - `1. Tratamento de Ponto`
   - `2. Relatórios`
   - `3. Solicitações`
+- [x] Estado após a reavaliação de 2026-03-15:
+  - `Tratamento de Ponto` está operacionalmente encerrado no núcleo
+  - `Solicitações de Ajuste` está operacionalmente encerrado no núcleo
+  - a próxima decisão de execução fica entre `Relatórios` e `Solicitações de Acesso`
 - [x] Justificativa operacional registrada:
-  - `Relógios de Ponto` já fecha o uso real do colaborador no contexto da batida.
-  - `Captura facial no painel` e `Envio por WhatsApp` já foram incorporados ao fluxo biométrico operacional.
-  - `Tratamento`, `Relatórios` e `Solicitações` continuam dependentes dos dados operacionais já produzidos pelos blocos anteriores.
+  - o domínio de ajustes já exigiu governança mínima e puxou parte do módulo `Solicitações` para dentro do ciclo atual
+  - `Relatórios` agora pode ser iniciado com uma base operacional mais estável
+  - `Solicitações de Acesso` permanece como extensão natural da governança ainda não implementada
 
 ## 17) Decisão técnica formal para WhatsApp
 - [x] O fluxo de envio por WhatsApp deve ser implementado com arquitetura `adapter pluggable`.
