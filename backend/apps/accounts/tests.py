@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
 from apps.accounts.models import Device, User
-from apps.accounts.permissions import IsDeviceToken, IsTenantMember
+from apps.accounts.permissions import CanDecideAdjustmentRequests, IsDeviceToken, IsTenantMember
 from apps.accounts.serializers import TenantTokenObtainPairSerializer
 from apps.accounts.services_cep import CepLookupError, CepNotFoundError
 from apps.accounts.services_cnpj import (
@@ -233,6 +233,22 @@ class TestPermissions:
         request = SimpleNamespace(auth=token, tenant=tenant_b)
 
         assert IsDeviceToken().has_permission(request, view=None) is False
+
+    def test_can_decide_adjustment_requests_permite_admin(self, user_a, tenant_a):
+        request = SimpleNamespace(user=user_a, tenant=tenant_a)
+
+        assert CanDecideAdjustmentRequests().has_permission(request, view=None) is True
+
+    def test_can_decide_adjustment_requests_bloqueia_viewer(self, tenant_a):
+        viewer = User.objects.create_user(
+            email="viewer-adjustments@tenant-a.com",
+            password="12345678",
+            tenant=tenant_a,
+            role=User.Role.VIEWER,
+        )
+        request = SimpleNamespace(user=viewer, tenant=tenant_a)
+
+        assert CanDecideAdjustmentRequests().has_permission(request, view=None) is False
 
 
 @pytest.mark.django_db

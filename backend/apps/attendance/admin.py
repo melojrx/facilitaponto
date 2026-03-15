@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AttendanceRecord, TimeClock, TimeClockEmployeeAssignment, TimeClockGeofence
+from .models import AttendanceAdjustment, AttendanceRecord, TimeClock, TimeClockEmployeeAssignment, TimeClockGeofence
 
 
 @admin.register(AttendanceRecord)
@@ -35,6 +35,14 @@ class AttendanceRecordAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(AttendanceAdjustment)
+class AttendanceAdjustmentAdmin(admin.ModelAdmin):
+    list_display = ("employee", "tenant", "action_type", "status", "target_date", "requested_by", "decided_by")
+    list_filter = ("tenant", "action_type", "status", "auto_generated")
+    search_fields = ("employee__nome", "employee__cpf", "reason", "decision_note")
+    readonly_fields = ("created_at", "updated_at", "decided_at")
 
 
 @admin.register(TimeClock)

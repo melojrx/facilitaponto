@@ -1,0 +1,619 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}Espelho de Ponto | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}Espelho de Ponto{% endblock %}
+{% block panel_heading_subtitle %}Leitura diária das marcações, saldo e ocorrências do colaborador.{% endblock %}
+
+{% block panel_styles %}
+  <style>
+    .mirror-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .mirror-employee {
+      display: grid;
+      gap: 6px;
+    }
+
+    .mirror-employee h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .mirror-employee p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .mirror-period {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: 1px solid #dbe6f2;
+      border-radius: 999px;
+      background: #fff;
+      color: #334155;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .mirror-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mirror-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .mirror-action-form {
+      display: inline;
+    }
+
+    .mirror-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .mirror-card,
+    .mirror-table-card,
+    .mirror-legend {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    .mirror-card {
+      padding: 16px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .mirror-card-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+    }
+
+    .mirror-card-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .mirror-legend {
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .mirror-legend h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .mirror-legend-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .legend-chip.original { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .legend-chip.warning { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .legend-chip.danger { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+    .legend-chip.success { background: #ecfdf5; border-color: #bbf7d0; color: #15803d; }
+    .legend-chip.neutral { background: #f8fafc; border-color: #cbd5e1; color: #475569; }
+
+    .mirror-table-card {
+      overflow: hidden;
+    }
+
+    .mirror-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .mirror-table th,
+    .mirror-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .mirror-table th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .mirror-table tr.tone-warning {
+      background: #fffdf7;
+    }
+
+    .mirror-table tr.tone-danger {
+      background: #fff7f7;
+    }
+
+    .mirror-date {
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .mirror-weekday {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .mirror-action-disabled {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid #dbe6f2;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .mirror-edit-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid #dbe6f2;
+      border-radius: 10px;
+      background: #fff;
+      color: #334155;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mirror-row-actions {
+      display: grid;
+      gap: 10px;
+      min-width: 240px;
+    }
+
+    .mirror-pending-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mirror-pending-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px;
+      background: #fffaf0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .mirror-pending-meta {
+      display: grid;
+      gap: 4px;
+    }
+
+    .mirror-pending-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #9a3412;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .mirror-pending-reason {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .mirror-pending-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mirror-inline-form {
+      display: inline;
+    }
+
+    .mirror-mini-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      padding: 0 10px;
+      border-radius: 10px;
+      border: 1px solid #dbe6f2;
+      background: #fff;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .mirror-mini-button.success {
+      border-color: #bbf7d0;
+      background: #ecfdf5;
+      color: #15803d;
+    }
+
+    .mirror-mini-button.danger {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .mirror-mini-button.neutral {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: #475569;
+    }
+
+    .mirror-edit-dialog {
+      border: 0;
+      border-radius: 18px;
+      padding: 0;
+      width: min(520px, calc(100vw - 32px));
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+    }
+
+    .mirror-edit-dialog::backdrop {
+      background: rgba(15, 23, 42, 0.35);
+    }
+
+    .mirror-edit-body {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .mirror-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .mirror-edit-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .mirror-edit-field.full {
+      grid-column: 1 / -1;
+    }
+
+    .mirror-edit-field label {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mirror-edit-field input,
+    .mirror-edit-field select,
+    .mirror-edit-field textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .mirror-edit-field textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .mirror-edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1100px) {
+      .mirror-table-card {
+        overflow-x: auto;
+      }
+
+      .mirror-table {
+        min-width: 980px;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block panel_content %}
+  <nav class="panel-breadcrumb" aria-label="Breadcrumb">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <a class="panel-breadcrumb-link" href="{% url 'web:tratamento_ponto' %}?period={{ treatment_period.period_value }}">Tratamento de Ponto</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <span class="panel-breadcrumb-current" aria-current="page">Espelho de Ponto</span>
+  </nav>
+
+  <div class="mirror-header">
+    <div class="mirror-employee">
+      <h2>{{ mirror.nome }}</h2>
+      <p>{{ mirror.cargo }}</p>
+      <span class="mirror-period">
+        <span>{{ treatment_period.start_date|date:"d/m/Y" }} - {{ treatment_period.end_date|date:"d/m/Y" }}</span>
+        <span class="mirror-status">{{ mirror.period_status_label }}</span>
+      </span>
+    </div>
+    <div class="mirror-actions">
+      <a class="btn" href="{{ mirror_back_url }}">Voltar</a>
+      <form class="mirror-action-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="auto_adjust">
+        <button class="btn btn-primary" type="submit">Ajuste Automático</button>
+      </form>
+    </div>
+  </div>
+
+  <section class="mirror-cards">
+    {% for card in mirror_cards %}
+      <article class="mirror-card">
+        <span class="mirror-card-label">{{ card.label }}</span>
+        <span class="mirror-card-value">{{ card.value }}</span>
+      </article>
+    {% endfor %}
+  </section>
+
+  <section class="mirror-legend">
+    <h3>Legenda operacional</h3>
+    <div class="mirror-legend-list">
+      <span class="legend-chip original">Original (AFD)</span>
+      <span class="legend-chip neutral">A ser adicionada</span>
+      <span class="legend-chip warning">Adicionada (Pendente)</span>
+      <span class="legend-chip success">Adicionada (Aprovada)</span>
+      <span class="legend-chip danger">Adicionada (Rejeitada)</span>
+      <span class="legend-chip neutral">Desconsiderada</span>
+      <span class="legend-chip warning">Fora da cerca virtual</span>
+    </div>
+  </section>
+
+  <section class="mirror-table-card">
+    <table class="mirror-table">
+      <thead>
+        <tr>
+          <th>Data/Dia</th>
+          <th>Jornada Prevista</th>
+          <th>Marcações</th>
+          <th>Total</th>
+          <th>Saldo</th>
+          <th>Ocorrências</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in mirror.daily_rows %}
+          <tr class="tone-{{ row.row_tone }}">
+            <td>
+              <span class="mirror-date">{{ row.date_label }}</span>
+              <span class="mirror-weekday">{{ row.weekday_label }}</span>
+            </td>
+            <td>{{ row.expected_label }}</td>
+            <td>{{ row.markings_label }}</td>
+            <td>{{ row.worked_label }}</td>
+            <td>{{ row.balance_label }}</td>
+            <td>{{ row.occurrences_label }}</td>
+            <td>
+              <div class="mirror-row-actions">
+                <button
+                  class="mirror-edit-button"
+                  type="button"
+                  data-open-adjustment
+                  data-date="{{ row.date_iso }}"
+                >
+                  Editar
+                </button>
+                {% if row.pending_adjustments and treatment_can_decide_adjustments %}
+                  <div class="mirror-pending-list">
+                    {% for adjustment in row.pending_adjustments %}
+                      <div class="mirror-pending-item">
+                        <div class="mirror-pending-meta">
+                          <span class="mirror-pending-title">Ajuste pendente</span>
+                          <span class="mirror-pending-reason">{{ adjustment.reason }}</span>
+                        </div>
+                        <div class="mirror-pending-actions">
+                          <form class="mirror-inline-form" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="decide_adjustment">
+                            <input type="hidden" name="adjustment_id" value="{{ adjustment.id }}">
+                            <input type="hidden" name="decision" value="APROVAR">
+                            <button class="mirror-mini-button success" type="submit">Aprovar</button>
+                          </form>
+                          <button
+                            class="mirror-mini-button danger"
+                            type="button"
+                            data-open-decision
+                            data-adjustment-id="{{ adjustment.id }}"
+                            data-adjustment-context="{{ row.date_label }} • {{ adjustment.reason }}"
+                          >
+                            Rejeitar
+                          </button>
+                          <form class="mirror-inline-form" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="decide_adjustment">
+                            <input type="hidden" name="adjustment_id" value="{{ adjustment.id }}">
+                            <input type="hidden" name="decision" value="DESCONSIDERAR">
+                            <button class="mirror-mini-button neutral" type="submit">Desconsiderar</button>
+                          </form>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% elif row.pending_adjustments %}
+                  <span class="mirror-action-disabled">Aguardando decisão autorizada</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <dialog class="mirror-edit-dialog" data-adjustment-dialog>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mirror-edit-body">
+        <div>
+          <h3 style="margin: 0 0 6px;">Editar marcações do dia</h3>
+          <p style="margin: 0; color: var(--muted);">Adicione uma marcação manual com justificativa para ajuste operacional.</p>
+        </div>
+
+        <input type="hidden" name="action" value="add_mark">
+        <input type="hidden" name="target_date" value="" data-adjustment-date-input>
+
+        <div class="mirror-edit-grid">
+          <div class="mirror-edit-field">
+            <label for="id_target_date_label">Data</label>
+            <input id="id_target_date_label" type="text" value="" data-adjustment-date-label disabled>
+          </div>
+          <div class="mirror-edit-field">
+            <label for="id_tipo">Tipo</label>
+            <select id="id_tipo" name="tipo">
+              <option value="">Inferir automaticamente</option>
+              {% for value, label in treatment_adjustment_types %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mirror-edit-field">
+            <label for="id_hora">Hora</label>
+            <input id="id_hora" type="time" name="hora" required>
+          </div>
+          <div class="mirror-edit-field full">
+            <label for="id_motivo">Motivo</label>
+            <textarea id="id_motivo" name="motivo" required placeholder="Correção operacional"></textarea>
+          </div>
+        </div>
+
+        <div class="mirror-edit-actions">
+          <button class="btn" type="button" data-close-adjustment>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Aplicar ajuste</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="mirror-edit-dialog" data-decision-dialog>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mirror-edit-body">
+        <div>
+          <h3 style="margin: 0 0 6px;">Rejeitar ajuste</h3>
+          <p style="margin: 0; color: var(--muted);">Informe a justificativa operacional para rejeitar este ajuste pendente.</p>
+        </div>
+
+        <input type="hidden" name="action" value="decide_adjustment">
+        <input type="hidden" name="decision" value="REJEITAR">
+        <input type="hidden" name="adjustment_id" value="" data-decision-adjustment-id-input>
+
+        <div class="mirror-edit-grid">
+          <div class="mirror-edit-field full">
+            <label for="id_rejection_context">Ajuste</label>
+            <input id="id_rejection_context" type="text" value="" data-decision-context-label disabled>
+          </div>
+          <div class="mirror-edit-field full">
+            <label for="id_decision_note">Justificativa</label>
+            <textarea id="id_decision_note" name="decision_note" required minlength="10" placeholder="Descreva o motivo da rejeição"></textarea>
+          </div>
+        </div>
+
+        <div class="mirror-edit-actions">
+          <button class="btn" type="button" data-close-decision>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Rejeitar ajuste</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+{% endblock %}
+
+{% block panel_scripts %}
+  <script>
+    (function () {
+      const adjustmentDialog = document.querySelector("[data-adjustment-dialog]");
+      const decisionDialog = document.querySelector("[data-decision-dialog]");
+
+      if (adjustmentDialog) {
+        const dateInput = adjustmentDialog.querySelector("[data-adjustment-date-input]");
+        const dateLabel = adjustmentDialog.querySelector("[data-adjustment-date-label]");
+        const closeButton = adjustmentDialog.querySelector("[data-close-adjustment]");
+
+        document.querySelectorAll("[data-open-adjustment]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            const rawDate = button.getAttribute("data-date") || "";
+            dateInput.value = rawDate;
+            dateLabel.value = rawDate;
+            adjustmentDialog.showModal();
+          });
+        });
+
+        if (closeButton) {
+          closeButton.addEventListener("click", function () {
+            adjustmentDialog.close();
+          });
+        }
+      }
+
+      if (decisionDialog) {
+        const adjustmentIdInput = decisionDialog.querySelector("[data-decision-adjustment-id-input]");
+        const contextLabel = decisionDialog.querySelector("[data-decision-context-label]");
+        const closeDecisionButton = decisionDialog.querySelector("[data-close-decision]");
+
+        document.querySelectorAll("[data-open-decision]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            adjustmentIdInput.value = button.getAttribute("data-adjustment-id") || "";
+            contextLabel.value = button.getAttribute("data-adjustment-context") || "";
+            decisionDialog.showModal();
+          });
+        });
+
+        if (closeDecisionButton) {
+          closeDecisionButton.addEventListener("click", function () {
+            decisionDialog.close();
+          });
+        }
+      }
+    })();
+  </script>
+{% endblock %}

@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission
 
+from .models import User
+
 
 class IsTenantMember(BasePermission):
     message = "Usuário não pertence ao tenant do request."
@@ -37,3 +39,20 @@ class IsDeviceToken(BasePermission):
             return False
 
         return str(token_tenant_id) == str(tenant.id)
+
+
+def can_decide_adjustments(user) -> bool:
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    if getattr(user, "is_account_owner", False):
+        return True
+    return getattr(user, "role", "") in {User.Role.ADMIN, User.Role.GESTOR}
+
+
+class CanDecideAdjustmentRequests(BasePermission):
+    message = "Você não tem permissão para decidir esta solicitação."
+
+    def has_permission(self, request, view):
+        return can_decide_adjustments(request.user)

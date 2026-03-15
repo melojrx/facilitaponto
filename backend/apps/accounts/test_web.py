@@ -1,4 +1,5 @@
 import base64
+import datetime
 import json
 import re
 import uuid
@@ -61,6 +62,26 @@ class TestWebPublicPages:
 
         assert response.status_code == 302
         assert response.url == "/login/?next=/painel/"
+
+    def test_get_solicitacoes_index_renderiza_cards(self, client, user):
+        tenant = Tenant.objects.create(
+            tipo_pessoa="PJ",
+            documento="31721174000107",
+            cnpj="31721174000107",
+            razao_social="Acme Requests LTDA",
+            onboarding_step=3,
+        )
+        user.tenant = tenant
+        user.save(update_fields=["tenant"])
+        client.force_login(user)
+
+        response = client.get("/painel/solicitacoes/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Solicitações de Ajuste" in content
+        assert "Solicitações de Acesso" in content
+        assert "/painel/solicitacoes/ajustes/" in content
 
 
 @pytest.mark.django_db
@@ -2594,3 +2615,440 @@ class TestTimeClockWebFlow:
             time_clock=time_clock,
             employee=employee,
         ).exists()
+
+
+@pytest.mark.django_db
+class TestTreatmentPointWebFlow:
+    LIST_URL = "/painel/tratamento-ponto/"
+
+    def _make_tenant(self, step=3):
+        return Tenant.objects.create(
+            tipo_pessoa="PJ",
+            documento="31721174000107",
+            cnpj="31721174000107",
+            razao_social="Acme Tratamento LTDA",
+            onboarding_step=step,
+        )
+
+    def _attach_tenant(self, user, tenant):
+        user.tenant = tenant
+        user.save(update_fields=["tenant"])
+
+    def _create_schedule(self, tenant):
+        from apps.employees.models import WorkSchedule
+
+        return WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada Comercial",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+            configuracao={
+                "subtipo": "COMERCIAL_40H",
+                "intervalo_reduzido_convencao": False,
+                "norma_coletiva_ref": "",
+                "dias": [
+                    {
+                        "dia_semana": "SEGUNDA",
+                        "dsr": False,
+                        "entrada_1": "08:00",
+                        "saida_1": "12:00",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:00",
+                    },
+                    {
+                        "dia_semana": "TERCA",
+                        "dsr": False,
+                        "entrada_1": "08:00",
+                        "saida_1": "12:00",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:00",
+                    },
+                    {"dia_semana": "QUARTA", "dsr": True},
+                    {"dia_semana": "QUINTA", "dsr": True},
+                    {"dia_semana": "SEXTA", "dsr": True},
+                    {"dia_semana": "SABADO", "dsr": True},
+                    {"dia_semana": "DOMINGO", "dsr": True},
+                ],
+            },
+        )
+
+    def _create_employee(self, tenant, schedule, *, nome, cpf, pis, funcao="Supervisor"):
+        from apps.employees.models import Employee
+
+        return Employee.all_objects.create(
+            tenant=tenant,
+            nome=nome,
+            cpf=cpf,
+            pis=pis,
+            funcao=funcao,
+            work_schedule=schedule,
+            ativo=True,
+        )
+
+    def _create_record(self, tenant, employee, *, dt_value, tipo, nsr):
+        from apps.attendance.models import AttendanceRecord
+
+        AttendanceRecord.all_objects.create(
+            tenant=tenant,
+            employee=employee,
+            tipo=tipo,
+            timestamp=dt_value,
+            nsr=nsr,
+            foto_path="s3://bucket/teste.jpg",
+            foto_hash="a" * 64,
+            confianca_biometrica=0.99,
+        )
+
+    def test_get_renderiza_listagem_vazia(self, client, user):
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        client.force_login(user)
+
+        response = client.get(self.LIST_URL)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Tratamento de Ponto" in content
+        assert "Nenhum resultado encontrado" in content
+
+    def test_get_lista_colaborador_com_resumo_do_periodo(self, client, user):
+        from apps.attendance.models import AttendanceRecord
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = self._create_employee(
+            tenant,
+            schedule,
+            nome="FRANCISCO MARCIO GADELHA PAES",
+            cpf="52998224725",
+            pis="12345678900",
+            funcao="Supervisor de Grupo de Costura",
+        )
+        client.force_login(user)
+
+        self._create_record(
+            tenant,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=1,
+        )
+        self._create_record(
+            tenant,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 12, 0)),
+            tipo=AttendanceRecord.Tipo.INICIO_INTERVALO,
+            nsr=2,
+        )
+        self._create_record(
+            tenant,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 13, 0)),
+            tipo=AttendanceRecord.Tipo.FIM_INTERVALO,
+            nsr=3,
+        )
+        self._create_record(
+            tenant,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 17, 0)),
+            tipo=AttendanceRecord.Tipo.SAIDA,
+            nsr=4,
+        )
+
+        response = client.get(f"{self.LIST_URL}?period=2026-03")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "FRANCISCO MARCIO GADELHA PAES" in content
+        assert "Supervisor de Grupo de Costura" in content
+        assert "Ver Espelho" in content
+
+    def test_get_filtro_apenas_pendencias(self, client, user):
+        from apps.attendance.models import AttendanceRecord
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee_ok = self._create_employee(
+            tenant,
+            schedule,
+            nome="Colaborador Sem Pendencia",
+            cpf="52998224725",
+            pis="12345678900",
+        )
+        employee_pending = self._create_employee(
+            tenant,
+            schedule,
+            nome="Colaborador Com Pendencia",
+            cpf="39053344705",
+            pis="98765432100",
+        )
+        client.force_login(user)
+
+        self._create_record(
+            tenant,
+            employee_ok,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=1,
+        )
+        self._create_record(
+            tenant,
+            employee_ok,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 17, 0)),
+            tipo=AttendanceRecord.Tipo.SAIDA,
+            nsr=2,
+        )
+        self._create_record(
+            tenant,
+            employee_pending,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=3,
+        )
+
+        response = client.get(f"{self.LIST_URL}?period=2026-03&only_pendencias=1")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Colaborador Com Pendencia" in content
+        assert "Colaborador Sem Pendencia" not in content
+
+    def test_get_espelho_renderiza_grade_diaria(self, client, user):
+        from apps.attendance.models import AttendanceRecord
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = self._create_employee(
+            tenant,
+            schedule,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+            funcao="Analista",
+        )
+        client.force_login(user)
+
+        self._create_record(
+            tenant,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=1,
+        )
+
+        response = client.get(f"/painel/tratamento-ponto/{employee.id}/espelho/?period=2026-03")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Espelho de Ponto" in content
+        assert "Maria Clara" in content
+        assert "Falta saída" in content
+        assert "Ajuste Automático" in content
+
+    def test_post_espelho_aplica_ajuste_manual(self, client, user):
+        from apps.attendance.models import AttendanceAdjustment, AttendanceRecord
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = self._create_employee(
+            tenant,
+            schedule,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+        )
+        client.force_login(user)
+
+        self._create_record(
+            tenant,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=1,
+        )
+
+        response = client.post(
+            f"/painel/tratamento-ponto/{employee.id}/espelho/?period=2026-03",
+            data={
+                "action": "add_mark",
+                "target_date": "2026-03-02",
+                "hora": "17:00",
+                "motivo": "Correção operacional",
+                "tipo": "S",
+            },
+            follow=False,
+        )
+
+        assert response.status_code == 302
+        assert response.url == f"/painel/tratamento-ponto/{employee.id}/espelho/?period=2026-03"
+        assert AttendanceRecord.all_objects.filter(
+            tenant=tenant,
+            employee=employee,
+            tipo=AttendanceRecord.Tipo.SAIDA,
+            justificativa="Correção operacional",
+        ).exists()
+        assert AttendanceAdjustment.all_objects.filter(
+            tenant=tenant,
+            employee=employee,
+            status=AttendanceAdjustment.Status.PENDING,
+            reason="Correção operacional",
+        ).exists()
+
+    def test_post_espelho_aprova_ajuste_pendente(self, client, user):
+        from apps.attendance.models import AttendanceAdjustment, AttendanceRecord
+        from apps.attendance.treatment import TreatmentPointService
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = self._create_employee(
+            tenant,
+            schedule,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+        )
+        client.force_login(user)
+
+        adjustment = TreatmentPointService().create_day_adjustment(
+            tenant=tenant,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="17:00",
+            motivo="Correção operacional",
+            requested_by=user,
+            tipo=AttendanceRecord.Tipo.SAIDA,
+        )
+
+        response = client.post(
+            f"/painel/tratamento-ponto/{employee.id}/espelho/?period=2026-03",
+            data={
+                "action": "decide_adjustment",
+                "adjustment_id": str(adjustment.id),
+                "decision": "APROVAR",
+            },
+            follow=False,
+        )
+
+        adjustment.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == f"/painel/tratamento-ponto/{employee.id}/espelho/?period=2026-03"
+        assert adjustment.status == AttendanceAdjustment.Status.APPROVED
+
+    def test_get_espelho_oculta_decisao_para_viewer(self, client):
+        from apps.attendance.models import AttendanceRecord
+        from apps.attendance.treatment import TreatmentPointService
+
+        tenant = self._make_tenant(step=3)
+        viewer = User.objects.create_user(
+            email="viewer-web@acme.com",
+            password="Forte123!",
+            tenant=tenant,
+            role=User.Role.VIEWER,
+        )
+        schedule = self._create_schedule(tenant)
+        employee = self._create_employee(
+            tenant,
+            schedule,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+        )
+        TreatmentPointService().create_day_adjustment(
+            tenant=tenant,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="17:00",
+            motivo="Correção operacional",
+            requested_by=viewer,
+            tipo=AttendanceRecord.Tipo.SAIDA,
+        )
+        client.force_login(viewer)
+
+        response = client.get(f"/painel/tratamento-ponto/{employee.id}/espelho/?period=2026-03")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Aguardando decisão autorizada" in content
+        assert "Aprovar" not in content
+
+    def test_get_solicitacoes_ajustes_renderiza_fila(self, client, user):
+        from apps.attendance.models import AttendanceRecord
+        from apps.attendance.treatment import TreatmentPointService
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = self._create_employee(
+            tenant,
+            schedule,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+        )
+        TreatmentPointService().create_day_adjustment(
+            tenant=tenant,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="17:00",
+            motivo="Correção operacional",
+            requested_by=user,
+            tipo=AttendanceRecord.Tipo.SAIDA,
+        )
+        client.force_login(user)
+
+        response = client.get("/painel/solicitacoes/ajustes/?period=2026-03")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Solicitações de Ajuste" in content
+        assert "Correção operacional" in content
+        assert "Visualizar" in content
+
+    def test_post_solicitacoes_ajustes_aprova_item(self, client, user):
+        from apps.attendance.models import AttendanceAdjustment, AttendanceRecord
+        from apps.attendance.treatment import TreatmentPointService
+
+        tenant = self._make_tenant(step=3)
+        self._attach_tenant(user, tenant)
+        schedule = self._create_schedule(tenant)
+        employee = self._create_employee(
+            tenant,
+            schedule,
+            nome="Maria Clara",
+            cpf="52998224725",
+            pis="12345678900",
+        )
+        adjustment = TreatmentPointService().create_day_adjustment(
+            tenant=tenant,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="17:00",
+            motivo="Correção operacional",
+            requested_by=user,
+            tipo=AttendanceRecord.Tipo.SAIDA,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            "/painel/solicitacoes/ajustes/?period=2026-03",
+            data={
+                "action": "decide_adjustment",
+                "period": "2026-03",
+                "adjustment_id": str(adjustment.id),
+                "decision": "APROVAR",
+            },
+            follow=False,
+        )
+
+        adjustment.refresh_from_db()
+        assert response.status_code == 302
+        assert response.url == "/painel/solicitacoes/ajustes/?period=2026-03"
+        assert adjustment.status == AttendanceAdjustment.Status.APPROVED

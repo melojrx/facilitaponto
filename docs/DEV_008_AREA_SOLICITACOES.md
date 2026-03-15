@@ -28,11 +28,18 @@ Rotas alvo (MVP):
 - O status oficial de execução e a ordem da sprint ficam em `docs/DEV_008_CHECKLIST.md`.
 - O enquadramento do módulo na arquitetura do `DEV-008` fica em `docs/DEV_008_ONBOARDING_MODELAGEM.md`.
 
-## Status de implementação (2026-03-11)
+## Status de implementação (2026-03-15)
 
-- O módulo ainda não foi implementado.
-- Ele entra depois de `Tratamento de Ponto` e `Relatórios`, quando já existirem eventos operacionais e decisões a governar.
-- Este documento deve ser mantido como especificação de fluxo e rastreabilidade, sem duplicar controle de sprint.
+- A área web `Solicitações` ainda não foi implementada no painel.
+- A primeira UI real de `Solicitações de Ajuste` já está disponível em `/painel/solicitacoes/ajustes/`, com filtros, listagem, visualização e decisão.
+- A ponte de backend para `Solicitações de Ajuste` já foi iniciada reaproveitando `attendance.AttendanceAdjustment` como fonte oficial da fila e do histórico.
+- APIs-base já disponíveis:
+  - `GET /api/solicitacoes/resumo/`
+  - `GET /api/solicitacoes/ajustes/`
+  - `GET /api/solicitacoes/ajustes/{id}/`
+  - `POST /api/solicitacoes/ajustes/{id}/decidir/`
+- `Solicitações de Acesso` continua como domínio futuro; no resumo atual retorna contadores zerados.
+- Este documento permanece como especificação de fluxo e rastreabilidade, sem duplicar controle de sprint.
 
 ---
 

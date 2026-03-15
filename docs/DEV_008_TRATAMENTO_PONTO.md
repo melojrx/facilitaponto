@@ -27,10 +27,28 @@ Rotas alvo (MVP):
 - O status oficial de execução e a ordem da sprint ficam em `docs/DEV_008_CHECKLIST.md`.
 - O enquadramento do módulo na arquitetura do `DEV-008` fica em `docs/DEV_008_ONBOARDING_MODELAGEM.md`.
 
-## Status de implementação (2026-03-11)
+## Status de implementação (2026-03-15)
 
-- O módulo ainda não foi implementado.
-- Ele entra depois de `Relógios de Ponto`, `Captura facial no painel` e `Envio por WhatsApp`.
+- MVP web inicial implementado:
+  - listagem em `/painel/tratamento-ponto/`
+  - filtros por período, busca, inconsistências e pendências
+  - tabela-resumo por colaborador com ação `Ver Espelho`
+  - espelho inicial em `/painel/tratamento-ponto/espelho/{colaborador_id}/`
+  - ajuste manual de marcação por dia no espelho
+  - `Ajuste Automático` inicial no período aberto
+- APIs MVP implementadas:
+  - `GET /api/tratamento-ponto/colaboradores/`
+  - `GET /api/tratamento-ponto/espelho/{employee_id}/`
+  - `POST /api/tratamento-ponto/espelho/{employee_id}/dias/{date}/ajustes/`
+  - `POST /api/tratamento-ponto/espelho/{employee_id}/ajuste-automatico/`
+  - `POST /api/tratamento-ponto/espelho/{employee_id}/ajustes/{adjustment_id}/decisao/`
+- Governança inicial implementada:
+  - decisão de ajuste restrita a `owner`, `admin` e `gestor`
+  - `viewer` não decide ajustes no painel nem na API
+  - ponte inicial com `Solicitações` via APIs baseadas no mesmo `AttendanceAdjustment`
+- Pendências do módulo:
+  - módulo web completo de `Solicitações` ainda não renderizado no painel
+  - políticas mais sofisticadas de ajuste automático
 - Dependências funcionais para início:
   - colaboradores com jornada vinculada
   - relógios operacionais e colaboradores atribuídos
@@ -168,6 +186,9 @@ Estados observados nas referências:
 ### 5.2 Editar dia
 - Clique em `Editar` abre interface de ajuste do dia.
 - Ajustes devem registrar status (`pendente`, `aprovada`, `rejeitada`, `desconsiderada`) conforme política de aprovação.
+- Decisão de ajuste:
+  - somente `owner`, `admin` ou `gestor` do tenant podem aprovar, rejeitar ou desconsiderar
+  - `viewer` pode consultar o espelho, mas não decide
 
 ### 5.3 Ajuste automático
 - `Ajuste Automático` aplica regras automáticas configuradas para reduzir inconsistências recorrentes.

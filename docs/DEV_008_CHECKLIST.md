@@ -131,19 +131,21 @@
 - [x] Batida (`POST /api/attendance/register/`) valida pré-condições do relógio: dispositivo ativado, relógio ativo, colaborador atribuído e colaborador ativo
 
 ## 7) Módulo Tratamento de Ponto (`/painel/tratamento-ponto`)
-- [ ] Tela de listagem 1:1 com breadcrumb, período mensal, busca de colaborador, filtros de inconsistência/pendência e ação `Ver Pendências`
-- [ ] Tabela de colaboradores com colunas de indicadores (`Saldo BH`, `HE 50%`, `HE 100%`, `Atrasos`, `Faltas`, `Pendências`) e ação `Ver Espelho`
-- [ ] Navegação `Ver Espelho` abre espelho por colaborador e período selecionado
-- [ ] Tela `Espelho de Ponto` 1:1 com cards de indicadores, badge de período (`Aberto`) e ação `Ajuste Automático`
-- [ ] Legenda de marcações implementada: `Original (AFD)`, `A ser adicionada`, `Adicionada (Pendente/Aprovada/Rejeitada)`, `Desconsiderada`, `Fora da cerca virtual`
-- [ ] Grade diária com estados visuais (normal, inconsistência, pendência crítica) e ação `Editar` por dia
-- [ ] Ocorrências críticas (ex.: `Falta saída`) aparecem na coluna `Ocorrências` com destaque visual
-- [ ] APIs do módulo implementadas:
+- [x] Tela de listagem MVP com breadcrumb, período mensal, busca de colaborador, filtros de inconsistência/pendência e ação `Ver Pendências`
+- [x] Tabela de colaboradores MVP com indicadores principais (`Saldo BH`, `Atrasos`, `Faltas`, `Pendências`) e ação `Ver Espelho`
+- [x] Navegação `Ver Espelho` abre espelho por colaborador e período selecionado
+- [x] Tela `Espelho de Ponto` MVP read-only com cards de indicadores, badge de período (`Aberto`) e ação `Ajuste Automático` desabilitada
+- [x] Legenda de marcações renderizada no espelho MVP como base visual para os estados operacionais
+- [x] Grade diária MVP com estados visuais (normal, inconsistência, pendência crítica) e ação `Editar` funcional para adição manual de marcação
+- [x] Ocorrências críticas (ex.: `Falta saída`) aparecem na coluna `Ocorrências` com destaque visual
+- [x] APIs do módulo implementadas:
   - `GET /api/tratamento-ponto/colaboradores/`
   - `GET /api/tratamento-ponto/espelho/{employee_id}/`
   - `POST /api/tratamento-ponto/espelho/{employee_id}/dias/{date}/ajustes/`
   - `POST /api/tratamento-ponto/espelho/{employee_id}/ajuste-automatico/`
-- [ ] Regras de cálculo diário/mensal e auditoria de ajustes respeitadas no período aberto
+- [x] Regras iniciais de cálculo diário/mensal e ajuste operacional aplicadas no período aberto
+- [x] Decisão de ajuste no espelho implementada com `aprovar`, `rejeitar` e `desconsiderar`
+- [x] Permissão de decisão restringida a `owner/admin/gestor`; `viewer` permanece somente leitura na governança
 
 ## 8) Módulo Relatórios (`/painel/relatorios`)
 - [ ] Tela índice 1:1 com cards `Espelho de Ponto`, `Cartão de Ponto` e `Detalhes dos Cálculos`
@@ -158,20 +160,20 @@
   - `GET /api/relatorios/download/{report_id}/`
 
 ## 9) Módulo Solicitações (`/painel/solicitacoes`)
-- [ ] Tela índice 1:1 com cards `Solicitações de Ajuste` e `Solicitações de Acesso`
-- [ ] Cada card exibe contagem de pendências e estado vazio quando aplicável
-- [ ] Ação `Acessar` navega para listagem detalhada do tipo correspondente
-- [ ] Tela interna `Solicitações de Ajuste` (Acessar) 1:1 com breadcrumb, filtros, tabela detalhada e ações por linha (`Visualizar`, `Aprovar`, `Rejeitar`)
+- [x] Primeira UI funcional da tela índice `/painel/solicitacoes/` entregue com os cards `Solicitações de Ajuste` e `Solicitações de Acesso`
+- [x] Cada card já exibe contagem de pendências/abertas e estado vazio quando aplicável
+- [x] Card `Solicitações de Ajuste` já navega para a listagem detalhada correspondente
+- [x] Primeira UI funcional de `Solicitações de Ajuste` entregue em `/painel/solicitacoes/ajustes/` com breadcrumb, filtros, tabela, `Visualizar`, `Aprovar` e `Rejeitar`
 - [ ] Tela interna `Solicitações de Acesso` (Acessar) 1:1 com breadcrumb, filtros, tabela detalhada e ações por linha (`Visualizar`, `Aprovar`, `Rejeitar`)
-- [ ] Drawer/modal `Visualizar` exibe contexto completo da solicitação e histórico de decisões
+- [x] `Visualizar` já exibe contexto base da solicitação e histórico disponível do ajuste
 - [ ] Fluxo de decisão (aprovar/rejeitar) com rastreabilidade e validação de permissão
-- [ ] APIs do módulo implementadas:
-  - `GET /api/solicitacoes/resumo/`
-  - `GET /api/solicitacoes/ajustes/`
-  - `GET /api/solicitacoes/ajustes/{id}/`
+- [~] APIs do módulo parcialmente implementadas:
+  - [x] `GET /api/solicitacoes/resumo/`
+  - [x] `GET /api/solicitacoes/ajustes/`
+  - [x] `GET /api/solicitacoes/ajustes/{id}/`
+  - [x] `POST /api/solicitacoes/ajustes/{id}/decidir/`
   - `GET /api/solicitacoes/acessos/`
   - `GET /api/solicitacoes/acessos/{id}/`
-  - `POST /api/solicitacoes/ajustes/{id}/decidir/`
   - `POST /api/solicitacoes/acessos/{id}/decidir/`
 
 ## 10) Liberação de menu por estado

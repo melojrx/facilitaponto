@@ -1,4 +1,5 @@
 import base64
+import datetime
 import io
 from concurrent.futures import ThreadPoolExecutor
 
@@ -14,12 +15,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import Device, User
 from apps.attendance.models import (
+    AttendanceAdjustment,
     AttendanceRecord,
     TimeClock,
     TimeClockEmployeeAssignment,
     TimeClockGeofence,
 )
 from apps.attendance.services import AttendanceService, TimeClockService
+from apps.attendance.treatment import TreatmentPointService, parse_treatment_period
 from apps.attendance.storage import AttendancePhotoStorageService
 from apps.biometrics.models import FacialEmbedding
 from apps.employees.models import Employee
@@ -1077,6 +1080,489 @@ class TestTimeClockApiEndpoints:
         assert move_response.data["moved_count"] == 1
         assert assigned_response.status_code == 200
         assert assigned_response.data["count"] == 1
+
+
+@pytest.mark.django_db
+class TestTreatmentPointApiEndpoints:
+    def _create_schedule(self, tenant):
+        from apps.employees.models import WorkSchedule
+
+        return WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada Comercial",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+            configuracao={
+                "subtipo": "COMERCIAL_40H",
+                "intervalo_reduzido_convencao": False,
+                "norma_coletiva_ref": "",
+                "dias": [
+                    {
+                        "dia_semana": "SEGUNDA",
+                        "dsr": False,
+                        "entrada_1": "08:00",
+                        "saida_1": "12:00",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:00",
+                    },
+                    {
+                        "dia_semana": "TERCA",
+                        "dsr": False,
+                        "entrada_1": "08:00",
+                        "saida_1": "12:00",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:00",
+                    },
+                    {"dia_semana": "QUARTA", "dsr": True},
+                    {"dia_semana": "QUINTA", "dsr": True},
+                    {"dia_semana": "SEXTA", "dsr": True},
+                    {"dia_semana": "SABADO", "dsr": True},
+                    {"dia_semana": "DOMINGO", "dsr": True},
+                ],
+            },
+        )
+
+    def _create_employee(self, tenant, schedule, *, nome, cpf, pis):
+        return Employee.all_objects.create(
+            tenant=tenant,
+            nome=nome,
+            cpf=cpf,
+            pis=pis,
+            funcao="Supervisor",
+            work_schedule=schedule,
+            ativo=True,
+        )
+
+    def _create_record(self, tenant, employee, *, dt_value, tipo, nsr):
+        AttendanceRecord.all_objects.create(
+            tenant=tenant,
+            employee=employee,
+            tipo=tipo,
+            timestamp=dt_value,
+            nsr=nsr,
+            foto_path="s3://bucket/teste.jpg",
+            foto_hash="a" * 64,
+            confianca_biometrica=0.99,
+        )
+
+    def test_get_listagem_resumo(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = self._create_employee(
+            tenant_a,
+            schedule,
+            nome="Francisco Gadelha",
+            cpf="55555555003",
+            pis="55555555003",
+        )
+        self._create_record(
+            tenant_a,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=1,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user_a)
+
+        response = client.get(
+            "/api/tratamento-ponto/colaboradores/?period=2026-03",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 200
+        assert response.data["count"] == 1
+        assert response.data["results"][0]["nome"] == "Francisco Gadelha"
+
+    def test_get_espelho_retorna_dias(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = self._create_employee(
+            tenant_a,
+            schedule,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+        )
+        self._create_record(
+            tenant_a,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=1,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user_a)
+
+        response = client.get(
+            f"/api/tratamento-ponto/espelho/{employee.id}/?period=2026-03",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 200
+        assert response.data["employee"]["nome"] == "Maria Lopes"
+        assert len(response.data["dias"]) >= 1
+        assert "pending_adjustments" in response.data["dias"][0]
+
+    def test_post_ajuste_manual_cria_registro(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = self._create_employee(
+            tenant_a,
+            schedule,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user_a)
+
+        response = client.post(
+            f"/api/tratamento-ponto/espelho/{employee.id}/dias/2026-03-02/ajustes/",
+            data={
+                "acao": "ADICIONAR_MARCACAO",
+                "hora": "08:00",
+                "motivo": "Correção operacional",
+                "tipo": "E",
+            },
+            format="json",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 201
+        assert response.data["status"] == "PENDENTE"
+        assert AttendanceRecord.all_objects.filter(
+            tenant=tenant_a,
+            employee=employee,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            justificativa="Correção operacional",
+        ).exists()
+        assert AttendanceAdjustment.all_objects.filter(
+            tenant=tenant_a,
+            employee=employee,
+            status=AttendanceAdjustment.Status.PENDING,
+        ).exists()
+
+    def test_post_ajuste_automatico_fecha_pendencia(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = self._create_employee(
+            tenant_a,
+            schedule,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+        )
+        self._create_record(
+            tenant_a,
+            employee,
+            dt_value=timezone.make_aware(datetime.datetime(2026, 3, 2, 8, 0)),
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+            nsr=1,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user_a)
+
+        response = client.post(
+            f"/api/tratamento-ponto/espelho/{employee.id}/ajuste-automatico/",
+            data={
+                "periodo_inicio": "2026-03-01",
+                "periodo_fim": "2026-03-31",
+            },
+            format="json",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert response.status_code == 200
+        assert response.data["updated_days"] >= 1
+        assert AttendanceAdjustment.all_objects.filter(
+            tenant=tenant_a,
+            employee=employee,
+            status=AttendanceAdjustment.Status.PENDING,
+            reason="Ajuste automático do espelho",
+        ).exists()
+
+    def test_post_decisao_de_ajuste_aprova_pendente(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = self._create_employee(
+            tenant_a,
+            schedule,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+        )
+        adjustment = TreatmentPointService().create_day_adjustment(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="08:00",
+            motivo="Correção operacional",
+            requested_by=user_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user_a)
+
+        response = client.post(
+            f"/api/tratamento-ponto/espelho/{employee.id}/ajustes/{adjustment.id}/decisao/?period=2026-03",
+            data={
+                "decisao": "APROVAR",
+                "observacao": "Conferido no espelho.",
+            },
+            format="json",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        adjustment.refresh_from_db()
+        assert response.status_code == 200
+        assert response.data["status"] == AttendanceAdjustment.Status.APPROVED
+        assert adjustment.status == AttendanceAdjustment.Status.APPROVED
+
+    def test_post_decisao_de_ajuste_bloqueia_viewer(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = self._create_employee(
+            tenant_a,
+            schedule,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+        )
+        adjustment = TreatmentPointService().create_day_adjustment(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="08:00",
+            motivo="Correção operacional",
+            requested_by=user_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+        )
+        viewer = User.objects.create_user(
+            email="viewer.requests@tenant-a.com",
+            password="12345678",
+            tenant=tenant_a,
+            role=User.Role.VIEWER,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=viewer)
+
+        response = client.post(
+            f"/api/tratamento-ponto/espelho/{employee.id}/ajustes/{adjustment.id}/decisao/?period=2026-03",
+            data={
+                "decisao": "APROVAR",
+                "observacao": "Não deveria passar.",
+            },
+            format="json",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        adjustment.refresh_from_db()
+        assert response.status_code == 403
+        assert adjustment.status == AttendanceAdjustment.Status.PENDING
+
+    def test_api_solicitacoes_resumo_lista_e_detalhe_de_ajustes(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = self._create_employee(
+            tenant_a,
+            schedule,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+        )
+        adjustment = TreatmentPointService().create_day_adjustment(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="08:00",
+            motivo="Correção operacional",
+            requested_by=user_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user_a)
+
+        summary_response = client.get(
+            "/api/solicitacoes/resumo/",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+        list_response = client.get(
+            "/api/solicitacoes/ajustes/?status=PENDENTE",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+        detail_response = client.get(
+            f"/api/solicitacoes/ajustes/{adjustment.id}/",
+            HTTP_HOST=f"{tenant_a.cnpj}.ponto.local",
+        )
+
+        assert summary_response.status_code == 200
+        assert summary_response.data["ajustes"]["pendentes"] >= 1
+        assert list_response.status_code == 200
+        assert list_response.data["count"] >= 1
+        assert list_response.data["results"][0]["status"] == AttendanceAdjustment.Status.PENDING
+        assert detail_response.status_code == 200
+        assert detail_response.data["id"] == str(adjustment.id)
+        assert detail_response.data["historico"][0]["tipo"] == "SOLICITADA"
+
+
+@pytest.mark.django_db
+class TestTreatmentPointAdjustmentDomain:
+    def _create_schedule(self, tenant):
+        from apps.employees.models import WorkSchedule
+
+        return WorkSchedule.all_objects.create(
+            tenant=tenant,
+            nome="Jornada Comercial",
+            tipo=WorkSchedule.TipoJornada.SEMANAL,
+            configuracao={
+                "subtipo": "COMERCIAL_40H",
+                "intervalo_reduzido_convencao": False,
+                "norma_coletiva_ref": "",
+                "dias": [
+                    {
+                        "dia_semana": "SEGUNDA",
+                        "dsr": False,
+                        "entrada_1": "08:00",
+                        "saida_1": "12:00",
+                        "entrada_2": "13:00",
+                        "saida_2": "17:00",
+                    },
+                    {"dia_semana": "TERCA", "dsr": True},
+                    {"dia_semana": "QUARTA", "dsr": True},
+                    {"dia_semana": "QUINTA", "dsr": True},
+                    {"dia_semana": "SEXTA", "dsr": True},
+                    {"dia_semana": "SABADO", "dsr": True},
+                    {"dia_semana": "DOMINGO", "dsr": True},
+                ],
+            },
+        )
+
+    def test_ajuste_manual_nasce_pendente_e_nao_entra_no_calculo(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = Employee.all_objects.create(
+            tenant=tenant_a,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+            funcao="Supervisor",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        service = TreatmentPointService()
+
+        adjustment = service.create_day_adjustment(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="08:00",
+            motivo="Correção operacional",
+            requested_by=user_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+        )
+        mirror = service.build_employee_mirror(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            period=parse_treatment_period("2026-03"),
+        )
+
+        assert adjustment.status == AttendanceAdjustment.Status.PENDING
+        assert mirror["total_trabalhado_min"] == 0
+        assert mirror["pendencias_count"] >= 1
+
+    def test_aprovacao_de_ajuste_passa_a_entrar_no_calculo(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = Employee.all_objects.create(
+            tenant=tenant_a,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+            funcao="Supervisor",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        service = TreatmentPointService()
+
+        entry_adjustment = service.create_day_adjustment(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="08:00",
+            motivo="Correção operacional",
+            requested_by=user_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+        )
+        exit_adjustment = service.create_day_adjustment(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="17:00",
+            motivo="Correção operacional",
+            requested_by=user_a,
+            tipo=AttendanceRecord.Tipo.SAIDA,
+        )
+        service.decide_adjustment(
+            tenant=tenant_a,
+            adjustment_id=entry_adjustment.id,
+            decision="APROVAR",
+            decided_by=user_a,
+            decision_note="Conferido e validado.",
+        )
+        service.decide_adjustment(
+            tenant=tenant_a,
+            adjustment_id=exit_adjustment.id,
+            decision="APROVAR",
+            decided_by=user_a,
+            decision_note="Conferido e validado.",
+        )
+        mirror = service.build_employee_mirror(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            period=parse_treatment_period("2026-03"),
+        )
+
+        entry_adjustment.refresh_from_db()
+        exit_adjustment.refresh_from_db()
+        assert entry_adjustment.status == AttendanceAdjustment.Status.APPROVED
+        assert exit_adjustment.status == AttendanceAdjustment.Status.APPROVED
+        assert mirror["total_trabalhado_min"] > 0
+
+    def test_rejeicao_exige_justificativa_minima(self, tenant_a, user_a):
+        schedule = self._create_schedule(tenant_a)
+        employee = Employee.all_objects.create(
+            tenant=tenant_a,
+            nome="Maria Lopes",
+            cpf="55555555003",
+            pis="55555555003",
+            funcao="Supervisor",
+            work_schedule=schedule,
+            ativo=True,
+        )
+        service = TreatmentPointService()
+        adjustment = service.create_day_adjustment(
+            tenant=tenant_a,
+            employee_id=employee.id,
+            target_date=datetime.date(2026, 3, 2),
+            action="ADICIONAR_MARCACAO",
+            hour="08:00",
+            motivo="Correção operacional",
+            requested_by=user_a,
+            tipo=AttendanceRecord.Tipo.ENTRADA,
+        )
+
+        with pytest.raises(ValidationError, match="justificativa"):
+            service.decide_adjustment(
+                tenant=tenant_a,
+                adjustment_id=adjustment.id,
+                decision="REJEITAR",
+                decided_by=user_a,
+                decision_note="curta",
+            )
 
 
 @pytest.mark.django_db

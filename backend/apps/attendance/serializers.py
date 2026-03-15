@@ -2,7 +2,7 @@ import base64
 
 from rest_framework import serializers
 
-from .models import AttendanceRecord, TimeClock, TimeClockGeofence
+from .models import AttendanceAdjustment, AttendanceRecord, TimeClock, TimeClockGeofence
 
 
 class AttendanceRegisterSerializer(serializers.Serializer):
@@ -230,3 +230,183 @@ class TimeClockEmployeeActionResultSerializer(serializers.Serializer):
     ignored_count = serializers.IntegerField()
     disponiveis_count = serializers.IntegerField()
     no_relogio_count = serializers.IntegerField()
+
+
+class TreatmentPointListQuerySerializer(serializers.Serializer):
+    period = serializers.CharField(required=False, allow_blank=True)
+    q = serializers.CharField(required=False, allow_blank=True)
+    only_inconsistencies = serializers.BooleanField(required=False, default=False)
+    only_pendencias = serializers.BooleanField(required=False, default=False)
+    page = serializers.IntegerField(required=False, min_value=1, default=1)
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=100, default=20)
+
+
+class TreatmentPointEmployeeSummarySerializer(serializers.Serializer):
+    employee_id = serializers.IntegerField()
+    nome = serializers.CharField()
+    cargo = serializers.CharField()
+    saldo_bh_min = serializers.IntegerField()
+    he_50_min = serializers.IntegerField()
+    he_100_min = serializers.IntegerField()
+    atrasos_min = serializers.IntegerField()
+    faltas_dias = serializers.IntegerField()
+    pendencias_count = serializers.IntegerField()
+
+
+class TreatmentPointEmployeeListSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = TreatmentPointEmployeeSummarySerializer(many=True)
+
+
+class TreatmentPointMirrorQuerySerializer(serializers.Serializer):
+    period = serializers.CharField(required=False, allow_blank=True)
+
+
+class TreatmentPointMirrorEmployeeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nome = serializers.CharField()
+    cargo = serializers.CharField()
+
+
+class TreatmentPointMirrorPeriodSerializer(serializers.Serializer):
+    inicio = serializers.DateField()
+    fim = serializers.DateField()
+    status = serializers.CharField()
+
+
+class TreatmentPointMirrorIndicatorsSerializer(serializers.Serializer):
+    saldo_bh_min = serializers.IntegerField()
+    he_50_min = serializers.IntegerField()
+    he_100_min = serializers.IntegerField()
+    atrasos_min = serializers.IntegerField()
+    saidas_antecipadas_min = serializers.IntegerField()
+    faltas_dias = serializers.IntegerField()
+    adicional_noturno_min = serializers.IntegerField()
+    total_trabalhado_min = serializers.IntegerField()
+    total_previsto_min = serializers.IntegerField()
+
+
+class TreatmentPointMirrorDaySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    date_label = serializers.CharField()
+    weekday_label = serializers.CharField()
+    expected_label = serializers.CharField()
+    markings_label = serializers.CharField()
+    worked_label = serializers.CharField()
+    balance_label = serializers.CharField()
+    occurrences = serializers.ListField(child=serializers.CharField())
+    row_tone = serializers.CharField()
+    pending_adjustments = serializers.ListField(child=serializers.DictField(), required=False)
+
+
+class TreatmentPointMirrorSerializer(serializers.Serializer):
+    employee = TreatmentPointMirrorEmployeeSerializer()
+    periodo = TreatmentPointMirrorPeriodSerializer()
+    indicadores = TreatmentPointMirrorIndicatorsSerializer()
+    dias = TreatmentPointMirrorDaySerializer(many=True)
+
+
+class TreatmentPointDayAdjustmentSerializer(serializers.Serializer):
+    acao = serializers.CharField()
+    hora = serializers.RegexField(regex=r"^\d{2}:\d{2}$")
+    motivo = serializers.CharField(max_length=255)
+    tipo = serializers.ChoiceField(choices=AttendanceRecord.Tipo.choices, required=False)
+
+
+class TreatmentPointDayAdjustmentResultSerializer(serializers.Serializer):
+    ajuste_id = serializers.CharField()
+    status = serializers.CharField()
+    date = serializers.DateField()
+
+
+class TreatmentPointAdjustmentDecisionSerializer(serializers.Serializer):
+    decisao = serializers.ChoiceField(choices=("APROVAR", "REJEITAR", "DESCONSIDERAR"))
+    observacao = serializers.CharField(required=False, allow_blank=True, max_length=1000)
+
+
+class TreatmentPointAdjustmentDecisionResultSerializer(serializers.Serializer):
+    ajuste_id = serializers.CharField()
+    status = serializers.ChoiceField(choices=AttendanceAdjustment.Status.choices)
+    decidido_em = serializers.DateTimeField()
+    observacao = serializers.CharField()
+
+
+class AdjustmentRequestSummarySerializer(serializers.Serializer):
+    pendentes = serializers.IntegerField()
+    total_abertas = serializers.IntegerField()
+
+
+class RequestSummarySerializer(serializers.Serializer):
+    ajustes = AdjustmentRequestSummarySerializer()
+    acessos = AdjustmentRequestSummarySerializer()
+
+
+class AdjustmentRequestListQuerySerializer(serializers.Serializer):
+    status = serializers.CharField(required=False, allow_blank=True)
+    periodo_inicio = serializers.DateField(required=False)
+    periodo_fim = serializers.DateField(required=False)
+    employee_id = serializers.IntegerField(required=False, min_value=1)
+    q = serializers.CharField(required=False, allow_blank=True)
+    page = serializers.IntegerField(required=False, min_value=1, default=1)
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=100, default=20)
+
+    def validate(self, attrs):
+        start = attrs.get("periodo_inicio")
+        end = attrs.get("periodo_fim")
+        if start and end and start > end:
+            raise serializers.ValidationError("Informe um período válido.")
+        return attrs
+
+
+class AdjustmentRequestListItemSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    protocolo = serializers.CharField()
+    employee_id = serializers.IntegerField()
+    colaborador_nome = serializers.CharField()
+    data_referencia = serializers.DateField()
+    tipo_ajuste = serializers.CharField()
+    motivo = serializers.CharField()
+    status = serializers.CharField()
+    solicitado_em = serializers.DateTimeField()
+
+
+class AdjustmentRequestListSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = AdjustmentRequestListItemSerializer(many=True)
+
+
+class AdjustmentRequestHistoryItemSerializer(serializers.Serializer):
+    tipo = serializers.CharField()
+    usuario = serializers.CharField(allow_blank=True)
+    data = serializers.DateTimeField(allow_null=True)
+    observacao = serializers.CharField(allow_blank=True)
+
+
+class AdjustmentRequestDetailSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    protocolo = serializers.CharField()
+    status = serializers.CharField()
+    marcacoes_originais = serializers.ListField(child=serializers.CharField())
+    marcacoes_propostas = serializers.ListField(child=serializers.CharField())
+    historico = AdjustmentRequestHistoryItemSerializer(many=True)
+
+
+class TreatmentPointAutoAdjustSerializer(serializers.Serializer):
+    periodo_inicio = serializers.DateField()
+    periodo_fim = serializers.DateField()
+
+    def validate(self, attrs):
+        if attrs["periodo_inicio"] > attrs["periodo_fim"]:
+            raise serializers.ValidationError("Informe um período válido.")
+        if (
+            attrs["periodo_inicio"].year != attrs["periodo_fim"].year
+            or attrs["periodo_inicio"].month != attrs["periodo_fim"].month
+        ):
+            raise serializers.ValidationError("O ajuste automático do MVP suporta apenas um único mês por vez.")
+        return attrs
+
+
+class TreatmentPointAutoAdjustResultSerializer(serializers.Serializer):
+    processed_days = serializers.IntegerField()
+    updated_days = serializers.IntegerField()
+    pendencias_restantes = serializers.IntegerField()

@@ -293,3 +293,83 @@ class AttendanceRecord(TenantModelMixin, models.Model):
 
     def __str__(self):
         return f"{self.employee_id} | {self.tipo} | NSR {self.nsr}"
+
+
+class AttendanceAdjustment(TenantModelMixin, models.Model):
+    class ActionType(models.TextChoices):
+        ADD_MARK = "ADD_MARK", "Adicionar Marcação"
+        DISREGARD_MARK = "DISREGARD_MARK", "Desconsiderar Marcação"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDENTE", "Pendente"
+        APPROVED = "APROVADA", "Aprovada"
+        REJECTED = "REJEITADA", "Rejeitada"
+        DISREGARDED = "DESCONSIDERADA", "Desconsiderada"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employee = models.ForeignKey(
+        "employees.Employee",
+        on_delete=models.PROTECT,
+        related_name="attendance_adjustments",
+        db_index=True,
+    )
+    attendance_record = models.OneToOneField(
+        AttendanceRecord,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="attendance_adjustment",
+    )
+    target_record = models.ForeignKey(
+        AttendanceRecord,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="attendance_adjustment_targets",
+    )
+    action_type = models.CharField(max_length=20, choices=ActionType.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    target_date = models.DateField()
+    requested_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attendance_adjustments_requested",
+    )
+    decided_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attendance_adjustments_decided",
+    )
+    reason = models.TextField()
+    decision_note = models.TextField(blank=True, default="")
+    auto_generated = models.BooleanField(default=False)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["tenant", "employee", "target_date"]),
+            models.Index(fields=["tenant", "status", "target_date"]),
+        ]
+        verbose_name = "Ajuste de Ponto"
+        verbose_name_plural = "Ajustes de Ponto"
+
+    def clean(self):
+        super().clean()
+        if not self.tenant_id or self.employee.tenant_id != self.tenant_id:
+            raise ValidationError({"employee": "Selecione um colaborador válido da sua empresa."})
+
+        if self.attendance_record_id and self.attendance_record.tenant_id != self.tenant_id:
+            raise ValidationError({"attendance_record": "Selecione um registro válido da sua empresa."})
+
+        if self.target_record_id and self.target_record.tenant_id != self.tenant_id:
+            raise ValidationError({"target_record": "Selecione um registro alvo válido da sua empresa."})
+
+    def __str__(self):
+        return f"{self.employee_id} | {self.action_type} | {self.status}"

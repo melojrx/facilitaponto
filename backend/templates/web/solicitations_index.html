@@ -1,0 +1,156 @@
+{% extends "web/panel_base.html" %}
+
+{% block title %}Solicitações | Painel FacilitaPonto{% endblock %}
+{% block panel_heading_title %}Solicitações{% endblock %}
+{% block panel_heading_subtitle %}Gerencie solicitações de ajuste de ponto e acesso a dados.{% endblock %}
+
+{% block panel_styles %}
+  <style>
+    .solicitations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .solicitations-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .solicitations-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .solicitations-card h3 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      color: #0f172a;
+    }
+
+    .solicitations-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .solicitations-counter {
+      min-width: 64px;
+      min-height: 64px;
+      border-radius: 18px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 800;
+      border: 1px solid #bfdbfe;
+    }
+
+    .solicitations-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .solicitations-metric {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: #f8fafc;
+      display: grid;
+      gap: 6px;
+    }
+
+    .solicitations-metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .solicitations-metric-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .solicitations-empty {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .solicitations-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .solicitations-button-disabled {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border-radius: 10px;
+      border: 1px solid #dbe6f2;
+      background: #f8fafc;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+  </style>
+{% endblock %}
+
+{% block panel_content %}
+  <nav class="panel-breadcrumb" aria-label="Breadcrumb">
+    <a class="panel-breadcrumb-link" href="{% url 'web:painel' %}">Início</a>
+    <span class="panel-breadcrumb-sep">›</span>
+    <span class="panel-breadcrumb-current" aria-current="page">Solicitações</span>
+  </nav>
+
+  <section class="solicitations-grid">
+    {% for card in solicitation_cards %}
+      <article class="solicitations-card">
+        <div class="solicitations-card-head">
+          <div>
+            <h3>{{ card.title }}</h3>
+            <p>{{ card.description }}</p>
+          </div>
+          <div class="solicitations-counter">{{ card.pending_count }}</div>
+        </div>
+
+        <div class="solicitations-metrics">
+          <div class="solicitations-metric">
+            <span class="solicitations-metric-label">Pendentes</span>
+            <span class="solicitations-metric-value">{{ card.pending_count }}</span>
+          </div>
+          <div class="solicitations-metric">
+            <span class="solicitations-metric-label">Abertas</span>
+            <span class="solicitations-metric-value">{{ card.total_open_count }}</span>
+          </div>
+        </div>
+
+        {% if card.pending_count == 0 %}
+          <div class="solicitations-empty">{{ card.empty_label }}</div>
+        {% endif %}
+
+        <div class="solicitations-actions">
+          {% if card.enabled %}
+            <a class="btn btn-primary" href="{{ card.cta_url }}">{{ card.cta_label }}</a>
+          {% else %}
+            <span class="solicitations-button-disabled">{{ card.cta_label }}</span>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+{% endblock %}

@@ -1,10 +1,12 @@
 """Views web (HTML) para landing e autenticação inicial."""
 
+import datetime
 from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
@@ -15,10 +17,12 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
+from apps.accounts.permissions import can_decide_adjustments
 from apps.accounts.validators import only_digits
 from apps.attendance.forms import TimeClockForm
-from apps.attendance.models import TimeClock
+from apps.attendance.models import AttendanceRecord, TimeClock
 from apps.attendance.services import TimeClockService
+from apps.attendance.treatment import TreatmentPointService, format_minutes_label, parse_treatment_period
 from apps.biometrics.forms import AssistedBiometricCaptureForm
 from apps.biometrics.services import AssistedBiometricCaptureService, BiometricInviteService
 from apps.employees.forms import EmployeeRegistrationForm, WorkScheduleForm
@@ -490,6 +494,345 @@ def module_placeholder_view(request, module_key):
         "web/panel_placeholder.html",
         current_menu=item["key"],
         extra_context={"module_title": item["label"]},
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET"])
+def solicitations_index_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Solicitações.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    summary = TreatmentPointService().adjustment_requests_summary(tenant=tenant)
+
+    return _render_panel(
+        request,
+        "web/solicitations_index.html",
+        current_menu="solicitacoes",
+        extra_context={
+            "solicitation_cards": [
+                {
+                    "title": "Solicitações de Ajuste",
+                    "description": "Gerencie pedidos de correção de marcações de ponto com rastreabilidade e decisão formal.",
+                    "pending_count": summary["ajustes"]["pendentes"],
+                    "total_open_count": summary["ajustes"]["total_abertas"],
+                    "empty_label": "Nenhuma solicitação pendente",
+                    "cta_label": "Acessar",
+                    "cta_url": reverse("web:solicitacoes_ajustes"),
+                    "enabled": True,
+                },
+                {
+                    "title": "Solicitações de Acesso",
+                    "description": "Central futura para pedidos de acesso a dados, exportações e integrações.",
+                    "pending_count": summary["acessos"]["pendentes"],
+                    "total_open_count": summary["acessos"]["total_abertas"],
+                    "empty_label": "Nenhuma solicitação pendente",
+                    "cta_label": "Em breve",
+                    "cta_url": "",
+                    "enabled": False,
+                },
+            ]
+        },
+    )
+
+
+def _treatment_query_string(*, period, q="", only_inconsistencies=False, only_pendencias=False):
+    params = {"period": period.period_value}
+    if q:
+        params["q"] = q
+    if only_inconsistencies:
+        params["only_inconsistencies"] = "1"
+    if only_pendencias:
+        params["only_pendencias"] = "1"
+    return urlencode(params)
+
+
+def _adjustment_request_query_string(*, period, q="", status_value="", selected_adjustment_id=""):
+    params = {"period": period.period_value}
+    if q:
+        params["q"] = q
+    if status_value:
+        params["status"] = status_value
+    if selected_adjustment_id:
+        params["view"] = selected_adjustment_id
+    return urlencode(params)
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET"])
+def treatment_point_list_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Tratamento de Ponto.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    try:
+        period = parse_treatment_period(request.GET.get("period"))
+    except DjangoValidationError as exc:
+        messages.warning(request, exc.messages[0])
+        return redirect("web:tratamento_ponto")
+
+    query = (request.GET.get("q") or "").strip()
+    only_inconsistencies = request.GET.get("only_inconsistencies") in {"1", "true", "on"}
+    only_pendencias = request.GET.get("only_pendencias") in {"1", "true", "on"}
+    page_number = request.GET.get("page") or 1
+
+    summaries = TreatmentPointService().list_collaborator_summaries(
+        tenant=tenant,
+        period=period,
+        search=query,
+        only_inconsistencies=only_inconsistencies,
+        only_pendencias=only_pendencias,
+    )
+
+    paginator = Paginator(summaries, 10)
+    page_obj = paginator.get_page(page_number)
+
+    summary_rows = []
+    for item in page_obj.object_list:
+        summary_rows.append(
+            {
+                **item,
+                "mirror_url": (
+                    reverse("web:tratamento_ponto_espelho", kwargs={"employee_id": item["employee_id"]})
+                    + f"?{_treatment_query_string(period=period, q=query)}"
+                ),
+                "saldo_badge_class": (
+                    "negative" if item["saldo_bh_min"] < 0 else "positive" if item["saldo_bh_min"] > 0 else "neutral"
+                ),
+                "pendencias_badge_class": "warning" if item["pendencias_count"] > 0 else "neutral",
+            }
+        )
+
+    return _render_panel(
+        request,
+        "web/treatment_point_list.html",
+        current_menu="tratamento_ponto",
+        extra_context={
+            "treatment_period": period,
+            "treatment_query": query,
+            "treatment_only_inconsistencies": only_inconsistencies,
+            "treatment_only_pendencias": only_pendencias,
+            "treatment_rows": summary_rows,
+            "treatment_page_obj": page_obj,
+            "treatment_total": paginator.count,
+            "treatment_show_pending_only_url": (
+                reverse("web:tratamento_ponto")
+                + f"?{_treatment_query_string(period=period, q=query, only_inconsistencies=only_inconsistencies, only_pendencias=True)}"
+            ),
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def solicitation_adjustments_view(request):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Solicitações.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    try:
+        period = parse_treatment_period(request.GET.get("period") or request.POST.get("period"))
+    except DjangoValidationError as exc:
+        messages.warning(request, exc.messages[0])
+        return redirect("web:solicitacoes_ajustes")
+
+    service = TreatmentPointService()
+    query = (request.GET.get("q") or request.POST.get("q") or "").strip()
+    status_value = (request.GET.get("status") or request.POST.get("status") or "").strip().upper()
+    selected_adjustment_id = (request.GET.get("view") or "").strip()
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        try:
+            if action == "decide_adjustment":
+                if not can_decide_adjustments(request.user):
+                    raise PermissionDenied("Você não tem permissão para decidir esta solicitação.")
+                adjustment = service.decide_adjustment(
+                    tenant=tenant,
+                    adjustment_id=request.POST.get("adjustment_id", ""),
+                    decision=request.POST.get("decision", ""),
+                    decided_by=request.user,
+                    decision_note=request.POST.get("decision_note", ""),
+                )
+                decision_messages = {
+                    "APROVADA": "Solicitação aprovada com sucesso.",
+                    "REJEITADA": "Solicitação rejeitada com sucesso.",
+                    "DESCONSIDERADA": "Solicitação desconsiderada com sucesso.",
+                }
+                messages.success(request, decision_messages.get(adjustment.status, "Solicitação atualizada com sucesso."))
+            else:
+                messages.warning(request, "Ação de solicitação inválida.")
+        except DjangoValidationError as exc:
+            messages.error(request, exc.messages[0])
+        return redirect(
+            reverse("web:solicitacoes_ajustes")
+            + f"?{_adjustment_request_query_string(period=period, q=query, status_value=status_value)}"
+        )
+
+    rows = service.list_adjustment_requests(
+        tenant=tenant,
+        status_value=status_value,
+        period_start=period.start_date,
+        period_end=period.end_date,
+        query=query,
+    )
+    selected_detail = None
+    if selected_adjustment_id:
+        try:
+            selected_detail = service.get_adjustment_request_detail(
+                tenant=tenant,
+                adjustment_id=selected_adjustment_id,
+            )
+        except Exception:
+            selected_detail = None
+
+    return _render_panel(
+        request,
+        "web/solicitation_adjustments.html",
+        current_menu="solicitacoes",
+        extra_context={
+            "solicitation_period": period,
+            "solicitation_query": query,
+            "solicitation_status": status_value or "TODOS",
+            "solicitation_rows": rows,
+            "solicitation_can_decide": can_decide_adjustments(request.user),
+            "solicitation_selected_detail": selected_detail,
+            "solicitation_back_url": reverse("web:solicitacoes"),
+            "solicitation_status_options": [
+                ("TODOS", "Todos"),
+                ("PENDENTE", "Pendentes"),
+                ("APROVADA", "Aprovadas"),
+                ("REJEITADA", "Rejeitadas"),
+                ("DESCONSIDERADA", "Desconsideradas"),
+            ],
+        },
+    )
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET", "POST"])
+def treatment_point_mirror_view(request, employee_id):
+    tenant = _resolve_user_tenant(request.user)
+    if not tenant:
+        messages.warning(request, "Cadastre sua empresa antes de acessar Tratamento de Ponto.")
+        return redirect("web:company_create")
+
+    guard_redirect = _require_step_or_redirect(request, min_step=3)
+    if guard_redirect:
+        return guard_redirect
+
+    try:
+        period = parse_treatment_period(request.GET.get("period"))
+    except DjangoValidationError as exc:
+        messages.warning(request, exc.messages[0])
+        return redirect("web:tratamento_ponto")
+
+    service = TreatmentPointService()
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        try:
+            if action == "add_mark":
+                service.create_day_adjustment(
+                    tenant=tenant,
+                    employee_id=employee_id,
+                    target_date=datetime.date.fromisoformat(request.POST.get("target_date", "")),
+                    action="ADICIONAR_MARCACAO",
+                    hour=request.POST.get("hora", ""),
+                    motivo=request.POST.get("motivo", ""),
+                    requested_by=request.user,
+                    tipo=request.POST.get("tipo") or None,
+                )
+                messages.success(request, "Ajuste enviado para aprovação.")
+            elif action == "auto_adjust":
+                result = service.auto_adjust_period(
+                    tenant=tenant,
+                    employee_id=employee_id,
+                    period=period,
+                    requested_by=request.user,
+                )
+                messages.success(
+                    request,
+                    f"Ajuste automático concluído. Ajustes pendentes gerados: {result['updated_days']}.",
+                )
+            elif action == "decide_adjustment":
+                if not can_decide_adjustments(request.user):
+                    raise PermissionDenied("Você não tem permissão para decidir esta solicitação.")
+                adjustment = service.decide_adjustment(
+                    tenant=tenant,
+                    adjustment_id=request.POST.get("adjustment_id", ""),
+                    decision=request.POST.get("decision", ""),
+                    decided_by=request.user,
+                    decision_note=request.POST.get("decision_note", ""),
+                )
+                decision_messages = {
+                    "APROVADA": "Ajuste aprovado com sucesso.",
+                    "REJEITADA": "Ajuste rejeitado com sucesso.",
+                    "DESCONSIDERADA": "Ajuste desconsiderado com sucesso.",
+                }
+                messages.success(request, decision_messages.get(adjustment.status, "Ajuste atualizado com sucesso."))
+            else:
+                messages.warning(request, "Ação de tratamento inválida.")
+        except ValueError:
+            messages.error(request, "Dados de marcação inválidos para este dia.")
+        except DjangoValidationError as exc:
+            messages.error(request, exc.messages[0])
+        return redirect(
+            reverse("web:tratamento_ponto_espelho", kwargs={"employee_id": employee_id})
+            + f"?{_treatment_query_string(period=period)}"
+        )
+
+    try:
+        mirror = service.build_employee_mirror(
+            tenant=tenant,
+            employee_id=employee_id,
+            period=period,
+        )
+    except Employee.DoesNotExist as exc:
+        raise Http404 from exc
+
+    for row in mirror["daily_rows"]:
+        row["occurrences_label"] = " • ".join(row["occurrences"]) if row["occurrences"] else "-"
+        row["date_iso"] = row["date"].isoformat()
+
+    return _render_panel(
+        request,
+        "web/treatment_point_mirror.html",
+        current_menu="tratamento_ponto",
+        extra_context={
+            "treatment_period": period,
+            "mirror": mirror,
+            "mirror_back_url": reverse("web:tratamento_ponto") + f"?{_treatment_query_string(period=period)}",
+            "mirror_cards": [
+                {"label": "Saldo BH", "value": format_minutes_label(mirror["saldo_bh_min"], signed=True)},
+                {"label": "HE 50%", "value": mirror["he_50_label"]},
+                {"label": "HE 100%", "value": mirror["he_100_label"]},
+                {"label": "Atrasos", "value": mirror["atrasos_label"]},
+                {"label": "S. Antec", "value": mirror["saidas_antec_label"]},
+                {"label": "Faltas", "value": str(mirror["faltas_dias"])},
+                {"label": "Ad. Noturno", "value": mirror["adicional_noturno_label"]},
+                {"label": "Total Trabalhado", "value": mirror["total_trabalhado_label"]},
+                {"label": "Total Previsto", "value": mirror["total_previsto_label"]},
+            ],
+            "treatment_adjustment_types": AttendanceRecord.Tipo.choices,
+            "treatment_can_decide_adjustments": can_decide_adjustments(request.user),
+        },
     )
 
 
